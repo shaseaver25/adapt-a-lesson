@@ -34,6 +34,7 @@ import {
   extractVocabularyFromContent 
 } from '@/types/audioRequirements';
 import { PrintableAudioQR } from '@/components/PrintableAudioQR';
+import { AudioUsageDashboard } from '@/components/AudioUsageDashboard';
 
 interface DifferentiatedLessonOutputProps {
   content: string;
@@ -552,6 +553,9 @@ export function DifferentiatedLessonOutput({
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Budget Indicator */}
+            <AudioUsageDashboard compact />
+            
             {/* Audio Players */}
             <div className="grid gap-4 md:grid-cols-2">
               {selectedGroups

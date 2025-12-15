@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import StudentGroups from "./pages/StudentGroups";
 import SavedLessons from "./pages/SavedLessons";
 import SavedRubrics from "./pages/SavedRubrics";
+import AudioUsage from "./pages/AudioUsage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/student-groups" element={<StudentGroups />} />
             <Route path="/saved-lessons" element={<SavedLessons />} />
             <Route path="/saved-rubrics" element={<SavedRubrics />} />
+            <Route path="/audio-usage" element={<AudioUsage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
