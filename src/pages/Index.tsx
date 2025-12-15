@@ -7,7 +7,6 @@ import { RubricForm } from '@/components/RubricForm';
 import { RubricOutput } from '@/components/RubricOutput';
 import { AudioScriptForm } from '@/components/AudioScriptForm';
 import { AudioScriptOutput } from '@/components/AudioScriptOutput';
-import { generateDifferentiatedLesson } from '@/lib/differentiation';
 import { StudentGroup } from '@/types/studentGroup';
 import { AssessmentInput } from '@/types/assessment';
 import { RubricInput } from '@/types/rubric';
@@ -43,13 +42,31 @@ const Index = () => {
   const handleDifferentiate = async (group: StudentGroup, lesson: string) => {
     setIsDifferentiating(true);
     setCurrentGroup(group);
-    
-    // Simulate processing time (will be replaced with AI call)
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    const result = generateDifferentiatedLesson(lesson, group);
-    setDifferentiatedLesson(result);
-    setIsDifferentiating(false);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('differentiate-lesson', {
+        body: { lessonContent: lesson, studentGroup: group },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setDifferentiatedLesson(data.differentiatedLesson);
+    } catch (error) {
+      console.error('Error differentiating lesson:', error);
+      toast({
+        title: 'Error differentiating lesson',
+        description: error instanceof Error ? error.message : 'Please try again later.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDifferentiating(false);
+    }
   };
 
   const handleGenerateAssessment = async (input: AssessmentInput) => {
