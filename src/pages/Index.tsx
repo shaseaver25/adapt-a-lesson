@@ -3,11 +3,14 @@ import { StudentGroupForm } from '@/components/StudentGroupForm';
 import { LessonOutput } from '@/components/LessonOutput';
 import { AssessmentForm } from '@/components/AssessmentForm';
 import { AssessmentOutput } from '@/components/AssessmentOutput';
+import { RubricForm } from '@/components/RubricForm';
+import { RubricOutput } from '@/components/RubricOutput';
 import { generateDifferentiatedLesson } from '@/lib/differentiation';
 import { StudentGroup } from '@/types/studentGroup';
 import { AssessmentInput } from '@/types/assessment';
+import { RubricInput } from '@/types/rubric';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles, BookOpenCheck, ShieldCheck } from 'lucide-react';
+import { Sparkles, BookOpenCheck, ShieldCheck, TableProperties } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -23,6 +26,11 @@ const Index = () => {
   const [generatedAssessment, setGeneratedAssessment] = useState<string | null>(null);
   const [currentAssessmentInput, setCurrentAssessmentInput] = useState<AssessmentInput | null>(null);
   const [isGeneratingAssessment, setIsGeneratingAssessment] = useState(false);
+
+  // Rubric state
+  const [generatedRubric, setGeneratedRubric] = useState<string | null>(null);
+  const [currentRubricInput, setCurrentRubricInput] = useState<RubricInput | null>(null);
+  const [isGeneratingRubric, setIsGeneratingRubric] = useState(false);
 
   const handleDifferentiate = async (group: StudentGroup, lesson: string) => {
     setIsDifferentiating(true);
@@ -66,6 +74,36 @@ const Index = () => {
     }
   };
 
+  const handleGenerateRubric = async (input: RubricInput) => {
+    setIsGeneratingRubric(true);
+    setCurrentRubricInput(input);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-rubric', {
+        body: input,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setGeneratedRubric(data.rubric);
+    } catch (error) {
+      console.error('Error generating rubric:', error);
+      toast({
+        title: 'Error generating rubric',
+        description: error instanceof Error ? error.message : 'Please try again later.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingRubric(false);
+    }
+  };
+
   const handleResetDifferentiation = () => {
     setDifferentiatedLesson(null);
     setCurrentGroup(null);
@@ -76,7 +114,18 @@ const Index = () => {
     setCurrentAssessmentInput(null);
   };
 
-  const showResults = differentiatedLesson || generatedAssessment;
+  const handleResetRubric = () => {
+    setGeneratedRubric(null);
+    setCurrentRubricInput(null);
+  };
+
+  const handleReset = () => {
+    if (differentiatedLesson) handleResetDifferentiation();
+    else if (generatedAssessment) handleResetAssessment();
+    else if (generatedRubric) handleResetRubric();
+  };
+
+  const showResults = differentiatedLesson || generatedAssessment || generatedRubric;
 
   return (
     <div className="min-h-screen gradient-hero">
@@ -98,7 +147,7 @@ const Index = () => {
           </div>
           {showResults && (
             <button
-              onClick={differentiatedLesson ? handleResetDifferentiation : handleResetAssessment}
+              onClick={handleReset}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
               ← Start Over
@@ -127,14 +176,18 @@ const Index = () => {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-slide-up">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsList className="grid w-full grid-cols-3 mb-6">
                 <TabsTrigger value="differentiate" className="flex items-center gap-2">
                   <BookOpenCheck className="h-4 w-4" />
-                  Differentiate Lesson
+                  Differentiate
                 </TabsTrigger>
                 <TabsTrigger value="assessment" className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4" />
-                  Generate Assessment
+                  Assessment
+                </TabsTrigger>
+                <TabsTrigger value="rubric" className="flex items-center gap-2">
+                  <TableProperties className="h-4 w-4" />
+                  Rubric
                 </TabsTrigger>
               </TabsList>
 
@@ -145,6 +198,10 @@ const Index = () => {
 
                 <TabsContent value="assessment" className="mt-0">
                   <AssessmentForm onSubmit={handleGenerateAssessment} isLoading={isGeneratingAssessment} />
+                </TabsContent>
+
+                <TabsContent value="rubric" className="mt-0">
+                  <RubricForm onSubmit={handleGenerateRubric} isLoading={isGeneratingRubric} />
                 </TabsContent>
               </div>
             </Tabs>
@@ -191,6 +248,28 @@ const Index = () => {
             <AssessmentOutput 
               content={generatedAssessment} 
               lessonTitle={currentAssessmentInput?.lessonTitle || 'assessment'} 
+            />
+          </div>
+        ) : generatedRubric ? (
+          <div className="max-w-4xl mx-auto animate-slide-up">
+            {/* Rubric result header */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-success/10">
+                <TableProperties className="h-5 w-5 text-success" />
+              </div>
+              <div>
+                <h2 className="font-display font-bold text-xl text-foreground">
+                  Analytic Rubric Ready
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {currentRubricInput?.numCriteria} criteria with 4 performance levels
+                </p>
+              </div>
+            </div>
+
+            <RubricOutput 
+              content={generatedRubric} 
+              assessmentTitle={currentRubricInput?.assessmentDescription.slice(0, 50) || 'rubric'} 
             />
           </div>
         ) : null}
