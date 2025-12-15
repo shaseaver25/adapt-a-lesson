@@ -15,25 +15,33 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { Copy, Download, Check, ChevronDown, FileText, Users } from 'lucide-react';
+import { Copy, Download, Check, ChevronDown, FileText, Users, Save, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { toast } from '@/hooks/use-toast';
-import { RubricExportOptions } from '@/types/rubric';
+import { RubricExportOptions, RubricInput, AIProofSettings, VerificationCheckpoints } from '@/types/rubric';
+import { AIVulnerabilityAnalysis } from '@/types/vulnerabilityAnalysis';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RubricOutputProps {
   content: string;
   assessmentTitle?: string;
   autoVerificationAdded?: boolean;
   autoVerificationCount?: number;
+  rubricInput?: RubricInput;
+  vulnerabilityAnalysis?: AIVulnerabilityAnalysis | null;
 }
 
 export function RubricOutput({ 
   content, 
   assessmentTitle = 'rubric',
   autoVerificationAdded,
-  autoVerificationCount 
+  autoVerificationCount,
+  rubricInput,
+  vulnerabilityAnalysis,
 }: RubricOutputProps) {
   const [copied, setCopied] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [exportOptionsOpen, setExportOptionsOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<RubricExportOptions['format']>('markdown');
   const [includeComponents, setIncludeComponents] = useState<RubricExportOptions['includeComponents']>({
@@ -119,6 +127,68 @@ export function RubricOutput({
     setIncludeComponents(prev => ({ ...prev, [key]: value }));
   };
 
+  const handleSave = async () => {
+    if (!rubricInput) {
+      toast({
+        title: 'Cannot save',
+        description: 'Missing rubric input data',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      // Build verification checkpoints array from the input
+      const checkpointsList: string[] = [];
+      if (rubricInput.verificationCheckpoints) {
+        const cp = rubricInput.verificationCheckpoints;
+        if (cp.processLog) checkpointsList.push('process_log');
+        if (cp.primaryResearchEvidence) checkpointsList.push('primary_research_evidence');
+        if (cp.draftHistory) checkpointsList.push('draft_history');
+        if (cp.photoDocumentation) checkpointsList.push('photo_documentation');
+        if (cp.liveQA) checkpointsList.push('live_qa');
+        if (cp.peerVerification) checkpointsList.push('peer_verification');
+      }
+
+      const { error } = await supabase.from('generated_rubrics').insert([{
+        assessment_description: rubricInput.assessmentDescription,
+        learning_objectives: rubricInput.learningObjectives,
+        rubric_content: content,
+        num_criteria: rubricInput.numCriteria,
+        grade_level: rubricInput.gradeLevel || null,
+        ai_vulnerability_score: vulnerabilityAnalysis?.aiVulnerabilityScore || null,
+        ai_proof_criteria: vulnerabilityAnalysis ? {
+          vulnerabilities: vulnerabilityAnalysis.vulnerabilities,
+          strengths: vulnerabilityAnalysis.strengths,
+          suggestedEnhancements: vulnerabilityAnalysis.suggestedEnhancements,
+        } : null,
+        verification_checkpoints: checkpointsList.length > 0 ? checkpointsList : null,
+        ai_proof_settings: rubricInput.aiProofSettings ? JSON.parse(JSON.stringify(rubricInput.aiProofSettings)) : null,
+        auto_verification_added: autoVerificationAdded || false,
+        auto_verification_count: autoVerificationCount || 0,
+      }]);
+
+      if (error) throw error;
+
+      setIsSaved(true);
+      toast({
+        title: 'Rubric saved!',
+        description: 'Your rubric has been saved and can be accessed from My Lessons.',
+      });
+    } catch (error) {
+      console.error('Error saving rubric:', error);
+      toast({
+        title: 'Error saving rubric',
+        description: error instanceof Error ? error.message : 'Please try again later.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Auto-verification indicator */}
@@ -163,6 +233,32 @@ export function RubricOutput({
                   <Download className="h-4 w-4" />
                   Download
                 </Button>
+                {rubricInput && (
+                  <Button
+                    variant={isSaved ? "secondary" : "default"}
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={isSaving || isSaved}
+                    className="flex items-center gap-2"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : isSaved ? (
+                      <>
+                        <Check className="h-4 w-4" />
+                        Saved
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4" />
+                        Save Rubric
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
             

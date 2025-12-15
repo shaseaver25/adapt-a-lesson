@@ -371,6 +371,8 @@ const Index = () => {
               assessmentTitle={currentRubricInput?.assessmentDescription.slice(0, 50) || 'rubric'}
               autoVerificationAdded={rubricAutoVerification?.added}
               autoVerificationCount={rubricAutoVerification?.count}
+              rubricInput={currentRubricInput || undefined}
+              vulnerabilityAnalysis={currentRubricInput?.vulnerabilityAnalysis}
             />
           </div>
         ) : generatedAudioScript ? (
