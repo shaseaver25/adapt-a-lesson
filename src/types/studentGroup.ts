@@ -61,6 +61,7 @@ export const LANGUAGES = [
   'Mandarin',
   'Vietnamese',
   'Arabic',
+  'Somali',
   'Tagalog',
   'Korean',
   'Haitian Creole',
