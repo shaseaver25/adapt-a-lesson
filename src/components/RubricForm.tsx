@@ -134,6 +134,7 @@ ${enhancements.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
       assessmentDescription,
       learningObjectives: objectives.filter((o) => o.trim() !== ''),
       numCriteria: parseInt(numCriteria, 10),
+      vulnerabilityAnalysis: analysis || undefined,
     };
     onSubmit(input);
     // Reset analysis state after generating
