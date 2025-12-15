@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { StudentGroupForm } from '@/components/StudentGroupForm';
-import { LessonOutput } from '@/components/LessonOutput';
+import { DifferentiateForm, DifferentiateInput } from '@/components/DifferentiateForm';
+import { DifferentiatedLessonOutput } from '@/components/DifferentiatedLessonOutput';
 import { AssessmentForm } from '@/components/AssessmentForm';
 import { AssessmentOutput } from '@/components/AssessmentOutput';
 import { RubricForm } from '@/components/RubricForm';
@@ -23,7 +23,7 @@ const Index = () => {
   
   // Differentiation state
   const [differentiatedLesson, setDifferentiatedLesson] = useState<string | null>(null);
-  const [currentGroup, setCurrentGroup] = useState<StudentGroup | null>(null);
+  const [selectedGroups, setSelectedGroups] = useState<(StudentGroup & { id: string })[]>([]);
   const [isDifferentiating, setIsDifferentiating] = useState(false);
 
   // Assessment state
@@ -41,13 +41,17 @@ const Index = () => {
   const [currentAudioScriptInput, setCurrentAudioScriptInput] = useState<AudioScriptInput | null>(null);
   const [isGeneratingAudioScript, setIsGeneratingAudioScript] = useState(false);
 
-  const handleDifferentiate = async (group: StudentGroup, lesson: string) => {
+  const handleDifferentiate = async (input: DifferentiateInput) => {
     setIsDifferentiating(true);
-    setCurrentGroup(group);
+    setSelectedGroups(input.selectedGroups);
 
     try {
       const { data, error } = await supabase.functions.invoke('differentiate-lesson', {
-        body: { lessonContent: lesson, studentGroup: group },
+        body: {
+          lessonContent: input.lessonContent,
+          selectedGroups: input.selectedGroups,
+          options: input.options,
+        },
       });
 
       if (error) {
@@ -133,7 +137,7 @@ const Index = () => {
 
   const handleResetDifferentiation = () => {
     setDifferentiatedLesson(null);
-    setCurrentGroup(null);
+    setSelectedGroups([]);
   };
 
   const handleResetAssessment = () => {
@@ -268,7 +272,7 @@ const Index = () => {
 
               <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-medium">
                 <TabsContent value="differentiate" className="mt-0">
-                  <StudentGroupForm onSubmit={handleDifferentiate} isLoading={isDifferentiating} />
+                  <DifferentiateForm onSubmit={handleDifferentiate} isLoading={isDifferentiating} />
                 </TabsContent>
 
                 <TabsContent value="assessment" className="mt-0">
@@ -297,14 +301,15 @@ const Index = () => {
                   Differentiated Lesson Ready
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Customized for: <span className="font-medium text-foreground">{currentGroup?.groupName}</span>
+                  Customized for {selectedGroups.length} student group{selectedGroups.length !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>
 
-            <LessonOutput 
+            <DifferentiatedLessonOutput 
               content={differentiatedLesson} 
-              groupName={currentGroup?.groupName || 'lesson'} 
+              selectedGroups={selectedGroups}
+              lessonTitle="lesson"
             />
           </div>
         ) : generatedAssessment ? (
