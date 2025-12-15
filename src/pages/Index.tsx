@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { DifferentiateForm, DifferentiateInput } from '@/components/DifferentiateForm';
 import { DifferentiatedLessonOutput } from '@/components/DifferentiatedLessonOutput';
@@ -6,15 +6,12 @@ import { AssessmentForm } from '@/components/AssessmentForm';
 import { AssessmentOutput } from '@/components/AssessmentOutput';
 import { RubricForm } from '@/components/RubricForm';
 import { RubricOutput } from '@/components/RubricOutput';
-import { AudioScriptForm } from '@/components/AudioScriptForm';
-import { AudioScriptOutput } from '@/components/AudioScriptOutput';
 import { Button } from '@/components/ui/button';
 import { StudentGroup } from '@/types/studentGroup';
 import { AssessmentInput } from '@/types/assessment';
 import { RubricInput } from '@/types/rubric';
-import { AudioScriptInput } from '@/types/audioScript';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles, BookOpenCheck, ShieldCheck, TableProperties, FileAudio, Users, FolderOpen } from 'lucide-react';
+import { Sparkles, BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -22,7 +19,7 @@ const Index = () => {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
-    return tabParam && ['differentiate', 'assessment', 'rubric', 'audio'].includes(tabParam) 
+    return tabParam && ['differentiate', 'assessment', 'rubric'].includes(tabParam) 
       ? tabParam 
       : 'differentiate';
   });
@@ -43,11 +40,6 @@ const Index = () => {
   const [currentRubricInput, setCurrentRubricInput] = useState<RubricInput | null>(null);
   const [isGeneratingRubric, setIsGeneratingRubric] = useState(false);
   const [rubricAutoVerification, setRubricAutoVerification] = useState<{ added: boolean; count: number } | null>(null);
-
-  // Audio Script state
-  const [generatedAudioScript, setGeneratedAudioScript] = useState<string | null>(null);
-  const [currentAudioScriptInput, setCurrentAudioScriptInput] = useState<AudioScriptInput | null>(null);
-  const [isGeneratingAudioScript, setIsGeneratingAudioScript] = useState(false);
 
   const handleDifferentiate = async (input: DifferentiateInput) => {
     setIsDifferentiating(true);
@@ -164,49 +156,13 @@ const Index = () => {
     setRubricAutoVerification(null);
   };
 
-  const handleResetAudioScript = () => {
-    setGeneratedAudioScript(null);
-    setCurrentAudioScriptInput(null);
-  };
-
-  const handleGenerateAudioScript = async (input: AudioScriptInput) => {
-    setIsGeneratingAudioScript(true);
-    setCurrentAudioScriptInput(input);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-audio-script', {
-        body: input,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      setGeneratedAudioScript(data.audioScript);
-    } catch (error) {
-      console.error('Error generating audio script:', error);
-      toast({
-        title: 'Error generating audio script',
-        description: error instanceof Error ? error.message : 'Please try again later.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsGeneratingAudioScript(false);
-    }
-  };
-
   const handleReset = () => {
     if (differentiatedLesson) handleResetDifferentiation();
     else if (generatedAssessment) handleResetAssessment();
     else if (generatedRubric) handleResetRubric();
-    else if (generatedAudioScript) handleResetAudioScript();
   };
 
-  const showResults = differentiatedLesson || generatedAssessment || generatedRubric || generatedAudioScript;
+  const showResults = differentiatedLesson || generatedAssessment || generatedRubric;
 
   return (
     <div className="min-h-screen gradient-hero">
@@ -277,7 +233,7 @@ const Index = () => {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-slide-up">
-              <TabsList className="grid w-full grid-cols-4 mb-6">
+              <TabsList className="grid w-full grid-cols-3 mb-6">
                 <TabsTrigger value="differentiate" className="flex items-center gap-2">
                   <BookOpenCheck className="h-4 w-4" />
                   <span className="hidden sm:inline">Differentiate</span>
@@ -289,10 +245,6 @@ const Index = () => {
                 <TabsTrigger value="rubric" className="flex items-center gap-2">
                   <TableProperties className="h-4 w-4" />
                   <span className="hidden sm:inline">Rubric</span>
-                </TabsTrigger>
-                <TabsTrigger value="audio" className="flex items-center gap-2">
-                  <FileAudio className="h-4 w-4" />
-                  <span className="hidden sm:inline">Audio</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -307,10 +259,6 @@ const Index = () => {
 
                 <TabsContent value="rubric" className="mt-0">
                   <RubricForm onSubmit={handleGenerateRubric} isLoading={isGeneratingRubric} />
-                </TabsContent>
-
-                <TabsContent value="audio" className="mt-0">
-                  <AudioScriptForm onSubmit={handleGenerateAudioScript} isLoading={isGeneratingAudioScript} />
                 </TabsContent>
               </div>
             </Tabs>
@@ -385,28 +333,6 @@ const Index = () => {
               autoVerificationCount={rubricAutoVerification?.count}
               rubricInput={currentRubricInput || undefined}
               vulnerabilityAnalysis={currentRubricInput?.vulnerabilityAnalysis}
-            />
-          </div>
-        ) : generatedAudioScript ? (
-          <div className="max-w-4xl mx-auto animate-slide-up">
-            {/* Audio Script result header */}
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg bg-success/10">
-                <FileAudio className="h-5 w-5 text-success" />
-              </div>
-              <div>
-                <h2 className="font-display font-bold text-xl text-foreground">
-                  Audio Script Ready
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Prepared for {currentAudioScriptInput?.language} TTS
-                </p>
-              </div>
-            </div>
-
-            <AudioScriptOutput 
-              content={generatedAudioScript} 
-              language={currentAudioScriptInput?.language || 'English'} 
             />
           </div>
         ) : null}
