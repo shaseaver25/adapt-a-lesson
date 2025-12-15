@@ -147,6 +147,8 @@ export type Database = {
           lesson_id: string | null
           section_id: string
           section_type: string
+          storage_path: string | null
+          voice_id: string | null
         }
         Insert: {
           audio_url: string
@@ -160,6 +162,8 @@ export type Database = {
           lesson_id?: string | null
           section_id: string
           section_type: string
+          storage_path?: string | null
+          voice_id?: string | null
         }
         Update: {
           audio_url?: string
@@ -173,6 +177,8 @@ export type Database = {
           lesson_id?: string | null
           section_id?: string
           section_type?: string
+          storage_path?: string | null
+          voice_id?: string | null
         }
         Relationships: [
           {
@@ -283,6 +289,56 @@ export type Database = {
           verification_checkpoints?: string[] | null
         }
         Relationships: []
+      }
+      lesson_audio_status: {
+        Row: {
+          completed_at: string | null
+          completed_sections: number | null
+          created_at: string | null
+          error_details: Json | null
+          failed_sections: number | null
+          id: string
+          lesson_id: string
+          started_at: string | null
+          status: string
+          total_sections: number
+          updated_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_sections?: number | null
+          created_at?: string | null
+          error_details?: Json | null
+          failed_sections?: number | null
+          id?: string
+          lesson_id: string
+          started_at?: string | null
+          status: string
+          total_sections?: number
+          updated_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          completed_sections?: number | null
+          created_at?: string | null
+          error_details?: Json | null
+          failed_sections?: number | null
+          id?: string
+          lesson_id?: string
+          started_at?: string | null
+          status?: string
+          total_sections?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_audio_status_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: true
+            referencedRelation: "generated_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rubric_verifications: {
         Row: {
@@ -431,6 +487,75 @@ export type Database = {
             columns: ["folder_id"]
             isOneToOne: false
             referencedRelation: "class_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vocabulary_audio: {
+        Row: {
+          created_at: string | null
+          definition: string | null
+          english_definition_audio_url: string | null
+          english_term_audio_url: string | null
+          group_id: string | null
+          group_name: string
+          home_language: string | null
+          home_language_definition_audio_url: string | null
+          home_language_term_audio_url: string | null
+          id: string
+          lesson_id: string
+          term: string
+          translated_definition: string | null
+          translated_term: string | null
+          vocab_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          definition?: string | null
+          english_definition_audio_url?: string | null
+          english_term_audio_url?: string | null
+          group_id?: string | null
+          group_name: string
+          home_language?: string | null
+          home_language_definition_audio_url?: string | null
+          home_language_term_audio_url?: string | null
+          id?: string
+          lesson_id: string
+          term: string
+          translated_definition?: string | null
+          translated_term?: string | null
+          vocab_id: string
+        }
+        Update: {
+          created_at?: string | null
+          definition?: string | null
+          english_definition_audio_url?: string | null
+          english_term_audio_url?: string | null
+          group_id?: string | null
+          group_name?: string
+          home_language?: string | null
+          home_language_definition_audio_url?: string | null
+          home_language_term_audio_url?: string | null
+          id?: string
+          lesson_id?: string
+          term?: string
+          translated_definition?: string | null
+          translated_term?: string | null
+          vocab_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vocabulary_audio_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "student_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vocabulary_audio_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "generated_lessons"
             referencedColumns: ["id"]
           },
         ]
