@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon, Save, Loader2, Headphones, QrCode, Printer, Volume2 } from 'lucide-react';
+import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon, Save, Loader2, Headphones, QrCode, Printer, Volume2, Languages } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentGroup } from '@/types/studentGroup';
@@ -21,7 +21,9 @@ import {
   exportTeacherGuideDocx,
   exportStudentHandoutsDocx,
   exportStudentHandoutsWithAudioDocx,
+  exportBilingualHandoutDocx,
   type AudioSection,
+  type BilingualSection,
 } from '@/lib/documentExport';
 import { supabase } from '@/integrations/supabase/client';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
@@ -444,6 +446,83 @@ export function DifferentiatedLessonOutput({
     toast({ title: 'Copied', description: `${groupName} section copied to clipboard` });
   };
 
+  // Export bilingual handout for non-English groups
+  const handleExportBilingualDocx = async (group: StudentGroup & { id: string }) => {
+    try {
+      const groupContent = extractGroupContent(group.groupName);
+      const groupAudio = preGeneratedAudio.filter(a => a.group_name === group.groupName);
+      
+      // Parse content into sections
+      const sections: BilingualSection[] = [];
+      const sectionPatterns = [
+        { type: 'learning-target', label: '🎯 Learning Target', pattern: /(?:learning target|objetivo|目標|học mục tiêu)/i },
+        { type: 'instructions', label: '📋 Instructions', pattern: /(?:instructions|instrucciones|指示|hướng dẫn)/i },
+        { type: 'vocabulary', label: '📚 Vocabulary', pattern: /(?:vocabulary|vocabulario|词汇|từ vựng)/i },
+        { type: 'content', label: '📖 Content', pattern: /(?:content|contenido|内容|nội dung)/i },
+        { type: 'practice', label: '✏️ Practice', pattern: /(?:practice|práctica|练习|thực hành)/i },
+        { type: 'reflection', label: '💭 Reflection', pattern: /(?:reflection|reflexión|反思|suy ngẫm)/i },
+      ];
+      
+      // Split content by sections (simplified parsing)
+      const lines = groupContent.split('\n');
+      let currentSection = { type: 'content', label: '📖 Content' };
+      let buffer: string[] = [];
+      
+      for (const line of lines) {
+        const matched = sectionPatterns.find(p => p.pattern.test(line));
+        if (matched && buffer.length > 0) {
+          // Get audio for this section
+          const engAudio = groupAudio.find(a => a.section_type === currentSection.type && a.language === 'English');
+          const homeAudio = groupAudio.find(a => a.section_type === currentSection.type && a.language === group.homeLanguage);
+          
+          sections.push({
+            sectionType: currentSection.type,
+            sectionLabel: currentSection.label,
+            englishContent: buffer.join('\n'), // English content
+            homeLanguageContent: buffer.join('\n'), // Same content (translated in original)
+            englishAudioUrl: engAudio?.audio_url,
+            homeLanguageAudioUrl: homeAudio?.audio_url,
+          });
+          buffer = [];
+        }
+        if (matched) {
+          currentSection = matched;
+        }
+        buffer.push(line);
+      }
+      
+      // Add final section
+      if (buffer.length > 0) {
+        const engAudio = groupAudio.find(a => a.section_type === currentSection.type && a.language === 'English');
+        const homeAudio = groupAudio.find(a => a.section_type === currentSection.type && a.language === group.homeLanguage);
+        
+        sections.push({
+          sectionType: currentSection.type,
+          sectionLabel: currentSection.label,
+          englishContent: buffer.join('\n'),
+          homeLanguageContent: buffer.join('\n'),
+          englishAudioUrl: engAudio?.audio_url,
+          homeLanguageAudioUrl: homeAudio?.audio_url,
+        });
+      }
+      
+      await exportBilingualHandoutDocx(sections, {
+        homeLanguage: group.homeLanguage,
+        groupName: group.groupName,
+        readingLevel: getStudentFriendlyName(group.readingLevelLabel),
+      }, lessonTitle);
+      
+      toast({ title: 'Downloaded', description: `Bilingual handout for ${group.groupName} created` });
+    } catch (error) {
+      console.error('Bilingual export error:', error);
+      toast({ 
+        title: 'Export failed', 
+        description: 'Could not generate bilingual document',
+        variant: 'destructive'
+      });
+    }
+  };
+
   // Use centralized reading level colors
 
   return (
@@ -529,6 +608,33 @@ export function DifferentiatedLessonOutput({
                         <p className="text-xs text-muted-foreground">Includes QR codes for audio access</p>
                       </div>
                     </DropdownMenuItem>
+                  )}
+                  
+                  {/* Bilingual Export Options */}
+                  {selectedGroups.some(g => g.homeLanguage && g.homeLanguage !== 'English') && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                        📖 Bilingual Side-by-Side (Landscape)
+                      </DropdownMenuLabel>
+                      {selectedGroups
+                        .filter(g => g.homeLanguage && g.homeLanguage !== 'English')
+                        .map((group) => (
+                          <DropdownMenuItem 
+                            key={`bilingual-${group.id}`}
+                            onClick={() => handleExportBilingualDocx(group)}
+                            className="gap-2"
+                          >
+                            <Languages className="h-4 w-4" />
+                            <div>
+                              <p className="font-medium">{group.groupName}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {group.homeLanguage} / English with QR codes
+                              </p>
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                    </>
                   )}
                   
                   <DropdownMenuSeparator />

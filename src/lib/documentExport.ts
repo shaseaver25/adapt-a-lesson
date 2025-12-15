@@ -1250,3 +1250,410 @@ Once completed, upload this file using the "Upload File" button or copy the cont
   const blob = new Blob([template], { type: 'text/markdown;charset=utf-8' });
   saveAs(blob, 'assessment-template.md');
 }
+
+/**
+ * Interface for bilingual content sections
+ */
+export interface BilingualSection {
+  sectionType: string;
+  sectionLabel: string;
+  englishContent: string;
+  homeLanguageContent: string;
+  englishAudioUrl?: string;
+  homeLanguageAudioUrl?: string;
+}
+
+export interface BilingualDocumentConfig {
+  homeLanguage: string;
+  groupName: string;
+  readingLevel?: string;
+}
+
+/**
+ * Create a side-by-side bilingual table for DOCX
+ */
+async function createBilingualContentTable(
+  englishContent: string,
+  homeLanguageContent: string,
+  homeLanguage: string
+): Promise<Table> {
+  const englishLines = englishContent.split('\n').filter(l => l.trim());
+  const homeLanguageLines = homeLanguageContent.split('\n').filter(l => l.trim());
+  const maxLines = Math.max(englishLines.length, homeLanguageLines.length);
+  
+  const rows: TableRow[] = [];
+  
+  // Header row with language labels
+  rows.push(
+    new TableRow({
+      tableHeader: true,
+      children: [
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${getLanguageFlag(homeLanguage)} ${homeLanguage}`,
+                  bold: true,
+                  size: 24,
+                  font: 'Arial',
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+          ],
+          width: { size: 48, type: WidthType.PERCENTAGE },
+          shading: { fill: 'E8F4FD' },
+          margins: { top: 100, bottom: 100, left: 100, right: 100 },
+        }),
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${getLanguageFlag('English')} English`,
+                  bold: true,
+                  size: 24,
+                  font: 'Arial',
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+          ],
+          width: { size: 48, type: WidthType.PERCENTAGE },
+          shading: { fill: 'F5F5F5' },
+          margins: { top: 100, bottom: 100, left: 100, right: 100 },
+        }),
+      ],
+    })
+  );
+  
+  // Content rows - aligned line by line
+  for (let i = 0; i < maxLines; i++) {
+    const homeText = homeLanguageLines[i] || '';
+    const engText = englishLines[i] || '';
+    
+    rows.push(
+      new TableRow({
+        children: [
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: homeText,
+                    size: 22,
+                    font: 'Arial',
+                  }),
+                ],
+              }),
+            ],
+            width: { size: 48, type: WidthType.PERCENTAGE },
+            margins: { top: 80, bottom: 80, left: 100, right: 100 },
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: engText,
+                    size: 22,
+                    font: 'Arial',
+                  }),
+                ],
+              }),
+            ],
+            width: { size: 48, type: WidthType.PERCENTAGE },
+            margins: { top: 80, bottom: 80, left: 100, right: 100 },
+          }),
+        ],
+      })
+    );
+  }
+  
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows,
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+      left: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+      right: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'E5E5E5' },
+      insideVertical: { style: BorderStyle.SINGLE, size: 2, color: 'CCCCCC' },
+    },
+  });
+}
+
+/**
+ * Create QR codes header block for bilingual document
+ */
+async function createBilingualQRHeader(
+  sections: BilingualSection[],
+  homeLanguage: string
+): Promise<(Paragraph | Table)[]> {
+  const elements: (Paragraph | Table)[] = [];
+  
+  // Header
+  elements.push(
+    new Paragraph({
+      children: [
+        new TextRun({ text: '🔊 ', size: 28 }),
+        new TextRun({
+          text: 'AUDIO SUPPORT - Scan QR codes to listen',
+          bold: true,
+          size: 24,
+          font: 'Arial',
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 200, after: 150 },
+      shading: { type: ShadingType.SOLID, color: 'FFF8E7' },
+    })
+  );
+  
+  // Create QR code cells for each section with audio
+  const qrCells: TableCell[] = [];
+  
+  for (const section of sections) {
+    if (!section.englishAudioUrl && !section.homeLanguageAudioUrl) continue;
+    
+    const cellContent: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: section.sectionLabel,
+            bold: true,
+            size: 18,
+            font: 'Arial',
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 80 },
+      }),
+    ];
+    
+    // Add QR codes side by side
+    const qrElements: (ImageRun | TextRun)[] = [];
+    
+    if (section.homeLanguageAudioUrl) {
+      try {
+        const homeQR = await generateQRCode(section.homeLanguageAudioUrl, 50);
+        const homeQRBuffer = await dataUrlToArrayBuffer(homeQR);
+        qrElements.push(
+          new ImageRun({
+            type: 'png',
+            data: homeQRBuffer,
+            transformation: { width: 50, height: 50 },
+          })
+        );
+        qrElements.push(new TextRun({ text: ' ' }));
+      } catch (e) {
+        console.error('Failed to generate home language QR:', e);
+      }
+    }
+    
+    if (section.englishAudioUrl) {
+      try {
+        const engQR = await generateQRCode(section.englishAudioUrl, 50);
+        const engQRBuffer = await dataUrlToArrayBuffer(engQR);
+        qrElements.push(
+          new ImageRun({
+            type: 'png',
+            data: engQRBuffer,
+            transformation: { width: 50, height: 50 },
+          })
+        );
+      } catch (e) {
+        console.error('Failed to generate English QR:', e);
+      }
+    }
+    
+    if (qrElements.length > 0) {
+      cellContent.push(
+        new Paragraph({
+          children: qrElements,
+          alignment: AlignmentType.CENTER,
+        })
+      );
+      
+      cellContent.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `${getLanguageFlag(homeLanguage)} / ${getLanguageFlag('English')}`,
+              size: 14,
+              font: 'Arial',
+            }),
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 40 },
+        })
+      );
+    }
+    
+    qrCells.push(
+      new TableCell({
+        children: cellContent,
+        width: { size: Math.floor(100 / Math.min(sections.length, 4)), type: WidthType.PERCENTAGE },
+        shading: { fill: 'FFF8E7' },
+        margins: { top: 80, bottom: 80, left: 60, right: 60 },
+      })
+    );
+  }
+  
+  if (qrCells.length > 0) {
+    // Split into rows of 4
+    const rows: TableRow[] = [];
+    for (let i = 0; i < qrCells.length; i += 4) {
+      const rowCells = qrCells.slice(i, i + 4);
+      // Pad to 4 cells if needed
+      while (rowCells.length < 4 && qrCells.length > 4) {
+        rowCells.push(
+          new TableCell({
+            children: [new Paragraph({ text: '' })],
+            shading: { fill: 'FFF8E7' },
+          })
+        );
+      }
+      rows.push(new TableRow({ children: rowCells }));
+    }
+    
+    elements.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows,
+        borders: {
+          top: { style: BorderStyle.SINGLE, size: 1, color: 'E5C07B' },
+          bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E5C07B' },
+          left: { style: BorderStyle.SINGLE, size: 1, color: 'E5C07B' },
+          right: { style: BorderStyle.SINGLE, size: 1, color: 'E5C07B' },
+        },
+      })
+    );
+  }
+  
+  elements.push(
+    new Paragraph({ text: '', spacing: { after: 300 } })
+  );
+  
+  return elements;
+}
+
+/**
+ * Export bilingual student handout as landscape DOCX with side-by-side layout
+ */
+export async function exportBilingualHandoutDocx(
+  sections: BilingualSection[],
+  config: BilingualDocumentConfig,
+  title: string
+): Promise<void> {
+  const children: (Paragraph | Table)[] = [];
+  
+  // Title
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: title || 'Student Handout',
+          bold: true,
+          size: 36,
+          font: 'Arial',
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 100 },
+    }),
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: `${config.groupName}`,
+          size: 24,
+          font: 'Arial',
+        }),
+        config.readingLevel ? new TextRun({
+          text: ` • ${config.readingLevel}`,
+          size: 22,
+          font: 'Arial',
+          italics: true,
+        }) : new TextRun({ text: '' }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 },
+    }),
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: `Bilingual: ${getLanguageFlag(config.homeLanguage)} ${config.homeLanguage} / ${getLanguageFlag('English')} English`,
+          size: 22,
+          font: 'Arial',
+          italics: true,
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 300 },
+    })
+  );
+  
+  // Add QR codes header at TOP
+  const qrHeader = await createBilingualQRHeader(sections, config.homeLanguage);
+  children.push(...qrHeader);
+  
+  // Add each section with side-by-side layout
+  for (const section of sections) {
+    // Section label
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: section.sectionLabel,
+            bold: true,
+            size: 26,
+            font: 'Arial',
+          }),
+        ],
+        spacing: { before: 300, after: 150 },
+        border: {
+          bottom: { style: BorderStyle.SINGLE, size: 2, color: '000000' },
+        },
+      })
+    );
+    
+    // Side-by-side content table
+    const contentTable = await createBilingualContentTable(
+      section.englishContent,
+      section.homeLanguageContent,
+      config.homeLanguage
+    );
+    children.push(contentTable);
+    children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+  }
+  
+  const doc = new Document({
+    creator: 'Educator Tools',
+    title: `${title} - Bilingual Handout`,
+    sections: [
+      {
+        properties: {
+          page: {
+            size: {
+              orientation: PageOrientation.LANDSCAPE,
+            },
+            margin: {
+              top: convertInchesToTwip(0.75),
+              bottom: convertInchesToTwip(0.5),
+              left: convertInchesToTwip(0.5),
+              right: convertInchesToTwip(0.5),
+            },
+          },
+        },
+        children,
+      },
+    ],
+  });
+  
+  const blob = await Packer.toBlob(doc);
+  const safeTitle = (title || 'handout').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  const safeGroup = config.groupName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  saveAs(blob, `${safeTitle}-${safeGroup}-bilingual.docx`);
+}
