@@ -21,12 +21,14 @@ interface LessonAudioPlayerProps {
   group: StudentGroup & { id: string };
   lessonContent: string;
   groupContent: string;
+  onAudioGenerated?: (audioUrl: string) => void;
 }
 
 export function LessonAudioPlayer({ 
   group, 
   lessonContent, 
-  groupContent 
+  groupContent,
+  onAudioGenerated
 }: LessonAudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -109,6 +111,9 @@ export function LessonAudioPlayer({
       setAudioBlob(blob);
       const url = URL.createObjectURL(blob);
       setAudioUrl(url);
+      
+      // Notify parent component about the generated audio URL
+      onAudioGenerated?.(url);
 
       if (audioRef.current) {
         audioRef.current.src = url;

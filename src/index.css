@@ -231,6 +231,23 @@
   animation: slide-up 0.4s ease-out;
 }
 
+/* Printable Audio QR Styles */
+.printable-audio-qr {
+  margin: 0.5rem 0;
+}
+
+@media print {
+  .printable-audio-qr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  
+  .printable-audio-qr img {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
 .animate-pulse-soft {
   animation: pulse-soft 2s ease-in-out infinite;
 }
