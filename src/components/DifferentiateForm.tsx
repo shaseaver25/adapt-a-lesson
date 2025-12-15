@@ -20,7 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Users, BookOpen, Settings2, ExternalLink, CheckSquare, XSquare, HelpCircle, Sparkles, FolderOpen } from 'lucide-react';
+import { Users, BookOpen, Settings2, ExternalLink, CheckSquare, XSquare, HelpCircle, Sparkles, FolderOpen, RefreshCw, AlertCircle, Clock } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useDifferentiation, type GraphicOrganizerType } from '@/contexts/DifferentiationContext';
 import { READING_LEVEL_DESCRIPTIONS, ELL_STATUS_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
@@ -63,6 +64,8 @@ export interface DifferentiateInput {
 interface DifferentiateFormProps {
   onSubmit: (input: DifferentiateInput) => void;
   isLoading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 function dbToStudentGroup(db: DBStudentGroup): StudentGroup & { id: string; folderId: string | null } {
@@ -82,7 +85,7 @@ function dbToStudentGroup(db: DBStudentGroup): StudentGroup & { id: string; fold
   };
 }
 
-export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProps) {
+export function DifferentiateForm({ onSubmit, isLoading, error, onRetry }: DifferentiateFormProps) {
   const {
     cachedLessonContent,
     setCachedLessonContent,
@@ -146,6 +149,14 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
   };
 
   const wordCount = cachedLessonContent.trim().split(/\s+/).filter(Boolean).length;
+
+  // Estimate generation time based on complexity
+  const getTimeEstimate = () => {
+    const numGroups = selectedGroupIds.length;
+    const hasEll = groups.filter(g => selectedGroupIds.includes(g.id) && g.homeLanguage !== 'English').length;
+    const baseMinutes = Math.ceil(wordCount / 500) + (numGroups * 0.5) + (hasEll * 0.5);
+    return Math.max(1, Math.min(5, Math.round(baseMinutes)));
+  };
 
   return (
     <div className="space-y-8">
@@ -428,6 +439,41 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
         </div>
       </div>
 
+      {/* Error with Retry */}
+      {error && !isLoading && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between gap-4">
+            <span>{error}</span>
+            {onRetry && (
+              <Button type="button" variant="outline" size="sm" onClick={onRetry} className="gap-2 shrink-0">
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Loading State with Time Estimate */}
+      {isLoading && (
+        <div className="mb-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span className="font-medium text-foreground">
+              Differentiating for {selectedGroupIds.length} group{selectedGroupIds.length !== 1 ? 's' : ''}...
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Clock className="h-4 w-4" />
+            <span>Estimated time: {getTimeEstimate()}-{getTimeEstimate() + 2} minutes</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Large lessons with multiple groups or translations may take longer. Please don't close this page.
+          </p>
+        </div>
+      )}
+
       {/* Submit */}
       <Button
         type="submit"
@@ -437,7 +483,7 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
         disabled={isLoading || selectedGroupIds.length === 0 || !cachedLessonContent.trim()}
       >
         {isLoading ? (
-          <span className="animate-pulse-soft">Differentiating for {selectedGroupIds.length} group{selectedGroupIds.length !== 1 ? 's' : ''}...</span>
+          <span className="animate-pulse-soft">Processing...</span>
         ) : selectedGroupIds.length === 0 ? (
           'Select at least one group to continue'
         ) : (
