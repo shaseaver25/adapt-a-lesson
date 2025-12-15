@@ -763,3 +763,131 @@
   @apply pt-2;
   border-top: 1px dashed hsl(var(--border) / 0.5);
 }
+
+/* Bilingual Export Options */
+.export-options {
+  @apply p-6 bg-card rounded-xl;
+  border: 1px solid hsl(var(--border));
+}
+
+.export-options h4 {
+  @apply text-lg font-semibold mb-4;
+}
+
+.bilingual-preview {
+  @apply rounded-lg p-4 mb-4;
+  background: linear-gradient(90deg, hsl(38 92% 95%) 50%, hsl(210 80% 96%) 50%);
+  border: 1px solid hsl(var(--border));
+}
+
+.preview-badge {
+  @apply flex justify-between items-center mb-2;
+}
+
+.preview-badge span:first-child {
+  @apply font-semibold text-foreground;
+}
+
+.preview-badge .languages {
+  @apply text-sm text-muted-foreground;
+}
+
+.preview-note {
+  @apply text-sm text-muted-foreground m-0;
+}
+
+.export-sections {
+  @apply flex flex-col gap-2 mb-4 p-4 bg-muted rounded-lg;
+}
+
+.checkbox-label {
+  @apply flex items-center gap-2 cursor-pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  @apply w-[18px] h-[18px];
+  accent-color: hsl(var(--primary));
+}
+
+.qr-options {
+  @apply mb-6 p-4 rounded-lg;
+  background: hsl(38 92% 96%);
+  border: 1px solid hsl(38 70% 85%);
+}
+
+.qr-options h5 {
+  @apply text-sm font-semibold mb-3;
+}
+
+.checkbox-label.read-aloud {
+  @apply mt-2 py-2 px-3 rounded-md;
+  background: hsl(210 80% 96%);
+}
+
+.export-buttons {
+  @apply flex flex-col gap-2;
+}
+
+.export-btn {
+  @apply flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium cursor-pointer transition-all duration-200;
+}
+
+.export-btn.primary {
+  @apply bg-primary text-primary-foreground border-none;
+}
+
+.export-btn.primary:hover {
+  @apply opacity-90;
+}
+
+.export-btn:not(.primary) {
+  @apply bg-card text-foreground;
+  border: 1px solid hsl(var(--border));
+}
+
+.export-btn:not(.primary):hover {
+  @apply bg-muted;
+  border-color: hsl(var(--border));
+}
+
+/* Print-specific styles for bilingual layout */
+@media print {
+  @page {
+    size: letter landscape;
+    margin: 0.75in;
+    margin-top: 1.5in;
+  }
+  
+  .qr-header {
+    position: running(header);
+  }
+  
+  .bilingual-table {
+    @apply w-full;
+    border-collapse: collapse;
+  }
+  
+  .bilingual-table td {
+    vertical-align: top;
+    padding: 8px 12px;
+  }
+  
+  .bilingual-table .left-column {
+    width: 48%;
+    background: hsl(38 92% 97%);
+    border-left: 3px solid hsl(38 92% 50%);
+  }
+  
+  .bilingual-table .right-column {
+    width: 48%;
+    background: hsl(210 80% 97%);
+    border-right: 3px solid hsl(210 90% 40%);
+  }
+  
+  .bilingual-table .gutter {
+    width: 4%;
+    background: hsl(var(--muted));
+    border-left: 1px dashed hsl(var(--border));
+    border-right: 1px dashed hsl(var(--border));
+  }
+}
