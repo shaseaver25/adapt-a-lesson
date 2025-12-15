@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon, Save, Loader2 } from 'lucide-react';
+import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon, Save, Loader2, Headphones } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentGroup } from '@/types/studentGroup';
@@ -23,6 +23,8 @@ import {
 } from '@/lib/documentExport';
 import { supabase } from '@/integrations/supabase/client';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
+import { LessonAudioPlayer } from '@/components/LessonAudioPlayer';
+import { analyzeAudioNeeds, anyGroupNeedsAudio } from '@/types/audioRequirements';
 
 interface DifferentiatedLessonOutputProps {
   content: string;
@@ -477,6 +479,34 @@ export function DifferentiatedLessonOutput({
           </div>
         </CardContent>
       </Card>
+
+      {/* Audio Players for groups that need audio support */}
+      {anyGroupNeedsAudio(selectedGroups) && (
+        <Card className="border-accent/20 bg-gradient-to-r from-accent/5 to-transparent">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Headphones className="h-5 w-5 text-accent" />
+              Audio Support
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                (for Read Aloud accommodations & multilingual students)
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            {selectedGroups
+              .filter(group => analyzeAudioNeeds(group).needsAudio)
+              .map(group => (
+                <LessonAudioPlayer
+                  key={group.id}
+                  group={group}
+                  lessonContent={content}
+                  groupContent={extractGroupContent(group.groupName)}
+                />
+              ))
+            }
+          </CardContent>
+        </Card>
+      )}
 
       {/* Content */}
       <Card className="overflow-hidden">
