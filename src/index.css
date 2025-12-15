@@ -457,7 +457,283 @@
 }
 
 /* ============================
-   Bilingual Vocabulary Player
+   Bilingual Audio Player
+   ============================ */
+
+.bilingual-audio-player {
+  @apply rounded-xl p-4 my-4 border;
+  background: hsl(var(--muted) / 0.5);
+  border-color: hsl(var(--warning) / 0.3);
+}
+
+/* Language Toggle */
+.language-toggle {
+  @apply flex gap-2 mb-4 p-1 rounded-lg w-fit;
+  background: hsl(var(--muted));
+}
+
+.lang-btn {
+  @apply flex items-center gap-2 px-4 py-2 border-none rounded-md cursor-pointer transition-all;
+  background: transparent;
+}
+
+.lang-btn.active {
+  @apply bg-card;
+  box-shadow: var(--shadow-soft);
+}
+
+.lang-btn:hover:not(.active) {
+  background: hsl(var(--muted-foreground) / 0.1);
+}
+
+.lang-flag {
+  @apply text-xl;
+}
+
+.lang-label {
+  @apply text-sm font-medium;
+}
+
+/* Bilingual Player Audio Controls */
+.bilingual-audio-controls {
+  @apply flex items-center gap-3;
+}
+
+.bilingual-play-btn {
+  @apply w-10 h-10 rounded-full border-none flex items-center justify-center cursor-pointer transition-all flex-shrink-0;
+  background: hsl(var(--warning));
+  color: hsl(var(--primary-foreground));
+}
+
+.bilingual-play-btn:hover {
+  background: hsl(var(--warning) / 0.9);
+  transform: scale(1.05);
+}
+
+.bilingual-play-btn.playing {
+  background: hsl(var(--destructive));
+}
+
+.bilingual-progress-container {
+  @apply flex-1 h-2 rounded relative overflow-hidden;
+  background: hsl(var(--muted));
+}
+
+.bilingual-progress-bar {
+  @apply h-full rounded;
+  background: hsl(var(--warning));
+  transition: width 0.1s linear;
+}
+
+.bilingual-progress-slider {
+  @apply absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer;
+}
+
+.bilingual-duration {
+  @apply text-xs tabular-nums min-w-[40px];
+  color: hsl(var(--muted-foreground));
+}
+
+.speed-control .speed-btn {
+  @apply px-2 py-1 rounded text-xs font-semibold cursor-pointer border;
+  background: hsl(var(--muted));
+  border-color: hsl(var(--border));
+}
+
+.speed-control .speed-btn:hover {
+  background: hsl(var(--muted-foreground) / 0.15);
+}
+
+.bilingual-hint {
+  @apply text-xs text-center mt-3;
+  color: hsl(var(--warning));
+}
+
+/* ============================
+   Bilingual Vocabulary Card
+   ============================ */
+
+.vocabulary-card.bilingual {
+  @apply bg-card border rounded-xl overflow-hidden mb-4;
+  border-color: hsl(var(--border));
+}
+
+.vocab-section {
+  @apply p-4;
+}
+
+.vocab-section.english {
+  border-bottom: 1px dashed hsl(var(--border));
+}
+
+.vocab-section .section-header {
+  @apply mb-3;
+}
+
+.lang-indicator {
+  @apply text-xs font-medium uppercase tracking-wide;
+  color: hsl(var(--muted-foreground));
+}
+
+.term-row {
+  @apply flex items-center justify-between mb-2;
+}
+
+.term {
+  @apply text-lg font-semibold;
+  color: hsl(var(--foreground));
+}
+
+.definition-row {
+  @apply flex items-start justify-between gap-2;
+}
+
+.definition {
+  @apply text-sm leading-relaxed m-0;
+  color: hsl(var(--muted-foreground));
+}
+
+.audio-btn {
+  @apply w-8 h-8 rounded-full border-none flex items-center justify-center cursor-pointer flex-shrink-0 transition-all;
+  background: hsl(var(--warning) / 0.15);
+  color: hsl(var(--warning));
+}
+
+.audio-btn:hover {
+  background: hsl(var(--warning) / 0.25);
+}
+
+.audio-btn.playing {
+  background: hsl(var(--warning));
+  color: hsl(var(--primary-foreground));
+}
+
+.play-all-btn {
+  @apply flex items-center justify-center gap-2 w-full py-3 border-none font-medium cursor-pointer transition-all;
+  background: hsl(var(--warning) / 0.1);
+  border-top: 1px solid hsl(var(--warning) / 0.2);
+  color: hsl(var(--warning));
+}
+
+.play-all-btn:hover {
+  background: hsl(var(--warning) / 0.2);
+}
+
+/* ============================
+   Differentiation Progress Modal
+   ============================ */
+
+.differentiation-progress {
+  @apply p-8;
+}
+
+.differentiation-progress h2 {
+  @apply text-center mb-8 font-display;
+}
+
+.progress-step {
+  @apply flex gap-4 p-4 mb-2 rounded-lg;
+  background: hsl(var(--muted) / 0.5);
+}
+
+.progress-step.generating {
+  background: hsl(var(--warning) / 0.1);
+  border: 1px solid hsl(var(--warning) / 0.3);
+}
+
+.progress-step.complete {
+  background: hsl(var(--success) / 0.1);
+}
+
+.step-icon {
+  @apply w-6 h-6 flex items-center justify-center;
+  color: hsl(var(--muted-foreground));
+}
+
+.progress-step.complete .step-icon {
+  color: hsl(var(--success));
+}
+
+.progress-step.generating .step-icon {
+  color: hsl(var(--warning));
+}
+
+.step-info {
+  @apply flex-1;
+}
+
+.step-title {
+  @apply font-medium block;
+}
+
+.step-detail {
+  @apply text-sm;
+  color: hsl(var(--muted-foreground));
+}
+
+.audio-progress-bar-modal {
+  @apply h-1 rounded mt-2 overflow-hidden;
+  background: hsl(var(--warning) / 0.3);
+}
+
+.audio-progress-fill {
+  @apply h-full;
+  background: hsl(var(--warning));
+  transition: width 0.3s ease;
+}
+
+.language-badges {
+  @apply flex gap-1 mt-2;
+}
+
+.lang-badge {
+  @apply text-xs px-2 py-0.5 rounded-full;
+  background: hsl(var(--info) / 0.15);
+  color: hsl(var(--info));
+}
+
+.completion-message {
+  @apply text-center p-8;
+}
+
+.success-icon {
+  @apply w-12 h-12 mx-auto mb-4;
+  color: hsl(var(--success));
+}
+
+.view-lesson-btn {
+  @apply px-8 py-3 border-none rounded-lg font-medium cursor-pointer mt-4;
+  background: hsl(var(--warning));
+  color: hsl(var(--primary-foreground));
+}
+
+.view-lesson-btn:hover {
+  background: hsl(var(--warning) / 0.9);
+}
+
+.warning-message {
+  @apply text-center p-4 rounded-lg;
+  background: hsl(var(--warning) / 0.1);
+}
+
+.warning-icon {
+  @apply w-8 h-8 mx-auto mb-2;
+  color: hsl(var(--warning));
+}
+
+.retry-btn {
+  @apply px-4 py-2 mt-2 border rounded-lg font-medium cursor-pointer;
+  background: transparent;
+  border-color: hsl(var(--warning));
+  color: hsl(var(--warning));
+}
+
+.retry-btn:hover {
+  background: hsl(var(--warning) / 0.1);
+}
+
+/* ============================
+   Bilingual Vocabulary Player (component)
    ============================ */
 
 .bilingual-vocabulary-player {
