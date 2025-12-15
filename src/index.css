@@ -234,3 +234,207 @@
 .animate-pulse-soft {
   animation: pulse-soft 2s ease-in-out infinite;
 }
+
+/* ============================
+   Audio Controls Styles
+   ============================ */
+
+/* Audio Section Container */
+.audio-section {
+  @apply border border-border rounded-xl overflow-hidden mb-6 bg-card;
+}
+
+.audio-section-header {
+  @apply flex items-center justify-between gap-4 p-4 bg-muted/50 border-b border-border flex-wrap;
+}
+
+.audio-section-title {
+  @apply flex items-center gap-2;
+}
+
+.audio-section-icon {
+  @apply text-lg;
+}
+
+.audio-section-title h3 {
+  @apply font-display font-semibold text-foreground m-0;
+}
+
+.audio-section-content {
+  @apply p-4 text-foreground leading-relaxed;
+}
+
+/* Audio Controls - Pill Style */
+.audio-controls {
+  @apply flex items-center gap-3 px-4 py-2 rounded-full border;
+  background: hsl(var(--warning) / 0.1);
+  border-color: hsl(var(--warning) / 0.3);
+}
+
+.audio-play-button {
+  @apply flex items-center gap-2 px-4 py-2 rounded-full border-none cursor-pointer font-medium transition-colors;
+  background: hsl(var(--warning));
+  color: hsl(var(--primary-foreground));
+}
+
+.audio-play-button:hover {
+  background: hsl(var(--warning) / 0.9);
+}
+
+.audio-play-button:focus {
+  @apply outline-none ring-2 ring-offset-2;
+  --tw-ring-color: hsl(var(--warning) / 0.5);
+}
+
+.audio-label {
+  @apply text-sm font-medium;
+}
+
+.audio-progress {
+  @apply flex-1 h-1 rounded-full overflow-hidden cursor-pointer min-w-[80px];
+  background: hsl(var(--warning) / 0.2);
+}
+
+.audio-progress-bar {
+  @apply h-full rounded-full transition-all duration-100;
+  background: hsl(var(--warning));
+}
+
+.audio-duration {
+  @apply text-sm tabular-nums;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Inline Audio Controls */
+.audio-controls-inline {
+  @apply inline-flex items-center gap-2;
+}
+
+.audio-controls-inline.audio-controls-sm {
+  @apply text-xs;
+}
+
+.audio-controls-inline.audio-controls-sm .audio-icon {
+  @apply h-3 w-3;
+}
+
+.audio-controls-inline.audio-controls-md {
+  @apply text-sm;
+}
+
+.audio-controls-inline.audio-controls-md .audio-icon {
+  @apply h-4 w-4;
+}
+
+.audio-controls-inline.audio-controls-lg {
+  @apply text-base;
+}
+
+.audio-controls-inline.audio-controls-lg .audio-icon {
+  @apply h-5 w-5;
+}
+
+/* Variants */
+.audio-controls-inline.audio-controls-default {
+  @apply px-3 py-1.5 rounded-full;
+  background: hsl(var(--warning) / 0.1);
+  border: 1px solid hsl(var(--warning) / 0.2);
+}
+
+.audio-controls-inline.audio-controls-pill {
+  @apply px-3 py-1.5 rounded-full;
+  background: hsl(var(--warning));
+  color: hsl(var(--primary-foreground));
+}
+
+.audio-controls-inline.audio-controls-minimal {
+  @apply p-0 bg-transparent border-none;
+}
+
+.audio-play-button-inline {
+  @apply flex items-center gap-1.5 cursor-pointer border-none bg-transparent p-0 transition-colors;
+  color: hsl(var(--warning));
+}
+
+.audio-controls-pill .audio-play-button-inline {
+  color: hsl(var(--primary-foreground));
+}
+
+.audio-play-button-inline:hover {
+  opacity: 0.8;
+}
+
+.audio-label-inline {
+  @apply font-medium;
+}
+
+.audio-progress-inline {
+  @apply w-16 h-1 rounded-full overflow-hidden;
+  background: hsl(var(--warning) / 0.3);
+}
+
+.audio-progress-bar-inline {
+  @apply h-full rounded-full;
+  background: hsl(var(--warning));
+  transition: width 0.1s linear;
+}
+
+.audio-time-inline {
+  @apply tabular-nums;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Playing state indicator */
+.audio-play-button.is-playing,
+.audio-play-button-inline.is-playing {
+  @apply animate-pulse-soft;
+}
+
+/* Accessibility: reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  .audio-progress-bar,
+  .audio-progress-bar-inline {
+    transition: none;
+  }
+  
+  .audio-play-button.is-playing,
+  .audio-play-button-inline.is-playing {
+    animation: none;
+  }
+}
+
+/* Audio indicator badge for lesson sections */
+.audio-badge {
+  @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  background: hsl(var(--warning) / 0.15);
+  color: hsl(var(--warning));
+}
+
+.audio-badge-icon {
+  @apply h-3 w-3;
+}
+
+/* Audio loading state */
+.audio-loading {
+  @apply animate-pulse;
+}
+
+/* Lesson audio wrapper in output */
+.lesson-audio-section {
+  @apply border rounded-xl p-4 my-4;
+  border-color: hsl(var(--accent) / 0.3);
+  background: hsl(var(--accent) / 0.05);
+}
+
+.lesson-audio-header {
+  @apply flex items-center gap-2 mb-3;
+}
+
+.lesson-audio-icon {
+  @apply h-5 w-5;
+  color: hsl(var(--accent));
+}
+
+.lesson-audio-title {
+  @apply font-display font-semibold text-foreground;
+}
