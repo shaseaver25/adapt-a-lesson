@@ -523,6 +523,63 @@ function buildGroupInstructions(group: StudentGroup, options: DifferentiationOpt
 
   instructions += levelGuidance;
 
+  // Enrichment Extension accommodation - comprehensive advanced content
+  if (group.accommodations.includes('Enrichment Extension')) {
+    instructions += `
+
+🚀 ENRICHMENT EXTENSION REQUIRED:
+Include a dedicated "ENRICHMENT EXTENSION" section in the student handout with ALL of the following:
+
+1. **ADVANCED APPLICATION QUESTIONS** (2-3 questions)
+   - Questions that require applying concepts to new, complex scenarios
+   - Open-ended questions with no single correct answer
+   - Example: "How might this concept apply in a different historical context?"
+
+2. **REAL-WORLD CONNECTION CHALLENGE**
+   - A scenario or problem connecting the lesson to current events or real-world applications
+   - Encourage students to research or investigate independently
+   - Example: "Research a modern example of this concept and prepare a 2-minute presentation"
+
+3. **INDEPENDENT RESEARCH PROMPT**
+   - A question or topic for deeper investigation beyond the lesson
+   - Include suggested resources or starting points
+   - Example: "Investigate [related advanced topic]. Create a one-page summary of your findings."
+
+4. **CROSS-CURRICULAR CONNECTIONS** (2-3 connections)
+   - Links to other subject areas (math, science, social studies, art, etc.)
+   - Example: "How does this connect to what you're learning in [other subject]?"
+
+5. **TEACH-BACK OPPORTUNITY**
+   - A structured way for advanced students to help peers understand content
+   - Example: "Create a mini-lesson or study guide to help a classmate understand [key concept]"
+   - Include guidelines for peer tutoring
+
+6. **EXTENSION PROJECT OPTIONS** (Choose 1)
+   - Creative project: Design, build, or create something related to the content
+   - Research project: Deep dive into a related topic
+   - Leadership project: Organize a group activity or presentation
+   - Innovation project: Propose a solution to a problem related to the content
+
+FORMAT for Enrichment Section:
+┌─────────────────────────────────────────────────────────────┐
+│  🚀 ENRICHMENT EXTENSION - Go Beyond!                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  [Advanced Application Questions]                           │
+│                                                             │
+│  [Real-World Connection Challenge]                          │
+│                                                             │
+│  [Independent Research Prompt]                              │
+│                                                             │
+│  [Cross-Curricular Connections]                             │
+│                                                             │
+│  [Teach-Back Opportunity]                                   │
+│                                                             │
+│  [Extension Project Options]                                │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘`;
+  }
+
   // Multilingual output support
   if (group.homeLanguage !== "English") {
     const translations = getLanguageTranslations(group.homeLanguage);
