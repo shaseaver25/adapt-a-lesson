@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon, Save, Loader2, Headphones } from 'lucide-react';
+import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon, Save, Loader2, Headphones, QrCode, Printer } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentGroup } from '@/types/studentGroup';
@@ -25,6 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
 import { LessonAudioPlayer } from '@/components/LessonAudioPlayer';
 import { analyzeAudioNeeds, anyGroupNeedsAudio } from '@/types/audioRequirements';
+import { PrintableAudioQR } from '@/components/PrintableAudioQR';
 
 interface DifferentiatedLessonOutputProps {
   content: string;
@@ -42,6 +43,8 @@ export function DifferentiatedLessonOutput({
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showPrintQR, setShowPrintQR] = useState(false);
+  const [generatedAudioUrls, setGeneratedAudioUrls] = useState<Record<string, string>>({});
   const { toast } = useToast();
   const { options } = useDifferentiation();
 
@@ -484,26 +487,94 @@ export function DifferentiatedLessonOutput({
       {anyGroupNeedsAudio(selectedGroups) && (
         <Card className="border-accent/20 bg-gradient-to-r from-accent/5 to-transparent">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Headphones className="h-5 w-5 text-accent" />
-              Audio Support
-              <span className="text-sm font-normal text-muted-foreground ml-2">
-                (for Read Aloud accommodations & multilingual students)
-              </span>
-            </CardTitle>
+            <div className="flex items-start justify-between flex-wrap gap-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Headphones className="h-5 w-5 text-accent" />
+                Audio Support
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  (for Read Aloud accommodations & multilingual students)
+                </span>
+              </CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowPrintQR(!showPrintQR)}
+                className="gap-2"
+              >
+                <QrCode className="h-4 w-4" />
+                {showPrintQR ? 'Hide' : 'Show'} Print QR Codes
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            {selectedGroups
-              .filter(group => analyzeAudioNeeds(group).needsAudio)
-              .map(group => (
-                <LessonAudioPlayer
-                  key={group.id}
-                  group={group}
-                  lessonContent={content}
-                  groupContent={extractGroupContent(group.groupName)}
-                />
-              ))
-            }
+          <CardContent className="space-y-6">
+            {/* Audio Players */}
+            <div className="grid gap-4 md:grid-cols-2">
+              {selectedGroups
+                .filter(group => analyzeAudioNeeds(group).needsAudio)
+                .map(group => (
+                  <LessonAudioPlayer
+                    key={group.id}
+                    group={group}
+                    lessonContent={content}
+                    groupContent={extractGroupContent(group.groupName)}
+                    onAudioGenerated={(url) => {
+                      setGeneratedAudioUrls(prev => ({
+                        ...prev,
+                        [group.id]: url
+                      }));
+                    }}
+                  />
+                ))
+              }
+            </div>
+            
+            {/* Printable QR Codes Section */}
+            {showPrintQR && Object.keys(generatedAudioUrls).length > 0 && (
+              <div className="border-t pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-semibold flex items-center gap-2">
+                    <Printer className="h-4 w-4" />
+                    QR Codes for Printed Handouts
+                  </h4>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => window.print()}
+                    className="gap-2 print:hidden"
+                  >
+                    <Printer className="h-4 w-4" />
+                    Print QR Codes
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Add these QR codes to printed student handouts. Students can scan to access audio.
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {selectedGroups
+                    .filter(group => generatedAudioUrls[group.id])
+                    .map(group => {
+                      const audioNeeds = analyzeAudioNeeds(group);
+                      return (
+                        <PrintableAudioQR
+                          key={group.id}
+                          sectionType={`${group.groupName} - Content`}
+                          audioUrl={generatedAudioUrls[group.id]}
+                          language={group.homeLanguage}
+                          size="md"
+                        />
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+            
+            {showPrintQR && Object.keys(generatedAudioUrls).length === 0 && (
+              <div className="border-t pt-6">
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Generate audio for student groups above to see QR codes for printing.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
