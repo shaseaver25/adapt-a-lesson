@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { DifferentiateForm, DifferentiateInput } from '@/components/DifferentiateForm';
 import { DifferentiatedLessonOutput } from '@/components/DifferentiatedLessonOutput';
@@ -15,6 +15,8 @@ import { Sparkles, BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpe
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
+import { DifferentiationProgress, GenerationStatus, createInitialStatus } from '@/components/DifferentiationProgress';
+
 const Index = () => {
   const [searchParams] = useSearchParams();
   const { setCachedLessonContent, clearSelection } = useDifferentiation();
@@ -30,6 +32,9 @@ const Index = () => {
   const [selectedGroups, setSelectedGroups] = useState<(StudentGroup & { id: string })[]>([]);
   const [originalLessonContent, setOriginalLessonContent] = useState<string>('');
   const [isDifferentiating, setIsDifferentiating] = useState(false);
+  const [progressStatus, setProgressStatus] = useState<GenerationStatus>(createInitialStatus());
+  const [lastDifferentiateInput, setLastDifferentiateInput] = useState<DifferentiateInput | null>(null);
+  const [differentiateError, setDifferentiateError] = useState<string | null>(null);
 
   // Assessment state
   const [generatedAssessment, setGeneratedAssessment] = useState<string | null>(null);
@@ -42,38 +47,111 @@ const Index = () => {
   const [isGeneratingRubric, setIsGeneratingRubric] = useState(false);
   const [rubricAutoVerification, setRubricAutoVerification] = useState<{ added: boolean; count: number } | null>(null);
 
-  const handleDifferentiate = async (input: DifferentiateInput) => {
+  // Abort controller for cancellation
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const handleDifferentiate = async (input: DifferentiateInput, isRetry = false) => {
     setIsDifferentiating(true);
+    setDifferentiateError(null);
     setSelectedGroups(input.selectedGroups);
     setOriginalLessonContent(input.lessonContent);
+    setLastDifferentiateInput(input);
+
+    // Reset and start progress
+    const status = createInitialStatus();
+    status.analyzing = true;
+    status.needsAudio = input.selectedGroups.some(g => 
+      g.accommodations?.includes('Read Aloud') || g.homeLanguage !== 'English'
+    );
+    status.audioGroups = input.selectedGroups.filter(g => 
+      g.accommodations?.includes('Read Aloud') || g.homeLanguage !== 'English'
+    ).length;
+    setProgressStatus(status);
+
+    // Simulate progress updates
+    const progressTimer = setTimeout(() => {
+      setProgressStatus(prev => ({ ...prev, analyzing: false, analyzingDone: true, contentGenerating: true }));
+    }, 3000);
 
     try {
-      const { data, error } = await supabase.functions.invoke('differentiate-lesson', {
-        body: {
-          lessonContent: input.lessonContent,
-          selectedGroups: input.selectedGroups,
-          options: input.options,
-        },
-      });
+      // Create abort controller for timeout
+      abortControllerRef.current = new AbortController();
+      
+      // Use fetch directly with extended timeout (5 minutes)
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/differentiate-lesson`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            lessonContent: input.lessonContent,
+            selectedGroups: input.selectedGroups,
+            options: input.options,
+          }),
+          signal: abortControllerRef.current.signal,
+        }
+      );
 
-      if (error) {
-        throw error;
+      clearTimeout(progressTimer);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Request failed with status ${response.status}`);
       }
+
+      const data = await response.json();
 
       if (data.error) {
         throw new Error(data.error);
       }
 
+      // Update progress to complete
+      setProgressStatus(prev => ({
+        ...prev,
+        analyzing: false,
+        analyzingDone: true,
+        contentGenerating: false,
+        contentDone: true,
+        audioGenerating: false,
+        audioDone: prev.needsAudio,
+        preparingDownloads: false,
+        complete: true,
+      }));
+
       setDifferentiatedLesson(data.differentiatedLesson);
     } catch (error) {
+      clearTimeout(progressTimer);
       console.error('Error differentiating lesson:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Please try again later.';
+      const isTimeout = errorMessage.includes('abort') || errorMessage.includes('timeout') || errorMessage.includes('connection');
+      
+      setDifferentiateError(isTimeout 
+        ? 'The request took too long. This can happen with long lessons or many student groups. Click "Retry" to try again.'
+        : errorMessage
+      );
+      
       toast({
-        title: 'Error differentiating lesson',
-        description: error instanceof Error ? error.message : 'Please try again later.',
+        title: isTimeout ? 'Request timed out' : 'Error differentiating lesson',
+        description: isTimeout 
+          ? 'Large lessons may take longer to process. Try again or reduce the number of groups.'
+          : errorMessage,
         variant: 'destructive',
       });
     } finally {
       setIsDifferentiating(false);
+      setProgressStatus(createInitialStatus());
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleRetryDifferentiate = () => {
+    if (lastDifferentiateInput) {
+      handleDifferentiate(lastDifferentiateInput, true);
     }
   };
 
@@ -259,7 +337,12 @@ const Index = () => {
 
               <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-medium">
                 <TabsContent value="differentiate" className="mt-0">
-                  <DifferentiateForm onSubmit={handleDifferentiate} isLoading={isDifferentiating} />
+                  <DifferentiateForm 
+                    onSubmit={handleDifferentiate} 
+                    isLoading={isDifferentiating}
+                    error={differentiateError}
+                    onRetry={handleRetryDifferentiate}
+                  />
                 </TabsContent>
 
                 <TabsContent value="assessment" className="mt-0">
