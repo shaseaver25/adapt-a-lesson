@@ -246,11 +246,66 @@ Format as a markdown table with clear descriptions for each cell.${hasAutoVerifi
     }
 
     const data = await response.json();
-    const rubric = data.choices?.[0]?.message?.content;
+    let rubric = data.choices?.[0]?.message?.content;
 
     if (!rubric) {
       throw new Error("No rubric generated");
     }
+
+    // Append the Authenticity Verification Guide for teacher use
+    const verificationGuide = `
+
+---
+
+## 🛡️ AUTHENTICITY VERIFICATION GUIDE
+**(For Teacher Use - Do Not Distribute to Students)**
+
+---
+
+This rubric includes AI-proof verification elements. Use these checkpoints to ensure authentic student work:
+
+### BEFORE GRADING - Collect These Artifacts:
+- [ ] Process documentation (research log, drafts, version history)
+- [ ] Primary research evidence (recordings, transcripts, raw survey data)
+- [ ] Photographic evidence of real-world engagement (if applicable)
+
+### DURING/AFTER GRADING - Verification Questions:
+Ask 2-3 of these questions to verify authentic engagement:
+
+**For Research-Based Work:**
+- "Tell me more about what [source/interviewee] said about [specific detail]."
+- "How did you find [specific source]? What search led you there?"
+- "What did [interviewee] say that surprised you most?"
+
+**For Personal/Reflective Work:**
+- "Walk me through what happened on [date mentioned in reflection]."
+- "You mentioned [specific challenge]—what did you try first?"
+- "What almost made you change your topic/approach?"
+
+**For Solution/Proposal Work:**
+- "If [stakeholder] said no to this, what would you try next?"
+- "What's the weakest part of your proposal? How would you fix it?"
+- "Who pushed back on your idea when you shared it? What did they say?"
+
+### ⚠️ RED FLAGS - Signs of Potential AI Generation:
+- Cannot answer basic questions about own work
+- Written work contains specific details student can't explain
+- No process documentation or documentation doesn't match final work
+- "Personal" experiences are vague or generic
+- Local details are surface-level or easily searchable
+- Writing style inconsistent with student's previous work
+- Perfect grammar/structure unusual for this student
+
+### IF RED FLAGS APPEAR:
+1. Ask more specific follow-up questions
+2. Request additional process documentation
+3. Compare to student's previous work samples
+4. Consider requiring revision with documented process
+
+---
+`;
+
+    rubric = rubric + verificationGuide;
 
     console.log("Rubric generated successfully", {
       autoVerificationCriteriaAdded: autoVerificationCriteria.length
