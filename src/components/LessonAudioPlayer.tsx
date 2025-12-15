@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { 
   Play, 
   Pause, 
@@ -16,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { StudentGroup } from '@/types/studentGroup';
 import { analyzeAudioNeeds, AudioRequirements } from '@/types/audioRequirements';
 import { getStudentFriendlyName, getStudentFriendlyIcon } from '@/lib/readingLevelNames';
+import { cn } from '@/lib/utils';
 
 interface LessonAudioPlayerProps {
   group: StudentGroup & { id: string };
@@ -33,12 +33,14 @@ export function LessonAudioPlayer({
   const [isMuted, setIsMuted] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [characterCount, setCharacterCount] = useState(0);
   const [estimatedCost, setEstimatedCost] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const audioRequirements = analyzeAudioNeeds(group);
@@ -63,7 +65,6 @@ export function LessonAudioPlayer({
     setError(null);
 
     try {
-      // Extract key content for audio (learning targets, instructions, vocabulary)
       const audioText = extractAudioContent(groupContent, group.homeLanguage);
 
       if (!audioText || audioText.length < 20) {
@@ -94,7 +95,6 @@ export function LessonAudioPlayer({
         throw new Error(errorData.error || `Failed to generate audio: ${response.status}`);
       }
 
-      // Get metadata from headers
       const audioDuration = parseFloat(response.headers.get('X-Audio-Duration') || '0');
       const chars = parseInt(response.headers.get('X-Characters-Used') || '0');
       const cost = parseFloat(response.headers.get('X-Estimated-Cost') || '0');
@@ -110,7 +110,6 @@ export function LessonAudioPlayer({
       const url = URL.createObjectURL(blob);
       setAudioUrl(url);
 
-      // Create and set up audio element
       if (audioRef.current) {
         audioRef.current.src = url;
         await audioRef.current.play();
@@ -160,17 +159,33 @@ export function LessonAudioPlayer({
 
   const handleTimeUpdate = () => {
     if (audioRef.current) {
-      const { currentTime, duration: audioDuration } = audioRef.current;
-      if (audioDuration > 0) {
-        setProgress((currentTime / audioDuration) * 100);
-        setDuration(audioDuration);
+      const { currentTime: time, duration: dur } = audioRef.current;
+      if (dur > 0) {
+        setProgress((time / dur) * 100);
+        setDuration(dur);
+        setCurrentTime(time);
       }
     }
+  };
+
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current || !progressRef.current) return;
+    
+    const rect = progressRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const percentage = clickX / width;
+    const newTime = percentage * audioRef.current.duration;
+    
+    audioRef.current.currentTime = newTime;
+    setProgress(percentage * 100);
+    setCurrentTime(newTime);
   };
 
   const handleEnded = () => {
     setIsPlaying(false);
     setProgress(0);
+    setCurrentTime(0);
   };
 
   const handleDownload = () => {
@@ -203,134 +218,123 @@ export function LessonAudioPlayer({
   };
 
   return (
-    <Card className="border-accent/30 bg-accent/5">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Headphones className="h-4 w-4 text-accent" />
-          <span>{getStudentFriendlyIcon(group.readingLevelLabel)} {getStudentFriendlyName(group.readingLevelLabel)} Audio</span>
-          <span className="text-xs text-muted-foreground font-normal ml-auto">
-            {getAudioTypeLabel(audioRequirements)}
+    <div className="lesson-audio-section">
+      <div className="lesson-audio-header">
+        <Headphones className="lesson-audio-icon" />
+        <span className="lesson-audio-title">
+          {getStudentFriendlyIcon(group.readingLevelLabel)} {getStudentFriendlyName(group.readingLevelLabel)}
+        </span>
+        <span className="audio-badge ml-auto">
+          <Volume2 className="audio-badge-icon" />
+          {getAudioTypeLabel(audioRequirements)}
+        </span>
+      </div>
+      
+      <audio
+        ref={audioRef}
+        onTimeUpdate={handleTimeUpdate}
+        onEnded={handleEnded}
+        onLoadedMetadata={() => {
+          if (audioRef.current) {
+            setDuration(audioRef.current.duration);
+          }
+        }}
+      />
+
+      {/* Audio Controls */}
+      <div className={cn("audio-controls", isLoading && "audio-loading")}>
+        <button 
+          onClick={togglePlay}
+          disabled={isLoading}
+          className={cn("audio-play-button", isPlaying && "is-playing")}
+          aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
+        >
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : isPlaying ? (
+            <Pause className="h-4 w-4" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
+          <span className="audio-label">
+            {isLoading ? 'Generating...' : isPlaying ? 'Pause' : audioUrl ? 'Play' : 'Listen'}
           </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <audio
-          ref={audioRef}
-          onTimeUpdate={handleTimeUpdate}
-          onEnded={handleEnded}
-          onLoadedMetadata={() => {
-            if (audioRef.current) {
-              setDuration(audioRef.current.duration);
-            }
-          }}
-        />
-
-        {/* Progress bar */}
+        </button>
+        
         {audioUrl && (
-          <div className="space-y-1">
-            <Progress value={progress} className="h-2" />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{formatTime((progress / 100) * duration)}</span>
-              <span>{formatTime(duration)}</span>
+          <>
+            <div 
+              ref={progressRef}
+              className="audio-progress"
+              onClick={handleProgressClick}
+              role="slider"
+              aria-label="Audio progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progress}
+              tabIndex={0}
+            >
+              <div 
+                className="audio-progress-bar" 
+                style={{ width: `${progress}%` }} 
+              />
             </div>
-          </div>
+            
+            <span className="audio-duration">
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </span>
+            
+            <button
+              onClick={toggleMute}
+              className="audio-play-button-inline"
+              aria-label={isMuted ? 'Unmute' : 'Mute'}
+            >
+              {isMuted ? (
+                <VolumeX className="h-4 w-4" />
+              ) : (
+                <Volume2 className="h-4 w-4" />
+              )}
+            </button>
+            
+            <button
+              onClick={handleDownload}
+              className="audio-play-button-inline"
+              aria-label="Download audio"
+            >
+              <Download className="h-4 w-4" />
+            </button>
+          </>
         )}
-
-        {/* Controls */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant={audioUrl ? 'default' : 'outline'}
-            size="sm"
-            onClick={togglePlay}
+        
+        {audioUrl && (
+          <button
+            onClick={generateAudio}
             disabled={isLoading}
-            className="gap-2"
+            className="audio-play-button-inline"
+            aria-label="Regenerate audio"
           >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : isPlaying ? (
-              <>
-                <Pause className="h-4 w-4" />
-                Pause
-              </>
-            ) : audioUrl ? (
-              <>
-                <Play className="h-4 w-4" />
-                Play
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4" />
-                Generate Audio
-              </>
-            )}
-          </Button>
-
-          {audioUrl && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleMute}
-              >
-                {isMuted ? (
-                  <VolumeX className="h-4 w-4" />
-                ) : (
-                  <Volume2 className="h-4 w-4" />
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={generateAudio}
-                disabled={isLoading}
-                title="Regenerate audio"
-              >
-                <RefreshCcw className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDownload}
-                title="Download audio"
-              >
-                <Download className="h-4 w-4" />
-              </Button>
-            </>
-          )}
-        </div>
-
-        {/* Error display */}
-        {error && (
-          <p className="text-xs text-destructive">{error}</p>
+            <RefreshCcw className="h-4 w-4" />
+          </button>
         )}
+      </div>
 
-        {/* Info text */}
-        <div className="text-xs text-muted-foreground space-y-1">
-          <p>
-            {audioRequirements.audioType === 'both' 
-              ? `Audio support for Read Aloud accommodation in ${group.homeLanguage}`
-              : audioRequirements.audioType === 'multilingual'
-              ? `Audio generated in ${group.homeLanguage} for native language support`
-              : 'Audio support for Read Aloud accommodation'
-            }
-          </p>
-          {characterCount > 0 && (
-            <p className="text-muted-foreground/60">
-              {characterCount.toLocaleString()} characters • ~${estimatedCost.toFixed(4)} estimated
-            </p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      {/* Error display */}
+      {error && (
+        <p className="text-xs text-destructive mt-2">{error}</p>
+      )}
+
+      {/* Usage info */}
+      {characterCount > 0 && (
+        <p className="text-xs text-muted-foreground mt-2">
+          {characterCount.toLocaleString()} characters • ~${estimatedCost.toFixed(4)} estimated
+        </p>
+      )}
+    </div>
   );
 }
 
 /**
  * Extract key content for audio generation
- * Prioritizes learning targets, instructions, and vocabulary
  */
 function extractAudioContent(content: string, language: string): string {
   const lines = content.split('\n');
@@ -338,7 +342,6 @@ function extractAudioContent(content: string, language: string): string {
   let currentSection = '';
   let inImportantSection = false;
 
-  // Keywords that indicate important sections to read aloud
   const importantKeywords = [
     'learning target', 'objetivo', 'meta',
     'instructions', 'instrucciones',
@@ -350,7 +353,6 @@ function extractAudioContent(content: string, language: string): string {
   for (const line of lines) {
     const lowerLine = line.toLowerCase();
     
-    // Check if entering an important section
     if (importantKeywords.some(kw => lowerLine.includes(kw))) {
       if (currentSection) {
         sections.push(currentSection.trim());
@@ -358,7 +360,6 @@ function extractAudioContent(content: string, language: string): string {
       currentSection = line;
       inImportantSection = true;
     } else if (inImportantSection) {
-      // Check if we're leaving the section (new major heading)
       if (line.startsWith('##') || line.startsWith('---')) {
         sections.push(currentSection.trim());
         currentSection = '';
@@ -369,17 +370,14 @@ function extractAudioContent(content: string, language: string): string {
     }
   }
 
-  // Add any remaining section
   if (currentSection) {
     sections.push(currentSection.trim());
   }
 
-  // If no specific sections found, use first 2000 chars of content
   if (sections.length === 0) {
     return cleanTextForTTS(content.slice(0, 2000));
   }
 
-  // Join sections and clean for TTS (limit to ~3000 chars for cost management)
   const combinedText = sections.join('\n\n');
   return cleanTextForTTS(combinedText.slice(0, 3000));
 }
@@ -389,23 +387,17 @@ function extractAudioContent(content: string, language: string): string {
  */
 function cleanTextForTTS(text: string): string {
   return text
-    // Remove markdown formatting
     .replace(/#{1,6}\s*/g, '')
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/\*(.+?)\*/g, '$1')
     .replace(/_(.+?)_/g, '$1')
     .replace(/`(.+?)`/g, '$1')
-    // Remove bullet points and convert to spoken format
     .replace(/^[-*•]\s*/gm, '')
     .replace(/^\d+\.\s*/gm, '')
-    // Remove checkboxes
     .replace(/\[[ x]\]/gi, '')
-    // Remove table formatting
     .replace(/\|/g, '')
     .replace(/-{3,}/g, '')
-    // Remove special characters
     .replace(/[📚🎯✨🔥✅☐]/g, '')
-    // Clean up whitespace
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
