@@ -8,12 +8,19 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap } from 'lucide-react';
+import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentGroup } from '@/types/studentGroup';
+import {
+  exportAsDocx,
+  exportAsSeparateDocx,
+  exportTeacherGuideDocx,
+  exportStudentHandoutsDocx,
+} from '@/lib/documentExport';
 
 interface DifferentiatedLessonOutputProps {
   content: string;
@@ -157,6 +164,74 @@ export function DifferentiatedLessonOutput({ content, selectedGroups, lessonTitl
     });
   };
 
+  // DOCX export handlers
+  const handleExportDocx = async () => {
+    try {
+      const groups = selectedGroups.map((g) => ({
+        id: g.id,
+        groupName: g.groupName,
+        readingLevelLabel: g.readingLevelLabel,
+      }));
+      await exportAsDocx(content, lessonTitle, groups);
+      toast({ title: 'Downloaded', description: 'Word document (.docx) created' });
+    } catch (error) {
+      toast({ 
+        title: 'Export failed', 
+        description: 'Could not generate Word document',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleExportSeparateDocx = async () => {
+    try {
+      const groups = selectedGroups.map((g) => ({
+        id: g.id,
+        groupName: g.groupName,
+        readingLevelLabel: g.readingLevelLabel,
+      }));
+      await exportAsSeparateDocx(content, lessonTitle, groups);
+      toast({ title: 'Downloaded', description: 'ZIP file with separate Word documents created' });
+    } catch (error) {
+      toast({ 
+        title: 'Export failed', 
+        description: 'Could not generate separate Word documents',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleExportTeacherDocx = async () => {
+    try {
+      await exportTeacherGuideDocx(content, lessonTitle);
+      toast({ title: 'Downloaded', description: 'Teacher Guide Word document created' });
+    } catch (error) {
+      toast({ 
+        title: 'Export failed', 
+        description: 'Could not generate Teacher Guide document',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleExportStudentDocx = async () => {
+    try {
+      const groups = selectedGroups.map((g) => ({
+        id: g.id,
+        groupName: g.groupName,
+        readingLevelLabel: g.readingLevelLabel,
+      }));
+      await exportStudentHandoutsDocx(content, lessonTitle, groups);
+      toast({ title: 'Downloaded', description: 'Student Handouts Word document created' });
+    } catch (error) {
+      toast({ 
+        title: 'Export failed', 
+        description: 'Could not generate Student Handouts document',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const handleCopyGroupSection = async (groupName: string) => {
     const lines = content.split('\n');
     let inGroup = false;
@@ -208,37 +283,67 @@ export function DifferentiatedLessonOutput({ content, selectedGroups, lessonTitl
                     <ChevronDown className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64">
-                  <DropdownMenuItem onClick={handleDownloadTeacherGuide} className="gap-2">
+                <DropdownMenuContent align="end" className="w-72">
+                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                    Word Documents (.docx)
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem onClick={handleExportDocx} className="gap-2">
+                    <FileIcon className="h-4 w-4" />
+                    <div>
+                      <p className="font-medium">Combined Word Document</p>
+                      <p className="text-xs text-muted-foreground">All groups with page breaks</p>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportSeparateDocx} className="gap-2">
+                    <FolderArchive className="h-4 w-4" />
+                    <div>
+                      <p className="font-medium">Separate Word Documents</p>
+                      <p className="text-xs text-muted-foreground">ZIP with individual files per group</p>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportTeacherDocx} className="gap-2">
                     <GraduationCap className="h-4 w-4" />
                     <div>
-                      <p className="font-medium">Teacher Guide Only</p>
+                      <p className="font-medium">Teacher Guide (.docx)</p>
                       <p className="text-xs text-muted-foreground">Pacing, strategies, assessment tips</p>
                     </div>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDownloadStudentHandouts} className="gap-2">
+                  <DropdownMenuItem onClick={handleExportStudentDocx} className="gap-2">
                     <BookOpen className="h-4 w-4" />
                     <div>
-                      <p className="font-medium">Student Handouts Only</p>
+                      <p className="font-medium">Student Handouts (.docx)</p>
                       <p className="text-xs text-muted-foreground">Print-ready for distribution</p>
                     </div>
                   </DropdownMenuItem>
+                  
                   <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                    Markdown Files
+                  </DropdownMenuLabel>
                   <DropdownMenuItem onClick={handleDownloadMarkdown} className="gap-2">
                     <FileText className="h-4 w-4" />
                     <div>
-                      <p className="font-medium">Complete File</p>
+                      <p className="font-medium">Complete Markdown</p>
                       <p className="text-xs text-muted-foreground">Teacher guide + all handouts</p>
                     </div>
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDownloadTeacherGuide} className="gap-2">
+                    <GraduationCap className="h-4 w-4" />
+                    <span>Teacher Guide (.md)</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDownloadStudentHandouts} className="gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    <span>Student Handouts (.md)</span>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleDownloadSeparateFiles} className="gap-2">
                     <FolderArchive className="h-4 w-4" />
-                    <div>
-                      <p className="font-medium">Separate Handouts</p>
-                      <p className="text-xs text-muted-foreground">One file per student group</p>
-                    </div>
+                    <span>Separate Markdown Files</span>
                   </DropdownMenuItem>
+                  
                   <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                    Copy to Clipboard
+                  </DropdownMenuLabel>
                   {selectedGroups.map((group) => (
                     <DropdownMenuItem 
                       key={group.id} 
