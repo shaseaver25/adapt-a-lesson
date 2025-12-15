@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Copy, Download, Check, Users, ChevronDown, FileText, FolderArchive, Clipboard } from 'lucide-react';
+import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentGroup } from '@/types/studentGroup';
@@ -42,7 +42,55 @@ export function DifferentiatedLessonOutput({ content, selectedGroups, lessonTitl
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast({ title: 'Downloaded', description: 'Single markdown file with all groups' });
+    toast({ title: 'Downloaded', description: 'Complete lesson plan file' });
+  };
+
+  const extractSection = (sectionMarker: string, endMarker?: string): string => {
+    const lines = content.split('\n');
+    let inSection = false;
+    let sectionContent: string[] = [];
+    
+    for (const line of lines) {
+      if (line.includes(sectionMarker)) {
+        inSection = true;
+        sectionContent.push(line);
+      } else if (inSection) {
+        if (endMarker && line.includes(endMarker)) {
+          break;
+        }
+        sectionContent.push(line);
+      }
+    }
+    
+    return sectionContent.join('\n');
+  };
+
+  const handleDownloadTeacherGuide = () => {
+    const teacherContent = extractSection('TEACHER GUIDE', 'STUDENT HANDOUTS');
+    const blob = new Blob([teacherContent || content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${lessonTitle.replace(/\s+/g, '-').toLowerCase()}-teacher-guide.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: 'Downloaded', description: 'Teacher Guide file' });
+  };
+
+  const handleDownloadStudentHandouts = () => {
+    const studentContent = extractSection('STUDENT HANDOUTS', 'Cross-Group Teaching Notes');
+    const blob = new Blob([studentContent || content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${lessonTitle.replace(/\s+/g, '-').toLowerCase()}-student-handouts.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: 'Downloaded', description: 'Student Handouts file' });
   };
 
   const handleDownloadSeparateFiles = async () => {
@@ -160,18 +208,33 @@ export function DifferentiatedLessonOutput({ content, selectedGroups, lessonTitl
                     <ChevronDown className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuItem onClick={handleDownloadTeacherGuide} className="gap-2">
+                    <GraduationCap className="h-4 w-4" />
+                    <div>
+                      <p className="font-medium">Teacher Guide Only</p>
+                      <p className="text-xs text-muted-foreground">Pacing, strategies, assessment tips</p>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDownloadStudentHandouts} className="gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    <div>
+                      <p className="font-medium">Student Handouts Only</p>
+                      <p className="text-xs text-muted-foreground">Print-ready for distribution</p>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleDownloadMarkdown} className="gap-2">
                     <FileText className="h-4 w-4" />
                     <div>
-                      <p className="font-medium">Single File</p>
-                      <p className="text-xs text-muted-foreground">All groups in one markdown file</p>
+                      <p className="font-medium">Complete File</p>
+                      <p className="text-xs text-muted-foreground">Teacher guide + all handouts</p>
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleDownloadSeparateFiles} className="gap-2">
                     <FolderArchive className="h-4 w-4" />
                     <div>
-                      <p className="font-medium">Separate Files</p>
+                      <p className="font-medium">Separate Handouts</p>
                       <p className="text-xs text-muted-foreground">One file per student group</p>
                     </div>
                   </DropdownMenuItem>
