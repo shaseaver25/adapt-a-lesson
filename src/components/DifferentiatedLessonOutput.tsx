@@ -51,6 +51,24 @@ interface PreGeneratedAudioRecord {
   created_at: string;
 }
 
+interface PreGeneratedVocabularyAudioRecord {
+  id: string;
+  lesson_id: string;
+  group_id: string;
+  group_name: string;
+  vocab_id: string;
+  term: string;
+  definition: string | null;
+  english_term_audio_url: string | null;
+  english_definition_audio_url: string | null;
+  home_language: string;
+  translated_term: string | null;
+  translated_definition: string | null;
+  home_language_term_audio_url: string | null;
+  home_language_definition_audio_url: string | null;
+  created_at: string;
+}
+
 interface DifferentiatedLessonOutputProps {
   content: string;
   selectedGroups: (StudentGroup & { id: string })[];
@@ -59,6 +77,7 @@ interface DifferentiatedLessonOutputProps {
   onSaved?: () => void;
   lessonId?: string | null;
   preGeneratedAudio?: PreGeneratedAudioRecord[];
+  preGeneratedVocabularyAudio?: PreGeneratedVocabularyAudioRecord[];
   isGeneratingAudio?: boolean;
 }
 
@@ -70,6 +89,7 @@ export function DifferentiatedLessonOutput({
   onSaved,
   lessonId,
   preGeneratedAudio = [],
+  preGeneratedVocabularyAudio = [],
   isGeneratingAudio = false
 }: DifferentiatedLessonOutputProps) {
   const [copied, setCopied] = useState(false);

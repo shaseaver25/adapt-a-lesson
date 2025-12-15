@@ -53,7 +53,15 @@ const Index = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Audio generation hook
-  const { isGenerating: isGeneratingAudio, progress: audioProgress, audioRecords, generateAudio, fetchLessonAudio } = useLessonAudio();
+  const { 
+    isGenerating: isGeneratingAudio, 
+    progress: audioProgress, 
+    audioRecords, 
+    vocabularyAudio,
+    generateAudio, 
+    fetchLessonAudio,
+    fetchVocabularyAudio 
+  } = useLessonAudio();
 
   // Track if lesson has been saved
   const [isLessonSaved, setIsLessonSaved] = useState(false);
@@ -496,6 +504,7 @@ const Index = () => {
               onSaved={handleLessonSaved}
               lessonId={currentLessonId}
               preGeneratedAudio={audioRecords}
+              preGeneratedVocabularyAudio={vocabularyAudio}
               isGeneratingAudio={isGeneratingAudio}
             />
           </div>
