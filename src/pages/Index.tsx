@@ -224,7 +224,13 @@ const Index = () => {
             <Link to="/saved-lessons">
               <Button variant="ghost" size="sm" className="gap-2">
                 <FolderOpen className="h-4 w-4" />
-                <span className="hidden sm:inline">My Lessons</span>
+                <span className="hidden sm:inline">Lessons</span>
+              </Button>
+            </Link>
+            <Link to="/saved-rubrics">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <TableProperties className="h-4 w-4" />
+                <span className="hidden sm:inline">Rubrics</span>
               </Button>
             </Link>
             <Link to="/student-groups">
