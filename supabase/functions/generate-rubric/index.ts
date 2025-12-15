@@ -64,61 +64,75 @@ const VERIFICATION_CRITERIA_TEMPLATES = {
 | During live Q&A, student demonstrates complete ownership: answers all spontaneous questions with specific details not in written work; elaborates naturally without hesitation; makes connections between different parts of their project; discusses dead-ends and pivots in their process; shows emotional investment in topic. | Student demonstrates solid ownership: answers most questions with reasonable detail; can elaborate on main points; shows familiarity with sources and process; minor hesitation on edge questions is natural. | Student demonstrates partial ownership: answers basic questions but struggles with specifics; relies heavily on re-reading from written work; cannot elaborate beyond what's written; significant gaps in process knowledge. | Student cannot demonstrate ownership: unable to answer basic questions; unfamiliar with own sources or claims; responses contradict written work; shows no evidence of authentic engagement with material. Suggests work was not authentically completed. |`
 };
 
-const systemPrompt = `You are an expert in AI-resistant assessment design. Create clear, specific analytic rubrics that:
-1. Use observable, measurable criteria that are VERIFIABLE
-2. Distinguish clearly between performance levels with AI-proof language
-3. Avoid vague language ("good", "adequate", "some")
-4. Include specific verification requirements at each level
-5. Align directly to the learning objectives
-6. Make it difficult for AI tools to fake authentic work
+const systemPrompt = `You are generating an AI-resistant assessment rubric for K-12 education. Your rubric must:
 
-PERFORMANCE LEVELS (always use these):
-- Exemplary (4 points)
-- Proficient (3 points)
-- Developing (2 points)
-- Beginning (1 point)
+1. ALIGN precisely to the provided learning objectives
+2. USE observable, measurable criteria at each performance level
+3. INCLUDE specific examples that distinguish between levels
+4. INCORPORATE AI-proof verification language based on vulnerability analysis
+5. HELP teachers distinguish between authentic student work and AI-generated submissions
 
-AI-PROOF VERIFICATION LANGUAGE TO INCORPORATE:
+AI-PROOF REQUIREMENTS (apply based on assessment type):
 
-For LOCAL SPECIFICITY criteria:
-- Exemplary: ${AI_PROOF_LANGUAGE.exemplary.localSpecificity}
-- Proficient: ${AI_PROOF_LANGUAGE.proficient.localSpecificity}
-- Developing: ${AI_PROOF_LANGUAGE.developing.localSpecificity}
-- Beginning: ${AI_PROOF_LANGUAGE.beginning.localSpecificity}
-
-For PERSONAL CONNECTION criteria:
-- Exemplary: ${AI_PROOF_LANGUAGE.exemplary.personalConnection}
-- Proficient: ${AI_PROOF_LANGUAGE.proficient.personalConnection}
-- Developing: ${AI_PROOF_LANGUAGE.developing.personalConnection}
-- Beginning: ${AI_PROOF_LANGUAGE.beginning.personalConnection}
-
-For PRIMARY RESEARCH criteria:
+For ANY criterion involving RESEARCH:
+- Include language about "documented sources," "evidence of authentic interaction," and "verifiable details"
 - Exemplary: ${AI_PROOF_LANGUAGE.exemplary.primaryResearch}
 - Proficient: ${AI_PROOF_LANGUAGE.proficient.primaryResearch}
 - Developing: ${AI_PROOF_LANGUAGE.developing.primaryResearch}
 - Beginning: ${AI_PROOF_LANGUAGE.beginning.primaryResearch}
 
-For PROCESS DOCUMENTATION criteria:
-- Exemplary: ${AI_PROOF_LANGUAGE.exemplary.processDocumentation}
-- Proficient: ${AI_PROOF_LANGUAGE.proficient.processDocumentation}
-- Developing: ${AI_PROOF_LANGUAGE.developing.processDocumentation}
-- Beginning: ${AI_PROOF_LANGUAGE.beginning.processDocumentation}
+For ANY criterion involving PERSONAL EXPERIENCE:
+- Include language about "specific, verifiable firsthand experience" and "named individuals/locations/dates"
+- Exemplary: ${AI_PROOF_LANGUAGE.exemplary.personalConnection}
+- Proficient: ${AI_PROOF_LANGUAGE.proficient.personalConnection}
+- Developing: ${AI_PROOF_LANGUAGE.developing.personalConnection}
+- Beginning: ${AI_PROOF_LANGUAGE.beginning.personalConnection}
 
-For REFLECTION criteria:
+For ANY criterion involving LOCAL CONTEXT:
+- Include language about "specific to [location] with details that would not apply elsewhere"
+- Exemplary: ${AI_PROOF_LANGUAGE.exemplary.localSpecificity}
+- Proficient: ${AI_PROOF_LANGUAGE.proficient.localSpecificity}
+- Developing: ${AI_PROOF_LANGUAGE.developing.localSpecificity}
+- Beginning: ${AI_PROOF_LANGUAGE.beginning.localSpecificity}
+
+For ANY criterion involving REFLECTION:
+- Include language about "specific moments during the process," "timestamps," and "documented obstacles"
 - Exemplary: ${AI_PROOF_LANGUAGE.exemplary.reflection}
 - Proficient: ${AI_PROOF_LANGUAGE.proficient.reflection}
 - Developing: ${AI_PROOF_LANGUAGE.developing.reflection}
 - Beginning: ${AI_PROOF_LANGUAGE.beginning.reflection}
 
-For PRESENTATION criteria:
+For ANY criterion involving PROCESS DOCUMENTATION:
+- Exemplary: ${AI_PROOF_LANGUAGE.exemplary.processDocumentation}
+- Proficient: ${AI_PROOF_LANGUAGE.proficient.processDocumentation}
+- Developing: ${AI_PROOF_LANGUAGE.developing.processDocumentation}
+- Beginning: ${AI_PROOF_LANGUAGE.beginning.processDocumentation}
+
+For ANY criterion involving PRESENTATION/DEFENSE:
 - Exemplary: ${AI_PROOF_LANGUAGE.exemplary.presentation}
 - Proficient: ${AI_PROOF_LANGUAGE.proficient.presentation}
 - Developing: ${AI_PROOF_LANGUAGE.developing.presentation}
 - Beginning: ${AI_PROOF_LANGUAGE.beginning.presentation}
 
-Use the appropriate verification language above based on what criteria the assessment requires. Not all criteria types will apply to every assessment - select and adapt the relevant ones.
+LEVEL DIFFERENTIATION (always use these 4 levels):
+- Exemplary (4 points): Exceeds expectations with sophisticated, verified, specific work
+- Proficient (3 points): Meets expectations with adequate verification and specificity
+- Developing (2 points): Partially meets expectations with gaps in verification or specificity
+- Beginning (1 point): Does not meet expectations; may lack authenticity markers
 
-Format the rubric as a markdown table with clear descriptions for each cell. Each criterion should be a row, and each performance level should be a column.`;
+CRITICAL BEGINNING LEVEL REQUIREMENT:
+- At the BEGINNING level: ALWAYS include "work appears potentially AI-generated" or "exhibits hallmarks of AI generation" as a descriptor when other criteria aren't met
+
+OUTPUT FORMAT:
+- Use clear markdown table format with descriptive headers
+- Create 4-6 criteria aligned to learning objectives (use numCriteria parameter)
+- Each criterion should be a row, each performance level should be a column
+- Include point values in headers
+- Avoid vague language ("good", "adequate", "some")
+- Use concrete, observable, measurable descriptors
+
+IMPORTANT: The rubric must remain fair and focused on learning outcomes while helping teachers identify authentic student work.`;
+
 
 // Helper function to determine which auto-verification criteria to add
 function getAutoVerificationCriteria(vulnerabilityAnalysis: any): string[] {
