@@ -188,17 +188,70 @@ const systemPrompt = `You are an expert educator who specializes in differentiat
 CRITICAL DOCUMENT STRUCTURE RULES - READ CAREFULLY
 ═══════════════════════════════════════════════════════════════════════════════
 
+CRITICAL: GROUP ORDERING RULE
+Always list student groups from LOWEST reading level to HIGHEST reading level:
+1. Below Grade (Embers) → first
+2. On Grade (Flames) → second
+3. Above Grade (Blazers) → third
+4. Advanced (Supernovas) → last
+
+This ordering applies to:
+- The Accommodations Summary Table
+- All Differentiation Strategies sections
+- Student Handouts
+- Any group-by-group breakdowns
+
 TEACHER GUIDE SECTION (First Part of Document):
 The Teacher Guide MUST contain ALL of the following in this order:
 1. LESSON OVERVIEW - Objectives, standards, total duration
-2. ACCOMMODATIONS SUMMARY TABLE - Quick reference for all groups
+2. ACCOMMODATIONS SUMMARY TABLE - Quick reference for all groups (ordered lowest to highest level)
 3. MATERIALS NEEDED - Complete list for all groups, noting group-specific items
 4. PACING GUIDE - Timing for each section/activity
-5. FACILITATION GUIDE - Step-by-step teaching directions
+5. FACILITATION GUIDE - Step-by-step teaching directions with specific language suggestions
 6. GROUP MANAGEMENT TIPS - How to manage multiple groups simultaneously
 7. FORMATIVE ASSESSMENT CHECKPOINTS - When/how to check understanding per group
-8. DIFFERENTIATION STRATEGIES - Specific approaches for this lesson
+8. DIFFERENTIATION STRATEGIES BY GROUP - DETAILED strategies organized by reading level (see format below)
 9. ANSWER KEYS - If applicable, all answers consolidated here
+
+DIFFERENTIATION STRATEGIES FORMAT (REQUIRED):
+The Differentiation Strategies section MUST be organized BY READING LEVEL with detailed, actionable recommendations:
+
+### 🔥 Embers Group (Below Grade Level)
+**Scaffolding Strategies:**
+- [Specific strategy 1 with example]
+- [Specific strategy 2 with example]
+**Vocabulary Support:**
+- [Specific vocabulary modifications]
+**Pacing Adjustments:**
+- [How to adjust timing]
+**Check-In Frequency:**
+- [How often to check on this group]
+**Red Flags to Watch For:**
+- [Signs that a student needs additional help]
+
+### 🔥 Flames Group (On Grade Level)
+**Core Instruction Strategies:**
+- [How to deliver standard instruction]
+**Extension Opportunities:**
+- [Quick extensions if they finish early]
+**Check-In Frequency:**
+- [Recommended check-in schedule]
+
+### 💫 Blazers Group (Above Grade Level)
+**Acceleration Strategies:**
+- [How to move faster/deeper]
+**Independent Work Options:**
+- [What students can do independently]
+**Peer Tutoring Opportunities:**
+- [How they can help other groups]
+
+### 🌟 Supernovas Group (Advanced/Gifted)
+**Enrichment Strategies:**
+- [Advanced content extensions]
+**Leadership Opportunities:**
+- [How to leverage their expertise]
+**Independent Investigation:**
+- [Self-directed learning options]
 
 STUDENT HANDOUTS SECTION (Second Part of Document):
 Student handouts must contain ZERO teacher directions. They should ONLY include:
@@ -674,9 +727,23 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build comprehensive prompt for all groups
-    let groupsSection = "## STUDENT GROUPS TO DIFFERENTIATE FOR:\n";
-    for (const group of selectedGroups as StudentGroup[]) {
+    // Sort groups from lowest to highest reading level
+    const READING_LEVEL_ORDER: Record<string, number> = {
+      'Below Grade': 1,
+      'On Grade': 2,
+      'Above Grade': 3,
+      'Advanced': 4,
+    };
+    
+    const sortedGroups = [...(selectedGroups as StudentGroup[])].sort((a, b) => {
+      const orderA = READING_LEVEL_ORDER[a.readingLevelLabel] || 2;
+      const orderB = READING_LEVEL_ORDER[b.readingLevelLabel] || 2;
+      return orderA - orderB;
+    });
+
+    // Build comprehensive prompt for all groups (sorted by level)
+    let groupsSection = "## STUDENT GROUPS TO DIFFERENTIATE FOR (Ordered from Lowest to Highest Reading Level):\n";
+    for (const group of sortedGroups) {
       groupsSection += buildGroupInstructions(group, options as DifferentiationOptions);
       groupsSection += "\n\n---\n";
     }
@@ -758,16 +825,17 @@ Create a comprehensive document with TWO MAIN SECTIONS:
 ═══════════════════════════════════════════════════════════════
 
 **📅 Generated:** ${new Date().toLocaleDateString()}
-**📊 Groups Included:** ${(selectedGroups as StudentGroup[]).map((g: StudentGroup) => `${getStudentFriendlyIcon(g.readingLevelLabel)} ${g.groupName} (${getStudentFriendlyName(g.readingLevelLabel)})`).join(", ")}
+**📊 Groups Included (Lowest → Highest Level):** ${sortedGroups.map((g: StudentGroup) => `${getStudentFriendlyIcon(g.readingLevelLabel)} ${g.groupName} (${getStudentFriendlyName(g.readingLevelLabel)})`).join(", ")}
 
 ---
 
 ### 📋 ACCOMMODATIONS AT A GLANCE
+*Listed from lowest to highest reading level for consistent reference*
 
 ╔═══════════════╦══════════════╦══════════╦═══════════╦═════════════════════════╗
 ║ Group         ║ Level        ║ Students ║ Language  ║ Key Modifications       ║
 ╠═══════════════╬══════════════╬══════════╬═══════════╬═════════════════════════╣
-${(selectedGroups as StudentGroup[]).map((g: StudentGroup) => {
+${sortedGroups.map((g: StudentGroup) => {
   const levelDisplay = `${getStudentFriendlyIcon(g.readingLevelLabel)} ${getStudentFriendlyName(g.readingLevelLabel)}`;
   const accommodationsList = g.accommodations.length > 0 
     ? g.accommodations.map(a => `• ${a}`).join('\\n║               ║              ║          ║           ║ ')
@@ -787,19 +855,137 @@ ${(selectedGroups as StudentGroup[]).map((g: StudentGroup) => {
 ---
 
 ### 🎯 Lesson Overview
-[Extract and summarize objectives and standards from the original content]
+[Extract and summarize objectives and standards from the original content. Include:
+- Primary learning objective(s)
+- Relevant standards addressed
+- Estimated total lesson duration
+- Prior knowledge students should have]
 
 ### 📦 Materials Needed
-[List all materials across all groups, noting group-specific items]
+[List all materials across all groups, clearly noting which items are needed for specific groups:
+- Core materials (all groups)
+- 🔥 Embers-specific materials (e.g., simplified handouts, visual aids)
+- 💫 Blazers/🌟 Supernovas-specific materials (e.g., extension materials, advanced readings)]
 
 ### ⏱️ Pacing Guide
-[Suggested timing for each section]
+[Suggested timing for each section, with notes on group-specific pacing adjustments]
 
-### 🔄 Differentiation Strategy
-[How to manage multiple groups simultaneously - specific actionable suggestions]
+### 🧑‍🏫 Facilitation Guide
+[Step-by-step teaching directions including:
+- Suggested scripting/language for key explanations
+- Transition cues between activities
+- Questions to ask at each stage
+- How to introduce the lesson to each group level]
+
+### 👥 Group Management Tips
+[Specific strategies for managing multiple groups simultaneously:
+- Suggested rotation schedule
+- How to structure independent work time
+- When to pull small groups
+- How to handle questions from different levels]
+
+---
+
+### 🔄 DIFFERENTIATION STRATEGIES BY GROUP
+*Organized by reading level for easy reference during instruction*
+
+${sortedGroups.map((g: StudentGroup) => {
+  const icon = getStudentFriendlyIcon(g.readingLevelLabel);
+  const name = getStudentFriendlyName(g.readingLevelLabel);
+  const levelContext = g.readingLevelLabel;
+  
+  if (levelContext === 'Below Grade') {
+    return `#### ${icon} ${g.groupName} (${name} - Below Grade Level)
+**Scaffolding Strategies for This Lesson:**
+- [Specific vocabulary simplification for this content]
+- [Visual supports to add]
+- [Sentence starters or frames to provide]
+- [How to chunk this specific content]
+
+**Vocabulary Support:**
+- [List 3-5 key terms that need simplified definitions]
+- [Suggested visual/concrete representations]
+
+**Pacing Adjustments:**
+- [Specific timing modifications for this group]
+- [Where to build in extra practice time]
+
+**Check-In Frequency:**
+- Check every [X] minutes during independent work
+- [Specific checkpoints in this lesson]
+
+**Red Flags to Watch For:**
+- [Signs this group needs additional support]
+- [Common misconceptions to address proactively]
+
+**What to Say:**
+- *"Let's break this down into smaller steps..."*
+- *"Before we move on, let me show you..."*
+`;
+  } else if (levelContext === 'On Grade') {
+    return `#### ${icon} ${g.groupName} (${name} - On Grade Level)
+**Core Instruction Strategies:**
+- [How to deliver standard instruction for this lesson]
+- [Key points to emphasize]
+
+**Extension Opportunities:**
+- [Quick extensions if they finish early]
+- [Challenge questions to have ready]
+
+**Check-In Frequency:**
+- Check every [X] minutes
+- [Recommended checkpoint moments]
+
+**What to Say:**
+- *"Great work! If you finish early, try..."*
+- *"Think about how this connects to..."*
+`;
+  } else if (levelContext === 'Above Grade') {
+    return `#### ${icon} ${g.groupName} (${name} - Above Grade Level)
+**Acceleration Strategies:**
+- [How to move faster/deeper with this content]
+- [Additional complexity to add]
+
+**Independent Work Options:**
+- [What students can do independently]
+- [Self-directed exploration opportunities]
+
+**Peer Tutoring Opportunities:**
+- [How they can help Embers or Flames groups]
+- [Structured peer support activities]
+
+**What to Say:**
+- *"Since you understand this well, explore..."*
+- *"Consider how you might teach this to..."*
+`;
+  } else { // Advanced
+    return `#### ${icon} ${g.groupName} (${name} - Advanced/Gifted)
+**Enrichment Strategies:**
+- [Advanced content extensions for this lesson]
+- [Cross-curricular connections to explore]
+
+**Leadership Opportunities:**
+- [How to leverage their expertise]
+- [Facilitation roles they can take]
+
+**Independent Investigation:**
+- [Self-directed learning options]
+- [Research questions to pursue]
+
+**What to Say:**
+- *"You're ready to take this further by..."*
+- *"What questions does this raise for you?"*
+`;
+  }
+}).join('\\n---\\n\\n')}
+
+---
 
 ### ✅ Formative Assessment Checkpoints
-[When and how to check understanding per group]
+[When and how to check understanding, organized by group level:
+- 🔥 Embers: [Specific assessment approach - more frequent, scaffolded]
+- 🔥 Flames: [Standard assessment approach]
+- 💫 Blazers/🌟 Supernovas: [Advanced assessment - less scaffolded, more open-ended]]
 
 ---
 
@@ -807,14 +993,15 @@ ${(selectedGroups as StudentGroup[]).map((g: StudentGroup) => {
 # 📄 STUDENT HANDOUTS
 ## Print from here for student distribution
 ## ⚠️ MULTILINGUAL NOTE: Handouts for non-English home language groups must be FULLY TRANSLATED
+## ⚠️ ORDER: Handouts are arranged from lowest to highest reading level
 ═══════════════════════════════════════════════════════════════
 
-[For EACH student group, create a separate printable handout.
+[For EACH student group (in order from lowest to highest level), create a separate printable handout.
 **IF the group's home language is NOT English, the ENTIRE handout must be in that language.**]
 
 ---
 
-## ${getStudentFriendlyIcon((selectedGroups as StudentGroup[])[0]?.readingLevelLabel || 'On Grade')} [Group Name] Handout
+## ${getStudentFriendlyIcon(sortedGroups[0]?.readingLevelLabel || 'On Grade')} [Group Name] Handout
 ### [Lesson Title] - [Level Name, translated if non-English] ${(selectedGroups as StudentGroup[]).some((g: StudentGroup) => g.homeLanguage !== 'English') ? '(Use translated "Edition" label)' : 'Edition'} ✨
 
 **[Name label in home language]:** _________________________ **[Date label in home language]:** _______________
