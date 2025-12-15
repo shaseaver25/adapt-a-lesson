@@ -20,6 +20,8 @@ import {
   exportAsSeparateDocx,
   exportTeacherGuideDocx,
   exportStudentHandoutsDocx,
+  exportStudentHandoutsWithAudioDocx,
+  type AudioSection,
 } from '@/lib/documentExport';
 import { supabase } from '@/integrations/supabase/client';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
@@ -45,6 +47,7 @@ export function DifferentiatedLessonOutput({
   const [saved, setSaved] = useState(false);
   const [showPrintQR, setShowPrintQR] = useState(false);
   const [generatedAudioUrls, setGeneratedAudioUrls] = useState<Record<string, string>>({});
+  const [audioSections, setAudioSections] = useState<AudioSection[]>([]);
   const { toast } = useToast();
   const { options } = useDifferentiation();
 
@@ -321,6 +324,33 @@ export function DifferentiatedLessonOutput({
     }
   };
 
+  const handleExportStudentWithAudioDocx = async () => {
+    if (audioSections.length === 0) {
+      toast({ 
+        title: 'No audio generated', 
+        description: 'Generate audio for student groups first before exporting with audio',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    try {
+      const groups = selectedGroups.map((g) => ({
+        id: g.id,
+        groupName: g.groupName,
+        readingLevelLabel: g.readingLevelLabel,
+      }));
+      await exportStudentHandoutsWithAudioDocx(content, lessonTitle, groups, audioSections);
+      toast({ title: 'Downloaded', description: 'Student Handouts with audio QR codes created' });
+    } catch (error) {
+      toast({ 
+        title: 'Export failed', 
+        description: 'Could not generate document with audio',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const handleCopyGroupSection = async (groupName: string) => {
     const lines = content.split('\n');
     let inGroup = false;
@@ -421,6 +451,15 @@ export function DifferentiatedLessonOutput({
                       <p className="text-xs text-muted-foreground">Print-ready for distribution</p>
                     </div>
                   </DropdownMenuItem>
+                  {audioSections.length > 0 && (
+                    <DropdownMenuItem onClick={handleExportStudentWithAudioDocx} className="gap-2">
+                      <Headphones className="h-4 w-4" />
+                      <div>
+                        <p className="font-medium">Student Handouts with Audio</p>
+                        <p className="text-xs text-muted-foreground">Includes QR codes for audio access</p>
+                      </div>
+                    </DropdownMenuItem>
+                  )}
                   
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
@@ -522,6 +561,16 @@ export function DifferentiatedLessonOutput({
                         ...prev,
                         [group.id]: url
                       }));
+                      // Store full audio section info for export
+                      setAudioSections(prev => {
+                        const filtered = prev.filter(a => a.groupId !== group.id);
+                        return [...filtered, {
+                          groupId: group.id,
+                          groupName: group.groupName,
+                          audioUrl: url,
+                          language: group.homeLanguage
+                        }];
+                      });
                     }}
                   />
                 ))
