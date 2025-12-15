@@ -733,11 +733,27 @@ Create a comprehensive document with TWO MAIN SECTIONS:
 
 ---
 
-### 📑 Quick Reference: Group Accommodations
+### 📋 ACCOMMODATIONS AT A GLANCE
 
-| Group Name | Level | Key Modifications |
-|------------|-------|-------------------|
-${(selectedGroups as StudentGroup[]).map((g: StudentGroup) => `| ${g.groupName} | ${getStudentFriendlyIcon(g.readingLevelLabel)} ${getStudentFriendlyName(g.readingLevelLabel)} | ${g.accommodations.slice(0, 3).map(a => '• ' + a).join(' ')}${g.ellStatus !== 'None' ? ' • ELL: ' + g.ellStatus : ''} |`).join('\n')}
+╔═══════════════╦══════════════╦══════════╦═══════════╦═════════════════════════╗
+║ Group         ║ Level        ║ Students ║ Language  ║ Key Modifications       ║
+╠═══════════════╬══════════════╬══════════╬═══════════╬═════════════════════════╣
+${(selectedGroups as StudentGroup[]).map((g: StudentGroup) => {
+  const levelDisplay = `${getStudentFriendlyIcon(g.readingLevelLabel)} ${getStudentFriendlyName(g.readingLevelLabel)}`;
+  const accommodationsList = g.accommodations.length > 0 
+    ? g.accommodations.map(a => `• ${a}`).join('\\n║               ║              ║          ║           ║ ')
+    : '• Standard pacing';
+  const ellNote = g.ellStatus !== 'None' ? `\\n║               ║              ║          ║           ║ • ELL: ${g.ellStatus}` : '';
+  const iepNote = g.iep504Status !== 'None' ? `\\n║               ║              ║          ║           ║ • ${g.iep504Status}` : '';
+  return `║ ${g.groupName.padEnd(13).slice(0, 13)} ║ ${levelDisplay.padEnd(12).slice(0, 12)} ║ ${String(g.numStudents).padEnd(8).slice(0, 8)} ║ ${g.homeLanguage.padEnd(9).slice(0, 9)} ║ ${accommodationsList}${ellNote}${iepNote} ║`;
+}).join('\\n╠═══════════════╬══════════════╬══════════╬═══════════╬═════════════════════════╣\\n')}
+╚═══════════════╩══════════════╩══════════╩═══════════╩═════════════════════════╝
+
+**Quick Key:**
+- 🔥 Embers = Additional scaffolding needed
+- 🔥 Flames = Grade-level support
+- 💫 Blazers = Above grade-level
+- 🌟 Supernovas = Advanced/gifted
 
 ---
 
