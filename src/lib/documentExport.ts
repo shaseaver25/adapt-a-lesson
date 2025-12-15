@@ -43,6 +43,15 @@ export interface AudioSection {
   language: string;
 }
 
+export interface BilingualAudioSection {
+  groupId: string;
+  groupName: string;
+  sectionType: string;
+  englishAudioUrl?: string;
+  homeLanguageAudioUrl?: string;
+  homeLanguage?: string;
+}
+
 /**
  * Convert base64 data URL to ArrayBuffer for docx ImageRun
  */
@@ -151,6 +160,251 @@ async function createAudioBlockParagraph(
       }),
     ];
   }
+}
+
+const getLanguageFlag = (language: string): string => {
+  const flags: Record<string, string> = {
+    'English': '🇺🇸',
+    'Spanish': '🇪🇸',
+    'Somali': '🇸🇴',
+    'Hmong': '🇱🇦',
+    'Vietnamese': '🇻🇳',
+    'Arabic': '🇸🇦',
+    'Karen': '🇲🇲',
+    'Oromo': '🇪🇹',
+    'Mandarin': '🇨🇳',
+    'Chinese': '🇨🇳',
+    'Russian': '🇷🇺',
+    'Swahili': '🇹🇿',
+    'French': '🇫🇷',
+    'Portuguese': '🇧🇷',
+  };
+  return flags[language] || '🌐';
+};
+
+/**
+ * Create a bilingual audio block with two QR codes side by side
+ */
+async function createBilingualAudioBlockParagraph(
+  sectionType: string,
+  englishAudioUrl?: string,
+  homeLanguageAudioUrl?: string,
+  homeLanguage?: string
+): Promise<Paragraph[]> {
+  const paragraphs: Paragraph[] = [];
+  const hasHomeLanguage = homeLanguageAudioUrl && homeLanguage && homeLanguage !== 'English';
+  
+  // Header
+  paragraphs.push(
+    new Paragraph({
+      children: [
+        new TextRun({ text: '🔊 ', size: 28 }),
+        new TextRun({ 
+          text: 'LISTEN TO THIS SECTION', 
+          bold: true, 
+          size: 22,
+          font: 'Arial'
+        }),
+      ],
+      spacing: { before: 200, after: 100 },
+      shading: {
+        type: ShadingType.SOLID,
+        color: 'FFF8E7',
+      },
+    })
+  );
+
+  // Section type label
+  const sectionLabels: Record<string, string> = {
+    'learning-target': '🎯 Learning Target',
+    'instructions': '📋 Instructions',
+    'vocabulary': '📚 Vocabulary',
+    'content': '📖 Content',
+    'reflection-prompt': '💭 Reflection',
+  };
+  
+  paragraphs.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: sectionLabels[sectionType] || sectionType,
+          size: 18,
+          italics: true,
+          font: 'Arial',
+        }),
+      ],
+      spacing: { after: 150 },
+      shading: {
+        type: ShadingType.SOLID,
+        color: 'FFF8E7',
+      },
+    })
+  );
+
+  try {
+    // Create table with QR codes
+    const qrCells: TableCell[] = [];
+
+    // English QR
+    if (englishAudioUrl) {
+      const englishQR = await generateQRCode(englishAudioUrl, 70);
+      const englishQRBuffer = await dataUrlToArrayBuffer(englishQR);
+      
+      qrCells.push(
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({ text: `${getLanguageFlag('English')} English`, bold: true, size: 18, font: 'Arial' }),
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 80 },
+            }),
+            new Paragraph({
+              children: [
+                new ImageRun({
+                  type: 'png',
+                  data: englishQRBuffer,
+                  transformation: { width: 70, height: 70 },
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({
+              children: [
+                new ExternalHyperlink({
+                  children: [
+                    new TextRun({
+                      text: 'Tap to listen',
+                      style: 'Hyperlink',
+                      size: 16,
+                      font: 'Arial',
+                    }),
+                  ],
+                  link: englishAudioUrl,
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 60 },
+            }),
+          ],
+          width: { size: 50, type: WidthType.PERCENTAGE },
+          shading: { fill: 'FFF8E7' },
+          margins: { top: 100, bottom: 100, left: 100, right: 100 },
+        })
+      );
+    }
+
+    // Home Language QR
+    if (hasHomeLanguage) {
+      const homeLanguageQR = await generateQRCode(homeLanguageAudioUrl, 70);
+      const homeLanguageQRBuffer = await dataUrlToArrayBuffer(homeLanguageQR);
+      
+      qrCells.push(
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({ text: `${getLanguageFlag(homeLanguage)} ${homeLanguage}`, bold: true, size: 18, font: 'Arial' }),
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 80 },
+            }),
+            new Paragraph({
+              children: [
+                new ImageRun({
+                  type: 'png',
+                  data: homeLanguageQRBuffer,
+                  transformation: { width: 70, height: 70 },
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({
+              children: [
+                new ExternalHyperlink({
+                  children: [
+                    new TextRun({
+                      text: 'Tap to listen',
+                      style: 'Hyperlink',
+                      size: 16,
+                      font: 'Arial',
+                    }),
+                  ],
+                  link: homeLanguageAudioUrl,
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 60 },
+            }),
+          ],
+          width: { size: 50, type: WidthType.PERCENTAGE },
+          shading: { fill: 'FFF8E7' },
+          margins: { top: 100, bottom: 100, left: 100, right: 100 },
+        })
+      );
+    }
+
+    if (qrCells.length > 0) {
+      const qrTable = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({
+            children: qrCells,
+          }),
+        ],
+        borders: {
+          top: { style: BorderStyle.SINGLE, size: 1, color: 'E5E5E5' },
+          bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E5E5E5' },
+          left: { style: BorderStyle.SINGLE, size: 1, color: 'E5E5E5' },
+          right: { style: BorderStyle.SINGLE, size: 1, color: 'E5E5E5' },
+        },
+      });
+
+      // Add table as paragraph (convert to array format)
+      paragraphs.push(
+        new Paragraph({ text: '', spacing: { after: 50 } }),
+      );
+      
+      // Return paragraphs plus table
+      return [...paragraphs, qrTable as any, new Paragraph({ text: '', spacing: { after: 200 } })];
+    }
+  } catch (error) {
+    console.error('Failed to create bilingual audio block:', error);
+  }
+
+  // Fallback with links only
+  if (englishAudioUrl) {
+    paragraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: `${getLanguageFlag('English')} English: `, size: 18, font: 'Arial' }),
+          new ExternalHyperlink({
+            children: [new TextRun({ text: englishAudioUrl, style: 'Hyperlink', size: 18, font: 'Arial' })],
+            link: englishAudioUrl,
+          }),
+        ],
+        spacing: { after: 100 },
+      })
+    );
+  }
+  
+  if (hasHomeLanguage) {
+    paragraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: `${getLanguageFlag(homeLanguage)} ${homeLanguage}: `, size: 18, font: 'Arial' }),
+          new ExternalHyperlink({
+            children: [new TextRun({ text: homeLanguageAudioUrl, style: 'Hyperlink', size: 18, font: 'Arial' })],
+            link: homeLanguageAudioUrl,
+          }),
+        ],
+        spacing: { after: 200 },
+      })
+    );
+  }
+
+  return paragraphs;
 }
 
 // Parse markdown content into structured sections
