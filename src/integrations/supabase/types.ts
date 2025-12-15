@@ -14,6 +14,117 @@ export type Database = {
   }
   public: {
     Tables: {
+      audio_usage: {
+        Row: {
+          audio_url: string | null
+          characters_used: number
+          created_at: string
+          duration_seconds: number | null
+          estimated_cost: number
+          group_id: string | null
+          id: string
+          language: string
+          lesson_id: string | null
+          section_type: string
+        }
+        Insert: {
+          audio_url?: string | null
+          characters_used?: number
+          created_at?: string
+          duration_seconds?: number | null
+          estimated_cost?: number
+          group_id?: string | null
+          id?: string
+          language?: string
+          lesson_id?: string | null
+          section_type: string
+        }
+        Update: {
+          audio_url?: string | null
+          characters_used?: number
+          created_at?: string
+          duration_seconds?: number | null
+          estimated_cost?: number
+          group_id?: string | null
+          id?: string
+          language?: string
+          lesson_id?: string | null
+          section_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audio_usage_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "student_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audio_usage_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "generated_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generated_audio: {
+        Row: {
+          audio_url: string
+          characters_used: number
+          created_at: string
+          duration_seconds: number | null
+          group_id: string | null
+          group_name: string
+          id: string
+          language: string
+          lesson_id: string | null
+          section_id: string
+          section_type: string
+        }
+        Insert: {
+          audio_url: string
+          characters_used?: number
+          created_at?: string
+          duration_seconds?: number | null
+          group_id?: string | null
+          group_name: string
+          id?: string
+          language?: string
+          lesson_id?: string | null
+          section_id: string
+          section_type: string
+        }
+        Update: {
+          audio_url?: string
+          characters_used?: number
+          created_at?: string
+          duration_seconds?: number | null
+          group_id?: string | null
+          group_name?: string
+          id?: string
+          language?: string
+          lesson_id?: string | null
+          section_id?: string
+          section_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_audio_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "student_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_audio_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "generated_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generated_lessons: {
         Row: {
           created_at: string

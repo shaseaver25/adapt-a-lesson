@@ -9,7 +9,8 @@ import {
   VolumeX, 
   Loader2,
   RefreshCcw,
-  Headphones
+  Headphones,
+  Download
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { StudentGroup } from '@/types/studentGroup';
@@ -33,7 +34,10 @@ export function LessonAudioPlayer({
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [characterCount, setCharacterCount] = useState(0);
+  const [estimatedCost, setEstimatedCost] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
 
@@ -47,7 +51,7 @@ export function LessonAudioPlayer({
   // Clean up audio URL on unmount
   useEffect(() => {
     return () => {
-      if (audioUrl) {
+      if (audioUrl && audioUrl.startsWith('blob:')) {
         URL.revokeObjectURL(audioUrl);
       }
     };
@@ -78,6 +82,9 @@ export function LessonAudioPlayer({
           body: JSON.stringify({ 
             text: audioText,
             language: group.homeLanguage,
+            sectionType: 'content',
+            groupName: group.groupName,
+            sectionId: `${group.groupName}-full`,
           }),
         }
       );
@@ -87,8 +94,20 @@ export function LessonAudioPlayer({
         throw new Error(errorData.error || `Failed to generate audio: ${response.status}`);
       }
 
-      const audioBlob = await response.blob();
-      const url = URL.createObjectURL(audioBlob);
+      // Get metadata from headers
+      const audioDuration = parseFloat(response.headers.get('X-Audio-Duration') || '0');
+      const chars = parseInt(response.headers.get('X-Characters-Used') || '0');
+      const cost = parseFloat(response.headers.get('X-Estimated-Cost') || '0');
+      
+      setCharacterCount(chars);
+      setEstimatedCost(cost);
+      if (audioDuration > 0) {
+        setDuration(audioDuration);
+      }
+
+      const blob = await response.blob();
+      setAudioBlob(blob);
+      const url = URL.createObjectURL(blob);
       setAudioUrl(url);
 
       // Create and set up audio element
@@ -141,10 +160,10 @@ export function LessonAudioPlayer({
 
   const handleTimeUpdate = () => {
     if (audioRef.current) {
-      const { currentTime, duration } = audioRef.current;
-      if (duration > 0) {
-        setProgress((currentTime / duration) * 100);
-        setDuration(duration);
+      const { currentTime, duration: audioDuration } = audioRef.current;
+      if (audioDuration > 0) {
+        setProgress((currentTime / audioDuration) * 100);
+        setDuration(audioDuration);
       }
     }
   };
@@ -152,6 +171,23 @@ export function LessonAudioPlayer({
   const handleEnded = () => {
     setIsPlaying(false);
     setProgress(0);
+  };
+
+  const handleDownload = () => {
+    if (audioBlob) {
+      const url = URL.createObjectURL(audioBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${group.groupName.replace(/\s+/g, '-').toLowerCase()}-audio.mp3`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: 'Downloaded',
+        description: 'Audio file saved',
+      });
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -254,6 +290,14 @@ export function LessonAudioPlayer({
               >
                 <RefreshCcw className="h-4 w-4" />
               </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDownload}
+                title="Download audio"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
             </>
           )}
         </div>
@@ -264,14 +308,21 @@ export function LessonAudioPlayer({
         )}
 
         {/* Info text */}
-        <p className="text-xs text-muted-foreground">
-          {audioRequirements.audioType === 'both' 
-            ? `Audio support for Read Aloud accommodation in ${group.homeLanguage}`
-            : audioRequirements.audioType === 'multilingual'
-            ? `Audio generated in ${group.homeLanguage} for native language support`
-            : 'Audio support for Read Aloud accommodation'
-          }
-        </p>
+        <div className="text-xs text-muted-foreground space-y-1">
+          <p>
+            {audioRequirements.audioType === 'both' 
+              ? `Audio support for Read Aloud accommodation in ${group.homeLanguage}`
+              : audioRequirements.audioType === 'multilingual'
+              ? `Audio generated in ${group.homeLanguage} for native language support`
+              : 'Audio support for Read Aloud accommodation'
+            }
+          </p>
+          {characterCount > 0 && (
+            <p className="text-muted-foreground/60">
+              {characterCount.toLocaleString()} characters • ~${estimatedCost.toFixed(4)} estimated
+            </p>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -293,6 +344,7 @@ function extractAudioContent(content: string, language: string): string {
     'instructions', 'instrucciones',
     'vocabulary', 'vocabulario',
     'directions', 'direcciones',
+    'today you will', 'hoy aprenderás',
   ];
 
   for (const line of lines) {
@@ -327,8 +379,9 @@ function extractAudioContent(content: string, language: string): string {
     return cleanTextForTTS(content.slice(0, 2000));
   }
 
-  // Join sections and clean for TTS
-  return cleanTextForTTS(sections.join('\n\n'));
+  // Join sections and clean for TTS (limit to ~3000 chars for cost management)
+  const combinedText = sections.join('\n\n');
+  return cleanTextForTTS(combinedText.slice(0, 3000));
 }
 
 /**
