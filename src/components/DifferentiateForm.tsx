@@ -9,13 +9,20 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Users, BookOpen, Languages, Settings2, ExternalLink, CheckSquare, XSquare } from 'lucide-react';
+import { Users, BookOpen, Settings2, ExternalLink, CheckSquare, XSquare, HelpCircle, Sparkles } from 'lucide-react';
+import { useDifferentiation } from '@/contexts/DifferentiationContext';
+import { READING_LEVEL_DESCRIPTIONS, ELL_STATUS_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
 import type { StudentGroup } from '@/types/studentGroup';
 
 interface DBStudentGroup {
@@ -65,12 +72,19 @@ function dbToStudentGroup(db: DBStudentGroup): StudentGroup & { id: string } {
 }
 
 export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProps) {
-  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
-  const [lessonContent, setLessonContent] = useState('');
-  const [includeVocabularyScaffolding, setIncludeVocabularyScaffolding] = useState(true);
-  const [generateComprehensionQuestions, setGenerateComprehensionQuestions] = useState(false);
-  const [includeVisualPlaceholders, setIncludeVisualPlaceholders] = useState(true);
-  const [outputFormat, setOutputFormat] = useState<'markdown' | 'pdf-ready' | 'google-docs'>('markdown');
+  const {
+    cachedLessonContent,
+    setCachedLessonContent,
+    selectedGroupIds,
+    setSelectedGroupIds,
+    toggleGroup,
+    selectAllGroups,
+    clearSelection,
+    options,
+    setOptions,
+  } = useDifferentiation();
+
+  const [showCacheNotice, setShowCacheNotice] = useState(false);
 
   const { data: groups = [], isLoading: isLoadingGroups } = useQuery({
     queryKey: ['student-groups'],
@@ -85,50 +99,46 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
     },
   });
 
-  const toggleGroup = (groupId: string) => {
-    setSelectedGroupIds((prev) =>
-      prev.includes(groupId)
-        ? prev.filter((id) => id !== groupId)
-        : [...prev, groupId]
-    );
-  };
-
-  const selectAll = () => {
-    setSelectedGroupIds(groups.map((g) => g.id));
-  };
-
-  const clearSelection = () => {
-    setSelectedGroupIds([]);
-  };
+  // Show cache notice if there's cached content
+  useEffect(() => {
+    if (cachedLessonContent && cachedLessonContent.length > 0) {
+      setShowCacheNotice(true);
+      const timer = setTimeout(() => setShowCacheNotice(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const selectedGroups = groups.filter((g) => selectedGroupIds.includes(g.id));
     onSubmit({
-      lessonContent,
+      lessonContent: cachedLessonContent,
       selectedGroups,
-      options: {
-        includeVocabularyScaffolding,
-        generateComprehensionQuestions,
-        includeVisualPlaceholders,
-        outputFormat,
-      },
+      options,
     });
   };
 
-  const wordCount = lessonContent.trim().split(/\s+/).filter(Boolean).length;
+  const wordCount = cachedLessonContent.trim().split(/\s+/).filter(Boolean).length;
+  
   const readingLevelColor = (level: string) => ({
-    'Below Grade': 'bg-amber-500/20 text-amber-700 dark:text-amber-400',
-    'On Grade': 'bg-green-500/20 text-green-700 dark:text-green-400',
-    'Above Grade': 'bg-blue-500/20 text-blue-700 dark:text-blue-400',
-    'Advanced': 'bg-purple-500/20 text-purple-700 dark:text-purple-400',
-  }[level] || 'bg-muted text-muted-foreground');
+    'Below Grade': 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30',
+    'On Grade': 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
+    'Above Grade': 'bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30',
+    'Advanced': 'bg-violet-500/20 text-violet-700 dark:text-violet-400 border-violet-500/30',
+  }[level] || 'bg-muted text-muted-foreground border-border');
+
+  const readingLevelIcon = (level: string) => ({
+    'Below Grade': '📕',
+    'On Grade': '📗',
+    'Above Grade': '📘',
+    'Advanced': '📙',
+  }[level] || '📖');
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Section 1: Select Student Groups */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2 text-foreground">
             <Users className="h-5 w-5 text-primary" />
             <h3 className="font-display font-bold text-lg">Select Student Groups</h3>
@@ -145,47 +155,52 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
             ))}
           </div>
         ) : groups.length === 0 ? (
-          <div className="text-center py-8 border border-dashed border-border rounded-lg">
+          <div className="text-center py-8 border border-dashed border-border rounded-lg bg-muted/20">
             <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-muted-foreground mb-3">No student groups saved yet</p>
+            <p className="text-muted-foreground mb-1">No student groups saved yet</p>
+            <p className="text-xs text-muted-foreground mb-4">
+              Create groups to save time on future lessons
+            </p>
             <Link to="/student-groups">
-              <Button variant="outline" size="sm">
+              <Button variant="default" size="sm" className="gap-2">
+                <Sparkles className="h-4 w-4" />
                 Create Your First Group
               </Button>
             </Link>
           </div>
         ) : (
           <>
-            <div className="flex gap-2 mb-3">
-              <Button type="button" variant="outline" size="sm" onClick={selectAll} className="gap-1">
+            <div className="flex flex-wrap gap-2 mb-3">
+              <Button type="button" variant="outline" size="sm" onClick={() => selectAllGroups(groups)} className="gap-1">
                 <CheckSquare className="h-4 w-4" />
-                Select All
+                <span className="hidden sm:inline">Select All</span>
               </Button>
               <Button type="button" variant="outline" size="sm" onClick={clearSelection} className="gap-1">
                 <XSquare className="h-4 w-4" />
-                Clear
+                <span className="hidden sm:inline">Clear</span>
               </Button>
               <span className="text-sm text-muted-foreground ml-auto self-center">
                 {selectedGroupIds.length} of {groups.length} selected
               </span>
             </div>
 
-            <ScrollArea className="h-[200px] border border-border rounded-lg">
+            <ScrollArea className="h-[220px] border border-border rounded-lg bg-muted/10">
               <div className="p-2 space-y-2">
                 {groups.map((group) => {
                   const isSelected = selectedGroupIds.includes(group.id);
                   return (
                     <label
                       key={group.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
                         isSelected
-                          ? 'bg-primary/5 border-primary/50'
-                          : 'bg-background border-border hover:bg-muted/50'
+                          ? 'bg-primary/5 border-primary/50 shadow-sm'
+                          : 'bg-background border-border hover:bg-muted/50 hover:border-muted-foreground/20'
                       }`}
                     >
                       <Checkbox
                         checked={isSelected}
                         onCheckedChange={() => toggleGroup(group.id)}
+                        className="mt-0.5"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -194,18 +209,41 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
                             ({group.numStudents} student{group.numStudents !== 1 ? 's' : ''})
                           </span>
                         </div>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          <Badge variant="secondary" className={`text-xs ${readingLevelColor(group.readingLevelLabel)}`}>
-                            {group.readingLevelLabel}
-                          </Badge>
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="secondary" className={`text-xs border ${readingLevelColor(group.readingLevelLabel)}`}>
+                                <span className="mr-1">{readingLevelIcon(group.readingLevelLabel)}</span>
+                                {group.readingLevelLabel}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-sm">{READING_LEVEL_DESCRIPTIONS[group.readingLevelLabel]}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
                           {group.ellStatus !== 'None' && (
-                            <Badge variant="secondary" className="text-xs bg-sky-500/20 text-sky-700 dark:text-sky-400">
-                              ELL: {group.ellStatus}
-                            </Badge>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="secondary" className="text-xs bg-sky-500/20 text-sky-700 dark:text-sky-400 border border-sky-500/30">
+                                  🌐 ELL: {group.ellStatus}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <p className="text-sm">{ELL_STATUS_DESCRIPTIONS[group.ellStatus]}</p>
+                              </TooltipContent>
+                            </Tooltip>
                           )}
+                          
                           {group.homeLanguage !== 'English' && (
                             <Badge variant="outline" className="text-xs">
-                              {group.homeLanguage}
+                              🗣️ {group.homeLanguage}
+                            </Badge>
+                          )}
+                          
+                          {group.accommodations.length > 0 && (
+                            <Badge variant="outline" className="text-xs text-muted-foreground">
+                              {group.accommodations.length} accommodation{group.accommodations.length !== 1 ? 's' : ''}
                             </Badge>
                           )}
                         </div>
@@ -221,22 +259,32 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
 
       {/* Section 2: Original Lesson Content */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2 text-foreground">
             <BookOpen className="h-5 w-5 text-primary" />
             <h3 className="font-display font-bold text-lg">Original Lesson Content</h3>
           </div>
-          <span className="text-sm text-muted-foreground">{wordCount} words</span>
+          <div className="flex items-center gap-3">
+            {showCacheNotice && cachedLessonContent && (
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 animate-fade-in">
+                ✓ Previous lesson restored
+              </span>
+            )}
+            <span className="text-sm text-muted-foreground">{wordCount} words</span>
+          </div>
         </div>
 
         <Textarea
           placeholder="Paste your lesson content here in markdown format..."
-          value={lessonContent}
-          onChange={(e) => setLessonContent(e.target.value)}
-          rows={12}
-          className="font-mono text-sm"
+          value={cachedLessonContent}
+          onChange={(e) => setCachedLessonContent(e.target.value)}
+          rows={10}
+          className="font-mono text-sm resize-y min-h-[200px]"
           required
         />
+        <p className="text-xs text-muted-foreground">
+          💡 Your lesson content is automatically saved and will be here when you return.
+        </p>
       </div>
 
       {/* Section 3: Differentiation Options */}
@@ -246,43 +294,49 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
           <h3 className="font-display font-bold text-lg">Differentiation Options</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background hover:bg-muted/50 cursor-pointer transition-colors">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-border bg-background hover:bg-muted/50 cursor-pointer transition-colors">
             <Checkbox
-              checked={includeVocabularyScaffolding}
-              onCheckedChange={(checked) => setIncludeVocabularyScaffolding(!!checked)}
+              checked={options.includeVocabularyScaffolding}
+              onCheckedChange={(checked) => setOptions({ includeVocabularyScaffolding: !!checked })}
+              className="mt-0.5"
             />
             <div>
-              <span className="text-sm font-medium text-foreground">Vocabulary Scaffolding</span>
-              <p className="text-xs text-muted-foreground">Include bilingual glossaries and key term definitions</p>
+              <span className="text-sm font-medium text-foreground">📚 Vocabulary Scaffolding</span>
+              <p className="text-xs text-muted-foreground mt-0.5">Bilingual glossaries and key term definitions</p>
             </div>
           </label>
 
-          <label className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background hover:bg-muted/50 cursor-pointer transition-colors">
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-border bg-background hover:bg-muted/50 cursor-pointer transition-colors">
             <Checkbox
-              checked={generateComprehensionQuestions}
-              onCheckedChange={(checked) => setGenerateComprehensionQuestions(!!checked)}
+              checked={options.generateComprehensionQuestions}
+              onCheckedChange={(checked) => setOptions({ generateComprehensionQuestions: !!checked })}
+              className="mt-0.5"
             />
             <div>
-              <span className="text-sm font-medium text-foreground">Comprehension Questions</span>
-              <p className="text-xs text-muted-foreground">Generate level-appropriate check questions</p>
+              <span className="text-sm font-medium text-foreground">❓ Comprehension Questions</span>
+              <p className="text-xs text-muted-foreground mt-0.5">Level-appropriate check-for-understanding questions</p>
             </div>
           </label>
 
-          <label className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background hover:bg-muted/50 cursor-pointer transition-colors">
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-border bg-background hover:bg-muted/50 cursor-pointer transition-colors">
             <Checkbox
-              checked={includeVisualPlaceholders}
-              onCheckedChange={(checked) => setIncludeVisualPlaceholders(!!checked)}
+              checked={options.includeVisualPlaceholders}
+              onCheckedChange={(checked) => setOptions({ includeVisualPlaceholders: !!checked })}
+              className="mt-0.5"
             />
             <div>
-              <span className="text-sm font-medium text-foreground">Visual Placeholders</span>
-              <p className="text-xs text-muted-foreground">Add [VISUAL: description] markers for images</p>
+              <span className="text-sm font-medium text-foreground">🖼️ Visual Placeholders</span>
+              <p className="text-xs text-muted-foreground mt-0.5">Add [VISUAL: description] markers for images</p>
             </div>
           </label>
 
           <div className="p-3 rounded-lg border border-border bg-background">
-            <Label htmlFor="outputFormat" className="text-sm font-medium text-foreground">Output Format</Label>
-            <Select value={outputFormat} onValueChange={(v) => setOutputFormat(v as typeof outputFormat)}>
+            <Label htmlFor="outputFormat" className="text-sm font-medium text-foreground">📄 Output Format</Label>
+            <Select 
+              value={options.outputFormat} 
+              onValueChange={(v) => setOptions({ outputFormat: v as typeof options.outputFormat })}
+            >
               <SelectTrigger className="mt-2">
                 <SelectValue />
               </SelectTrigger>
@@ -302,12 +356,14 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
         variant="hero"
         size="lg"
         className="w-full"
-        disabled={isLoading || selectedGroupIds.length === 0 || !lessonContent.trim()}
+        disabled={isLoading || selectedGroupIds.length === 0 || !cachedLessonContent.trim()}
       >
         {isLoading ? (
           <span className="animate-pulse-soft">Differentiating for {selectedGroupIds.length} group{selectedGroupIds.length !== 1 ? 's' : ''}...</span>
+        ) : selectedGroupIds.length === 0 ? (
+          'Select at least one group to continue'
         ) : (
-          `Differentiate Lesson for ${selectedGroupIds.length} Group${selectedGroupIds.length !== 1 ? 's' : ''}`
+          `✨ Differentiate Lesson for ${selectedGroupIds.length} Group${selectedGroupIds.length !== 1 ? 's' : ''}`
         )}
       </Button>
     </form>
