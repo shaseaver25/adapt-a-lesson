@@ -26,9 +26,11 @@ export type Database = {
           learning_preferences: string[] | null
           notes: string | null
           num_students: number
+          organization_id: string | null
           reading_level_label: string
           reading_level_lexile: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           accommodations?: string[] | null
@@ -41,9 +43,11 @@ export type Database = {
           learning_preferences?: string[] | null
           notes?: string | null
           num_students?: number
+          organization_id?: string | null
           reading_level_label?: string
           reading_level_lexile?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           accommodations?: string[] | null
@@ -56,9 +60,11 @@ export type Database = {
           learning_preferences?: string[] | null
           notes?: string | null
           num_students?: number
+          organization_id?: string | null
           reading_level_label?: string
           reading_level_lexile?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
