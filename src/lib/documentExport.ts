@@ -1661,7 +1661,7 @@ export async function exportBilingualHandoutDocx(
 /**
  * Interface for aligned bilingual row
  */
-interface AlignedRow {
+export interface AlignedRow {
   id: string;
   type: 'heading' | 'instruction' | 'question' | 'answer-line' | 'answer-box' | 'spacer' | 'content' | 'vocabulary';
   homeLanguage: { text: string; lineCount: number };
@@ -1670,14 +1670,641 @@ interface AlignedRow {
 }
 
 /**
- * Create aligned bilingual table from pre-aligned content
+ * Border helper functions for enhanced styling
+ */
+function noBorders() {
+  return {
+    top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  };
+}
+
+function leftColumnBorders() {
+  return {
+    top: { style: BorderStyle.SINGLE, size: 4, color: 'E5E7EB' },
+    bottom: { style: BorderStyle.SINGLE, size: 4, color: 'E5E7EB' },
+    left: { style: BorderStyle.SINGLE, size: 8, color: 'D97706' },
+    right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  };
+}
+
+function rightColumnBorders() {
+  return {
+    top: { style: BorderStyle.SINGLE, size: 4, color: 'E5E7EB' },
+    bottom: { style: BorderStyle.SINGLE, size: 4, color: 'E5E7EB' },
+    left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    right: { style: BorderStyle.SINGLE, size: 8, color: '1E40AF' },
+  };
+}
+
+function gutterBorders() {
+  return {
+    top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    left: { style: BorderStyle.DASHED, size: 4, color: 'D1D5DB' },
+    right: { style: BorderStyle.DASHED, size: 4, color: 'D1D5DB' },
+  };
+}
+
+function cellMargins() {
+  return {
+    top: convertInchesToTwip(0.1),
+    bottom: convertInchesToTwip(0.1),
+    left: convertInchesToTwip(0.15),
+    right: convertInchesToTwip(0.15),
+  };
+}
+
+/**
+ * Get cell style based on row type
+ */
+function getCellStyleForType(type: AlignedRow['type']): { fontSize: number; bold: boolean } {
+  switch (type) {
+    case 'heading':
+      return { fontSize: 26, bold: true };
+    case 'instruction':
+      return { fontSize: 22, bold: false };
+    case 'question':
+      return { fontSize: 22, bold: false };
+    case 'vocabulary':
+      return { fontSize: 20, bold: false };
+    default:
+      return { fontSize: 22, bold: false };
+  }
+}
+
+/**
+ * Generate answer space paragraph for DOCX
+ */
+function generateAnswerSpaceParagraph(lines: number, type: 'answer-line' | 'answer-box'): Paragraph {
+  if (type === 'answer-line') {
+    return new Paragraph({
+      children: [
+        new TextRun({
+          text: '_'.repeat(50),
+          size: 22,
+          font: 'Arial',
+          color: '9CA3AF',
+        }),
+      ],
+      spacing: { before: 100, after: 100 },
+    });
+  } else {
+    const lineTexts: TextRun[] = [];
+    for (let i = 0; i < lines; i++) {
+      lineTexts.push(
+        new TextRun({
+          text: '_'.repeat(50),
+          size: 22,
+          font: 'Arial',
+          color: '9CA3AF',
+        })
+      );
+      if (i < lines - 1) {
+        lineTexts.push(new TextRun({ text: '\n', size: 22 }));
+      }
+    }
+    return new Paragraph({
+      children: lineTexts,
+      spacing: { before: 100, after: 100 },
+    });
+  }
+}
+
+/**
+ * Generate student info row (Name, Date, Period fields)
+ */
+function generateStudentInfoRow(): Paragraph {
+  return new Paragraph({
+    children: [
+      new TextRun({ text: 'Name: ', size: 22, font: 'Arial' }),
+      new TextRun({ text: '_'.repeat(30), size: 22, font: 'Arial' }),
+      new TextRun({ text: '     Date: ', size: 22, font: 'Arial' }),
+      new TextRun({ text: '_'.repeat(15), size: 22, font: 'Arial' }),
+      new TextRun({ text: '     Period: ', size: 22, font: 'Arial' }),
+      new TextRun({ text: '_'.repeat(8), size: 22, font: 'Arial' }),
+    ],
+    spacing: { before: 200, after: 300 },
+  });
+}
+
+/**
+ * Audio QR Header interface for DOCX generation
+ */
+export interface AudioQRHeaderData {
+  sectionTitle: string;
+  studentGroup: string;
+  audioLinks: {
+    homeLanguage?: {
+      language: string;
+      qrDataUrl: string;
+      shortUrl: string;
+      label: string;
+    };
+    english: {
+      qrDataUrl: string;
+      shortUrl: string;
+      label: string;
+    };
+    readAloud?: {
+      qrDataUrl: string;
+      shortUrl: string;
+      label: string;
+    };
+  };
+}
+
+/**
+ * Generate QR header section for bilingual DOCX
+ */
+async function generateQRHeaderSection(
+  qrHeader: AudioQRHeaderData,
+  readingLevel?: string
+): Promise<(Paragraph | Table)[]> {
+  const elements: (Paragraph | Table)[] = [];
+
+  // Title with reading level
+  elements.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: qrHeader.sectionTitle,
+          bold: true,
+          size: 36,
+          font: 'Arial',
+        }),
+        ...(readingLevel ? [
+          new TextRun({
+            text: `  •  ${readingLevel} Edition`,
+            size: 28,
+            font: 'Arial',
+            color: 'D97706',
+          }),
+        ] : []),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 },
+    })
+  );
+
+  // Audio instruction
+  elements.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: '🎧 Scan a QR code to listen to instructions:',
+          size: 22,
+          font: 'Arial',
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 },
+    })
+  );
+
+  // Build QR code cells
+  const qrCells: TableCell[] = [];
+
+  // Home Language QR (if exists)
+  if (qrHeader.audioLinks.homeLanguage) {
+    try {
+      const qrImageBuffer = await dataUrlToArrayBuffer(qrHeader.audioLinks.homeLanguage.qrDataUrl);
+      qrCells.push(
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new ImageRun({
+                  type: 'png',
+                  data: qrImageBuffer,
+                  transformation: { width: 70, height: 70 },
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: qrHeader.audioLinks.homeLanguage.label,
+                  size: 18,
+                  font: 'Arial',
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: qrHeader.audioLinks.homeLanguage.shortUrl,
+                  size: 14,
+                  font: 'Arial',
+                  color: '6B7280',
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+          ],
+          width: { size: 25, type: WidthType.PERCENTAGE },
+          borders: noBorders(),
+          margins: { top: 80, bottom: 80, left: 60, right: 60 },
+        })
+      );
+    } catch (e) {
+      console.error('Failed to create home language QR cell:', e);
+    }
+  }
+
+  // English QR (always present)
+  try {
+    const englishQRBuffer = await dataUrlToArrayBuffer(qrHeader.audioLinks.english.qrDataUrl);
+    qrCells.push(
+      new TableCell({
+        children: [
+          new Paragraph({
+            children: [
+              new ImageRun({
+                type: 'png',
+                data: englishQRBuffer,
+                transformation: { width: 70, height: 70 },
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: qrHeader.audioLinks.english.label,
+                size: 18,
+                font: 'Arial',
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: qrHeader.audioLinks.english.shortUrl,
+                size: 14,
+                font: 'Arial',
+                color: '6B7280',
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+          }),
+        ],
+        width: { size: 25, type: WidthType.PERCENTAGE },
+        borders: noBorders(),
+        margins: { top: 80, bottom: 80, left: 60, right: 60 },
+      })
+    );
+  } catch (e) {
+    console.error('Failed to create English QR cell:', e);
+  }
+
+  // Read Aloud QR (if accommodation selected)
+  if (qrHeader.audioLinks.readAloud) {
+    try {
+      const readAloudQRBuffer = await dataUrlToArrayBuffer(qrHeader.audioLinks.readAloud.qrDataUrl);
+      qrCells.push(
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new ImageRun({
+                  type: 'png',
+                  data: readAloudQRBuffer,
+                  transformation: { width: 70, height: 70 },
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: qrHeader.audioLinks.readAloud.label,
+                  size: 18,
+                  font: 'Arial',
+                  bold: true,
+                  color: '1E40AF',
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: qrHeader.audioLinks.readAloud.shortUrl,
+                  size: 14,
+                  font: 'Arial',
+                  color: '6B7280',
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+          ],
+          width: { size: 25, type: WidthType.PERCENTAGE },
+          borders: noBorders(),
+          shading: { fill: 'EFF6FF' },
+          margins: { top: 80, bottom: 80, left: 60, right: 60 },
+        })
+      );
+    } catch (e) {
+      console.error('Failed to create read aloud QR cell:', e);
+    }
+  }
+
+  // Add spacer cells to center QR codes
+  if (qrCells.length > 0 && qrCells.length < 4) {
+    const spacerWidth = Math.floor((100 - qrCells.length * 25) / 2);
+    qrCells.unshift(
+      new TableCell({
+        children: [new Paragraph({ text: '' })],
+        width: { size: spacerWidth, type: WidthType.PERCENTAGE },
+        borders: noBorders(),
+      })
+    );
+    qrCells.push(
+      new TableCell({
+        children: [new Paragraph({ text: '' })],
+        width: { size: spacerWidth, type: WidthType.PERCENTAGE },
+        borders: noBorders(),
+      })
+    );
+  }
+
+  if (qrCells.length > 0) {
+    elements.push(
+      new Table({
+        rows: [new TableRow({ children: qrCells })],
+        width: { size: 100, type: WidthType.PERCENTAGE },
+      })
+    );
+  }
+
+  return elements;
+}
+
+/**
+ * Generate enhanced bilingual content table with gutter and color-coded columns
+ */
+async function generateEnhancedBilingualContentTable(
+  rows: AlignedRow[],
+  homeLanguage: string
+): Promise<Table> {
+  const tableRows: TableRow[] = [];
+
+  // Column headers with color coding
+  tableRows.push(
+    new TableRow({
+      tableHeader: true,
+      children: [
+        // Home Language Header (LEFT)
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${getLanguageFlag(homeLanguage)} ${homeLanguage}`,
+                  bold: true,
+                  size: 24,
+                  font: 'Arial',
+                  color: 'FFFFFF',
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+          ],
+          width: { size: 48, type: WidthType.PERCENTAGE },
+          shading: { fill: 'D97706' }, // Amber background
+          margins: cellMargins(),
+        }),
+        // Gutter
+        new TableCell({
+          children: [new Paragraph({ text: '' })],
+          width: { size: 4, type: WidthType.PERCENTAGE },
+          borders: noBorders(),
+        }),
+        // English Header (RIGHT)
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: '🇺🇸 English',
+                  bold: true,
+                  size: 24,
+                  font: 'Arial',
+                  color: 'FFFFFF',
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+          ],
+          width: { size: 48, type: WidthType.PERCENTAGE },
+          shading: { fill: '1E40AF' }, // Blue background
+          margins: cellMargins(),
+        }),
+      ],
+    })
+  );
+
+  // Content rows
+  for (const row of rows) {
+    const cellStyle = getCellStyleForType(row.type);
+    const isAnswerSpace = row.type === 'answer-line' || row.type === 'answer-box';
+    const minHeight = row.alignedLineCount * 300;
+
+    tableRows.push(
+      new TableRow({
+        children: [
+          // Home Language Column (LEFT)
+          new TableCell({
+            children: [
+              isAnswerSpace
+                ? generateAnswerSpaceParagraph(row.alignedLineCount, row.type as 'answer-line' | 'answer-box')
+                : new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: row.homeLanguage.text,
+                        size: cellStyle.fontSize,
+                        font: 'Arial',
+                        bold: cellStyle.bold,
+                      }),
+                    ],
+                    spacing: { after: 100 },
+                  }),
+            ],
+            width: { size: 48, type: WidthType.PERCENTAGE },
+            borders: leftColumnBorders(),
+            margins: cellMargins(),
+            shading: { fill: 'FFFBEB' }, // Light amber tint
+          }),
+          // Gutter (middle divider)
+          new TableCell({
+            children: [new Paragraph({ text: '' })],
+            width: { size: 4, type: WidthType.PERCENTAGE },
+            borders: gutterBorders(),
+            shading: { fill: 'F3F4F6' },
+          }),
+          // English Column (RIGHT)
+          new TableCell({
+            children: [
+              isAnswerSpace
+                ? generateAnswerSpaceParagraph(row.alignedLineCount, row.type as 'answer-line' | 'answer-box')
+                : new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: row.english.text,
+                        size: cellStyle.fontSize,
+                        font: 'Arial',
+                        bold: cellStyle.bold,
+                      }),
+                    ],
+                    spacing: { after: 100 },
+                  }),
+            ],
+            width: { size: 48, type: WidthType.PERCENTAGE },
+            borders: rightColumnBorders(),
+            margins: cellMargins(),
+            shading: { fill: 'EFF6FF' }, // Light blue tint
+          }),
+        ],
+        height: { value: minHeight, rule: 'atLeast' as any },
+      })
+    );
+  }
+
+  return new Table({
+    rows: tableRows,
+    width: { size: 100, type: WidthType.PERCENTAGE },
+  });
+}
+
+/**
+ * Generate complete bilingual assignment DOCX with QR header, student info, and aligned content
+ */
+export async function generateBilingualAssignmentDocx(
+  sectionTitle: string,
+  alignedRows: AlignedRow[],
+  qrHeader: AudioQRHeaderData | null,
+  config: BilingualDocumentConfig,
+  title?: string
+): Promise<Document> {
+  const children: (Paragraph | Table)[] = [];
+
+  // QR Code Header (if available)
+  if (qrHeader) {
+    const qrHeaderElements = await generateQRHeaderSection(qrHeader, config.readingLevel);
+    children.push(...qrHeaderElements);
+
+    // Divider line
+    children.push(
+      new Paragraph({
+        border: {
+          bottom: { style: BorderStyle.SINGLE, size: 12, color: 'D97706' },
+        },
+        spacing: { after: 300 },
+      })
+    );
+  } else {
+    // Title without QR header
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: title || sectionTitle || 'Student Assignment',
+            bold: true,
+            size: 36,
+            font: 'Arial',
+          }),
+          ...(config.readingLevel ? [
+            new TextRun({
+              text: `  •  ${config.readingLevel} Edition`,
+              size: 28,
+              font: 'Arial',
+              color: 'D97706',
+            }),
+          ] : []),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `Bilingual: ${getLanguageFlag(config.homeLanguage)} ${config.homeLanguage} / ${getLanguageFlag('English')} English`,
+            size: 22,
+            font: 'Arial',
+            italics: true,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 300 },
+      })
+    );
+  }
+
+  // Student info line (Name, Date, Period)
+  children.push(generateStudentInfoRow());
+
+  // Main bilingual content table
+  const contentTable = await generateEnhancedBilingualContentTable(alignedRows, config.homeLanguage);
+  children.push(contentTable);
+
+  return new Document({
+    creator: 'Educator Tools',
+    title: `${title || sectionTitle} - Bilingual Assignment`,
+    sections: [
+      {
+        properties: {
+          page: {
+            size: {
+              orientation: PageOrientation.LANDSCAPE,
+              width: convertInchesToTwip(11),
+              height: convertInchesToTwip(8.5),
+            },
+            margin: {
+              top: convertInchesToTwip(1.5),
+              bottom: convertInchesToTwip(0.75),
+              left: convertInchesToTwip(0.75),
+              right: convertInchesToTwip(0.75),
+            },
+          },
+        },
+        children,
+      },
+    ],
+  });
+}
+
+/**
+ * Export bilingual assignment as DOCX file
+ */
+export async function exportBilingualAssignmentDocx(
+  sectionTitle: string,
+  alignedRows: AlignedRow[],
+  qrHeader: AudioQRHeaderData | null,
+  config: BilingualDocumentConfig,
+  title?: string
+): Promise<void> {
+  const doc = await generateBilingualAssignmentDocx(sectionTitle, alignedRows, qrHeader, config, title);
+  const blob = await Packer.toBlob(doc);
+  const safeTitle = (title || sectionTitle || 'assignment').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  const safeGroup = config.groupName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  saveAs(blob, `${safeTitle}-${safeGroup}-bilingual.docx`);
+}
+
+/**
+ * Create aligned bilingual table from pre-aligned content (legacy support)
  */
 async function createAlignedBilingualTable(
   rows: AlignedRow[],
   homeLanguage: string
 ): Promise<Table> {
   const tableRows: TableRow[] = [];
-  
+
   // Header row
   tableRows.push(
     new TableRow({
@@ -1722,16 +2349,14 @@ async function createAlignedBilingualTable(
       ],
     })
   );
-  
+
   // Content rows with type-based styling
   for (const row of rows) {
     const isHeading = row.type === 'heading';
     const isQuestion = row.type === 'question';
     const isAnswerSpace = row.type === 'answer-line' || row.type === 'answer-box';
-    
-    // Calculate min height based on aligned line count
-    const minHeight = row.alignedLineCount * 300; // twips per line
-    
+    const minHeight = row.alignedLineCount * 300;
+
     tableRows.push(
       new TableRow({
         children: [
@@ -1751,9 +2376,9 @@ async function createAlignedBilingualTable(
             width: { size: 48, type: WidthType.PERCENTAGE },
             margins: { top: 80, bottom: 80, left: 100, right: 100 },
             shading: isAnswerSpace ? { fill: 'FAFAFA' } : undefined,
-            borders: isAnswerSpace ? {
-              bottom: { style: BorderStyle.DASHED, size: 1, color: '999999' },
-            } : undefined,
+            borders: isAnswerSpace
+              ? { bottom: { style: BorderStyle.DASHED, size: 1, color: '999999' } }
+              : undefined,
           }),
           new TableCell({
             children: [
@@ -1771,16 +2396,16 @@ async function createAlignedBilingualTable(
             width: { size: 48, type: WidthType.PERCENTAGE },
             margins: { top: 80, bottom: 80, left: 100, right: 100 },
             shading: isAnswerSpace ? { fill: 'FAFAFA' } : undefined,
-            borders: isAnswerSpace ? {
-              bottom: { style: BorderStyle.DASHED, size: 1, color: '999999' },
-            } : undefined,
+            borders: isAnswerSpace
+              ? { bottom: { style: BorderStyle.DASHED, size: 1, color: '999999' } }
+              : undefined,
           }),
         ],
         height: { value: minHeight, rule: 'atLeast' as any },
       })
     );
   }
-  
+
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     rows: tableRows,
@@ -1805,7 +2430,7 @@ export async function exportAlignedBilingualDocx(
   title: string
 ): Promise<void> {
   const children: (Paragraph | Table)[] = [];
-  
+
   // Title
   children.push(
     new Paragraph({
@@ -1844,17 +2469,20 @@ export async function exportAlignedBilingualDocx(
       spacing: { after: 300 },
     })
   );
-  
+
   // Add QR codes header at TOP (if available)
   if (qrSections.length > 0) {
     const qrHeader = await createBilingualQRHeader(qrSections, config.homeLanguage);
     children.push(...qrHeader);
   }
-  
+
+  // Add student info row
+  children.push(generateStudentInfoRow());
+
   // Add aligned bilingual content table
   const contentTable = await createAlignedBilingualTable(alignedRows, config.homeLanguage);
   children.push(contentTable);
-  
+
   const doc = new Document({
     creator: 'Educator Tools',
     title: `${title} - Aligned Bilingual`,
@@ -1877,7 +2505,7 @@ export async function exportAlignedBilingualDocx(
       },
     ],
   });
-  
+
   const blob = await Packer.toBlob(doc);
   const safeTitle = (title || 'assignment').replace(/[^a-z0-9]/gi, '-').toLowerCase();
   const safeGroup = config.groupName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
