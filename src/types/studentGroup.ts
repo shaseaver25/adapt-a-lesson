@@ -6,9 +6,18 @@ export interface StudentGroup {
   homeLanguage: string;
   ellStatus: 'None' | 'Emerging' | 'Developing' | 'Expanding' | 'Bridging';
   iep504Status: 'None' | 'IEP' | '504 Plan';
+  learningPreference: 'Visual' | 'Hands-on' | 'Mixed' | 'Verbal' | 'Independent';
   accommodations: string[];
   notes: string;
 }
+
+export const LEARNING_PREFERENCES = [
+  { label: 'Visual', value: 'Visual' },
+  { label: 'Hands-on', value: 'Hands-on' },
+  { label: 'Mixed', value: 'Mixed' },
+  { label: 'Verbal', value: 'Verbal' },
+  { label: 'Independent', value: 'Independent' },
+] as const;
 
 export const READING_LEVELS = [
   { label: 'Below Grade', value: 'Below Grade' },

@@ -18,8 +18,9 @@ import {
   IEP_504_STATUSES,
   ACCOMMODATION_OPTIONS,
   LANGUAGES,
+  LEARNING_PREFERENCES,
 } from '@/types/studentGroup';
-import { Users, BookOpen, Languages, ClipboardList } from 'lucide-react';
+import { Users, BookOpen, Languages, ClipboardList, Brain } from 'lucide-react';
 
 interface StudentGroupFormProps {
   onSubmit: (group: StudentGroup, lesson: string) => void;
@@ -34,6 +35,7 @@ export function StudentGroupForm({ onSubmit, isLoading }: StudentGroupFormProps)
   const [homeLanguage, setHomeLanguage] = useState('English');
   const [ellStatus, setEllStatus] = useState<StudentGroup['ellStatus']>('None');
   const [iep504Status, setIep504Status] = useState<StudentGroup['iep504Status']>('None');
+  const [learningPreference, setLearningPreference] = useState<StudentGroup['learningPreference']>('Mixed');
   const [accommodations, setAccommodations] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [lessonContent, setLessonContent] = useState('');
@@ -56,6 +58,7 @@ export function StudentGroupForm({ onSubmit, isLoading }: StudentGroupFormProps)
       homeLanguage,
       ellStatus,
       iep504Status,
+      learningPreference,
       accommodations,
       notes,
     };
@@ -187,6 +190,27 @@ export function StudentGroupForm({ onSubmit, isLoading }: StudentGroupFormProps)
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      {/* Learning Preferences */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-foreground">
+          <Brain className="h-5 w-5 text-primary" />
+          <h3 className="font-display font-bold text-lg">Learning Preference</h3>
+        </div>
+        
+        <Select value={learningPreference} onValueChange={(v) => setLearningPreference(v as StudentGroup['learningPreference'])}>
+          <SelectTrigger className="w-full md:w-1/2">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {LEARNING_PREFERENCES.map((pref) => (
+              <SelectItem key={pref.value} value={pref.value}>
+                {pref.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Accommodations */}
