@@ -160,6 +160,39 @@ export type Database = {
           },
         ]
       }
+      saved_assessments: {
+        Row: {
+          assessment_description: string
+          created_at: string
+          grade_level: string | null
+          id: string
+          subject: string | null
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          assessment_description: string
+          created_at?: string
+          grade_level?: string | null
+          id?: string
+          subject?: string | null
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          assessment_description?: string
+          created_at?: string
+          grade_level?: string | null
+          id?: string
+          subject?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       student_groups: {
         Row: {
           accommodations: string[] | null
