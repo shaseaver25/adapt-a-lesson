@@ -1657,3 +1657,229 @@ export async function exportBilingualHandoutDocx(
   const safeGroup = config.groupName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
   saveAs(blob, `${safeTitle}-${safeGroup}-bilingual.docx`);
 }
+
+/**
+ * Interface for aligned bilingual row
+ */
+interface AlignedRow {
+  id: string;
+  type: 'heading' | 'instruction' | 'question' | 'answer-line' | 'answer-box' | 'spacer' | 'content' | 'vocabulary';
+  homeLanguage: { text: string; lineCount: number };
+  english: { text: string; lineCount: number };
+  alignedLineCount: number;
+}
+
+/**
+ * Create aligned bilingual table from pre-aligned content
+ */
+async function createAlignedBilingualTable(
+  rows: AlignedRow[],
+  homeLanguage: string
+): Promise<Table> {
+  const tableRows: TableRow[] = [];
+  
+  // Header row
+  tableRows.push(
+    new TableRow({
+      tableHeader: true,
+      children: [
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${getLanguageFlag(homeLanguage)} ${homeLanguage}`,
+                  bold: true,
+                  size: 24,
+                  font: 'Arial',
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+          ],
+          width: { size: 48, type: WidthType.PERCENTAGE },
+          shading: { fill: 'E8F4FD' },
+          margins: { top: 100, bottom: 100, left: 100, right: 100 },
+        }),
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${getLanguageFlag('English')} English`,
+                  bold: true,
+                  size: 24,
+                  font: 'Arial',
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+          ],
+          width: { size: 48, type: WidthType.PERCENTAGE },
+          shading: { fill: 'F5F5F5' },
+          margins: { top: 100, bottom: 100, left: 100, right: 100 },
+        }),
+      ],
+    })
+  );
+  
+  // Content rows with type-based styling
+  for (const row of rows) {
+    const isHeading = row.type === 'heading';
+    const isQuestion = row.type === 'question';
+    const isAnswerSpace = row.type === 'answer-line' || row.type === 'answer-box';
+    
+    // Calculate min height based on aligned line count
+    const minHeight = row.alignedLineCount * 300; // twips per line
+    
+    tableRows.push(
+      new TableRow({
+        children: [
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: isAnswerSpace ? '' : row.homeLanguage.text,
+                    size: isHeading ? 26 : 22,
+                    bold: isHeading || isQuestion,
+                    font: 'Arial',
+                  }),
+                ],
+              }),
+            ],
+            width: { size: 48, type: WidthType.PERCENTAGE },
+            margins: { top: 80, bottom: 80, left: 100, right: 100 },
+            shading: isAnswerSpace ? { fill: 'FAFAFA' } : undefined,
+            borders: isAnswerSpace ? {
+              bottom: { style: BorderStyle.DASHED, size: 1, color: '999999' },
+            } : undefined,
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: isAnswerSpace ? '' : row.english.text,
+                    size: isHeading ? 26 : 22,
+                    bold: isHeading || isQuestion,
+                    font: 'Arial',
+                  }),
+                ],
+              }),
+            ],
+            width: { size: 48, type: WidthType.PERCENTAGE },
+            margins: { top: 80, bottom: 80, left: 100, right: 100 },
+            shading: isAnswerSpace ? { fill: 'FAFAFA' } : undefined,
+            borders: isAnswerSpace ? {
+              bottom: { style: BorderStyle.DASHED, size: 1, color: '999999' },
+            } : undefined,
+          }),
+        ],
+        height: { value: minHeight, rule: 'atLeast' as any },
+      })
+    );
+  }
+  
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: tableRows,
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+      left: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+      right: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'E5E5E5' },
+      insideVertical: { style: BorderStyle.SINGLE, size: 2, color: 'CCCCCC' },
+    },
+  });
+}
+
+/**
+ * Export aligned bilingual content as landscape DOCX
+ */
+export async function exportAlignedBilingualDocx(
+  alignedRows: AlignedRow[],
+  qrSections: BilingualSection[],
+  config: BilingualDocumentConfig,
+  title: string
+): Promise<void> {
+  const children: (Paragraph | Table)[] = [];
+  
+  // Title
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: title || 'Student Assignment',
+          bold: true,
+          size: 36,
+          font: 'Arial',
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 100 },
+    }),
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: `${config.groupName}`,
+          size: 24,
+          font: 'Arial',
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 },
+    }),
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: `Bilingual: ${getLanguageFlag(config.homeLanguage)} ${config.homeLanguage} / ${getLanguageFlag('English')} English`,
+          size: 22,
+          font: 'Arial',
+          italics: true,
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 300 },
+    })
+  );
+  
+  // Add QR codes header at TOP (if available)
+  if (qrSections.length > 0) {
+    const qrHeader = await createBilingualQRHeader(qrSections, config.homeLanguage);
+    children.push(...qrHeader);
+  }
+  
+  // Add aligned bilingual content table
+  const contentTable = await createAlignedBilingualTable(alignedRows, config.homeLanguage);
+  children.push(contentTable);
+  
+  const doc = new Document({
+    creator: 'Educator Tools',
+    title: `${title} - Aligned Bilingual`,
+    sections: [
+      {
+        properties: {
+          page: {
+            size: {
+              orientation: PageOrientation.LANDSCAPE,
+            },
+            margin: {
+              top: convertInchesToTwip(0.75),
+              bottom: convertInchesToTwip(0.5),
+              left: convertInchesToTwip(0.5),
+              right: convertInchesToTwip(0.5),
+            },
+          },
+        },
+        children,
+      },
+    ],
+  });
+  
+  const blob = await Packer.toBlob(doc);
+  const safeTitle = (title || 'assignment').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  const safeGroup = config.groupName.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  saveAs(blob, `${safeTitle}-${safeGroup}-aligned-bilingual.docx`);
+}

@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.get-lesson-with-audio]
 verify_jwt = false
+
+[functions.translate-content]
+verify_jwt = false
