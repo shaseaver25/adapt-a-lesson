@@ -41,13 +41,15 @@ interface DifferentiatedLessonOutputProps {
   selectedGroups: (StudentGroup & { id: string })[];
   lessonTitle?: string;
   originalContent?: string;
+  onSaved?: () => void;
 }
 
 export function DifferentiatedLessonOutput({ 
   content, 
   selectedGroups, 
   lessonTitle = 'Lesson',
-  originalContent = ''
+  originalContent = '',
+  onSaved
 }: DifferentiatedLessonOutputProps) {
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -89,6 +91,7 @@ export function DifferentiatedLessonOutput({
       if (error) throw error;
 
       setSaved(true);
+      onSaved?.();
       toast({ 
         title: 'Lesson saved!', 
         description: 'Your differentiated lesson has been saved for future access.' 

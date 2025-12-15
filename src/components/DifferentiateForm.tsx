@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Users, BookOpen, Settings2, ExternalLink, CheckSquare, XSquare, HelpCircle, Sparkles, FolderOpen, RefreshCw, AlertCircle, Clock } from 'lucide-react';
+import { Users, BookOpen, Settings2, ExternalLink, CheckSquare, XSquare, HelpCircle, Sparkles, FolderOpen, RefreshCw, AlertCircle, Clock, XCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useDifferentiation, type GraphicOrganizerType } from '@/contexts/DifferentiationContext';
 import { READING_LEVEL_DESCRIPTIONS, ELL_STATUS_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
@@ -66,6 +66,7 @@ interface DifferentiateFormProps {
   isLoading?: boolean;
   error?: string | null;
   onRetry?: () => void;
+  onCancel?: () => void;
 }
 
 function dbToStudentGroup(db: DBStudentGroup): StudentGroup & { id: string; folderId: string | null } {
@@ -85,7 +86,7 @@ function dbToStudentGroup(db: DBStudentGroup): StudentGroup & { id: string; fold
   };
 }
 
-export function DifferentiateForm({ onSubmit, isLoading, error, onRetry }: DifferentiateFormProps) {
+export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCancel }: DifferentiateFormProps) {
   const {
     cachedLessonContent,
     setCachedLessonContent,
@@ -458,11 +459,25 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry }: Diffe
       {/* Loading State with Time Estimate */}
       {isLoading && (
         <div className="mb-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <span className="font-medium text-foreground">
-              Differentiating for {selectedGroupIds.length} group{selectedGroupIds.length !== 1 ? 's' : ''}...
-            </span>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <span className="font-medium text-foreground">
+                Differentiating for {selectedGroupIds.length} group{selectedGroupIds.length !== 1 ? 's' : ''}...
+              </span>
+            </div>
+            {onCancel && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onCancel}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <XCircle className="h-4 w-4 mr-1" />
+                Cancel
+              </Button>
+            )}
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />

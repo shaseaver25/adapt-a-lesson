@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { DifferentiateForm, DifferentiateInput } from '@/components/DifferentiateForm';
 import { DifferentiatedLessonOutput } from '@/components/DifferentiatedLessonOutput';
@@ -11,7 +11,7 @@ import { StudentGroup } from '@/types/studentGroup';
 import { AssessmentInput } from '@/types/assessment';
 import { RubricInput } from '@/types/rubric';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles, BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2 } from 'lucide-react';
+import { Sparkles, BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
@@ -49,6 +49,47 @@ const Index = () => {
 
   // Abort controller for cancellation
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Track if lesson has been saved
+  const [isLessonSaved, setIsLessonSaved] = useState(false);
+
+  // Warn user before leaving if there's unsaved content
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (differentiatedLesson && !isLessonSaved) {
+        e.preventDefault();
+        e.returnValue = 'You have an unsaved differentiated lesson. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [differentiatedLesson, isLessonSaved]);
+
+  // Reset saved state when new lesson is generated
+  useEffect(() => {
+    if (differentiatedLesson) {
+      setIsLessonSaved(false);
+    }
+  }, [differentiatedLesson]);
+
+  const handleCancelGeneration = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsDifferentiating(false);
+      setProgressStatus(createInitialStatus());
+      toast({
+        title: 'Generation cancelled',
+        description: 'Lesson differentiation was stopped.',
+      });
+    }
+  }, []);
+
+  const handleLessonSaved = useCallback(() => {
+    setIsLessonSaved(true);
+  }, []);
 
   const handleDifferentiate = async (input: DifferentiateInput, isRetry = false) => {
     setIsDifferentiating(true);
@@ -342,6 +383,7 @@ const Index = () => {
                     isLoading={isDifferentiating}
                     error={differentiateError}
                     onRetry={handleRetryDifferentiate}
+                    onCancel={handleCancelGeneration}
                   />
                 </TabsContent>
 
@@ -377,6 +419,7 @@ const Index = () => {
               selectedGroups={selectedGroups}
               lessonTitle="Differentiated Lesson"
               originalContent={originalLessonContent}
+              onSaved={handleLessonSaved}
             />
           </div>
         ) : generatedAssessment ? (
