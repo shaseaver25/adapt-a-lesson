@@ -21,14 +21,179 @@ function getStudentFriendlyIcon(level: string): string {
   return STUDENT_LEVEL_NAMES[level]?.icon || '📖';
 }
 
+// Language translations for UI elements
+const LANGUAGE_TRANSLATIONS: Record<string, {
+  levelNames: Record<string, string>;
+  uiElements: {
+    name: string;
+    date: string;
+    learningTarget: string;
+    todayYouWillLearn: string;
+    keyWords: string;
+    practice: string;
+    checkUnderstanding: string;
+    reflection: string;
+    whatILearned: string;
+    questionIHave: string;
+    encouragement: string;
+    graphicOrganizer: string;
+    lessonContent: string;
+    edition: string;
+  };
+}> = {
+  'Spanish': {
+    levelNames: { 'Embers': 'Chispas', 'Flames': 'Llamas', 'Blazers': 'Brillantes', 'Supernovas': 'Supernovas' },
+    uiElements: {
+      name: 'Nombre', date: 'Fecha', learningTarget: 'Objetivo de Aprendizaje',
+      todayYouWillLearn: 'Hoy aprenderás a', keyWords: 'Palabras Clave / Key Words',
+      practice: 'Práctica', checkUnderstanding: 'Comprueba Tu Comprensión',
+      reflection: 'Reflexión', whatILearned: '¿Qué aprendí hoy?',
+      questionIHave: 'Una pregunta que todavía tengo', encouragement: '¡Tú puedes!',
+      graphicOrganizer: 'Organizador Gráfico', lessonContent: 'Contenido de la Lección',
+      edition: 'Edición'
+    }
+  },
+  'Mandarin': {
+    levelNames: { 'Embers': '火花', 'Flames': '火焰', 'Blazers': '闪耀者', 'Supernovas': '超新星' },
+    uiElements: {
+      name: '姓名', date: '日期', learningTarget: '学习目标',
+      todayYouWillLearn: '今天你将学习', keyWords: '关键词 / Key Words',
+      practice: '练习', checkUnderstanding: '检查你的理解',
+      reflection: '反思', whatILearned: '我今天学到了什么？',
+      questionIHave: '我还有一个问题', encouragement: '你能行！',
+      graphicOrganizer: '图形组织器', lessonContent: '课程内容',
+      edition: '版本'
+    }
+  },
+  'Vietnamese': {
+    levelNames: { 'Embers': 'Tia Lửa', 'Flames': 'Ngọn Lửa', 'Blazers': 'Rực Sáng', 'Supernovas': 'Siêu Sao' },
+    uiElements: {
+      name: 'Tên', date: 'Ngày', learningTarget: 'Mục Tiêu Học Tập',
+      todayYouWillLearn: 'Hôm nay bạn sẽ học', keyWords: 'Từ Khóa / Key Words',
+      practice: 'Thực Hành', checkUnderstanding: 'Kiểm Tra Hiểu Biết',
+      reflection: 'Suy Ngẫm', whatILearned: 'Hôm nay tôi đã học được gì?',
+      questionIHave: 'Một câu hỏi tôi vẫn còn', encouragement: 'Bạn làm được!',
+      graphicOrganizer: 'Sơ Đồ Tổ Chức', lessonContent: 'Nội Dung Bài Học',
+      edition: 'Phiên Bản'
+    }
+  },
+  'Arabic': {
+    levelNames: { 'Embers': 'الشرارات', 'Flames': 'اللهب', 'Blazers': 'المتألقون', 'Supernovas': 'النجوم العملاقة' },
+    uiElements: {
+      name: 'الاسم', date: 'التاريخ', learningTarget: 'هدف التعلم',
+      todayYouWillLearn: 'اليوم ستتعلم', keyWords: 'الكلمات الرئيسية / Key Words',
+      practice: 'التدريب', checkUnderstanding: 'تحقق من فهمك',
+      reflection: 'التأمل', whatILearned: 'ماذا تعلمت اليوم؟',
+      questionIHave: 'سؤال لا يزال لدي', encouragement: '!يمكنك فعل ذلك',
+      graphicOrganizer: 'المنظم الرسومي', lessonContent: 'محتوى الدرس',
+      edition: 'إصدار'
+    }
+  },
+  'Tagalog': {
+    levelNames: { 'Embers': 'Mga Tilamsik', 'Flames': 'Mga Apoy', 'Blazers': 'Mga Nagniningning', 'Supernovas': 'Mga Supernova' },
+    uiElements: {
+      name: 'Pangalan', date: 'Petsa', learningTarget: 'Layunin sa Pagkatuto',
+      todayYouWillLearn: 'Ngayon matututo ka ng', keyWords: 'Mga Susing Salita / Key Words',
+      practice: 'Pagsasanay', checkUnderstanding: 'Suriin ang Iyong Pag-unawa',
+      reflection: 'Pagninilay', whatILearned: 'Ano ang natutunan ko ngayon?',
+      questionIHave: 'Isang tanong na mayroon pa ako', encouragement: 'Kaya mo ito!',
+      graphicOrganizer: 'Graphic Organizer', lessonContent: 'Nilalaman ng Aralin',
+      edition: 'Edisyon'
+    }
+  },
+  'Korean': {
+    levelNames: { 'Embers': '불씨', 'Flames': '불꽃', 'Blazers': '빛나는 별', 'Supernovas': '초신성' },
+    uiElements: {
+      name: '이름', date: '날짜', learningTarget: '학습 목표',
+      todayYouWillLearn: '오늘 배울 내용', keyWords: '핵심 단어 / Key Words',
+      practice: '연습', checkUnderstanding: '이해도 확인',
+      reflection: '성찰', whatILearned: '오늘 무엇을 배웠나요?',
+      questionIHave: '아직 궁금한 점', encouragement: '할 수 있어요!',
+      graphicOrganizer: '그래픽 오거나이저', lessonContent: '수업 내용',
+      edition: '에디션'
+    }
+  },
+  'Haitian Creole': {
+    levelNames: { 'Embers': 'Flanm', 'Flames': 'Dife', 'Blazers': 'Limyè', 'Supernovas': 'Sipènova' },
+    uiElements: {
+      name: 'Non', date: 'Dat', learningTarget: 'Objektif Aprantisaj',
+      todayYouWillLearn: 'Jodi a ou pral aprann', keyWords: 'Mo Kle / Key Words',
+      practice: 'Pratik', checkUnderstanding: 'Tcheke Konpreyansyon Ou',
+      reflection: 'Refleksyon', whatILearned: 'Kisa mwen te aprann jodi a?',
+      questionIHave: 'Yon kesyon mwen toujou genyen', encouragement: 'Ou kapab!',
+      graphicOrganizer: 'Òganizatè Grafik', lessonContent: 'Kontni Leson an',
+      edition: 'Edisyon'
+    }
+  },
+  'Portuguese': {
+    levelNames: { 'Embers': 'Faíscas', 'Flames': 'Chamas', 'Blazers': 'Brilhantes', 'Supernovas': 'Supernovas' },
+    uiElements: {
+      name: 'Nome', date: 'Data', learningTarget: 'Objetivo de Aprendizagem',
+      todayYouWillLearn: 'Hoje você vai aprender', keyWords: 'Palavras-Chave / Key Words',
+      practice: 'Prática', checkUnderstanding: 'Verifique Sua Compreensão',
+      reflection: 'Reflexão', whatILearned: 'O que eu aprendi hoje?',
+      questionIHave: 'Uma pergunta que ainda tenho', encouragement: 'Você consegue!',
+      graphicOrganizer: 'Organizador Gráfico', lessonContent: 'Conteúdo da Lição',
+      edition: 'Edição'
+    }
+  },
+  'Russian': {
+    levelNames: { 'Embers': 'Искры', 'Flames': 'Пламя', 'Blazers': 'Сияющие', 'Supernovas': 'Сверхновые' },
+    uiElements: {
+      name: 'Имя', date: 'Дата', learningTarget: 'Цель Обучения',
+      todayYouWillLearn: 'Сегодня ты научишься', keyWords: 'Ключевые Слова / Key Words',
+      practice: 'Практика', checkUnderstanding: 'Проверь Понимание',
+      reflection: 'Рефлексия', whatILearned: 'Чему я научился сегодня?',
+      questionIHave: 'Вопрос, который у меня остался', encouragement: 'У тебя получится!',
+      graphicOrganizer: 'Графический Органайзер', lessonContent: 'Содержание Урока',
+      edition: 'Издание'
+    }
+  },
+  'French': {
+    levelNames: { 'Embers': 'Étincelles', 'Flames': 'Flammes', 'Blazers': 'Brillants', 'Supernovas': 'Supernovas' },
+    uiElements: {
+      name: 'Nom', date: 'Date', learningTarget: "Objectif d'Apprentissage",
+      todayYouWillLearn: "Aujourd'hui tu vas apprendre", keyWords: 'Mots Clés / Key Words',
+      practice: 'Pratique', checkUnderstanding: 'Vérifie Ta Compréhension',
+      reflection: 'Réflexion', whatILearned: "Qu'ai-je appris aujourd'hui?",
+      questionIHave: "Une question que j'ai encore", encouragement: 'Tu peux le faire!',
+      graphicOrganizer: 'Organisateur Graphique', lessonContent: 'Contenu de la Leçon',
+      edition: 'Édition'
+    }
+  },
+  'Somali': {
+    levelNames: { 'Embers': 'Hillaaca', 'Flames': 'Dab', 'Blazers': 'Ifaya', 'Supernovas': 'Xiddigaha' },
+    uiElements: {
+      name: 'Magaca', date: 'Taariikhda', learningTarget: 'Hadafka Barashada',
+      todayYouWillLearn: 'Maanta waxaad baran doontaa', keyWords: 'Erayada Muhiimka / Key Words',
+      practice: 'Tababar', checkUnderstanding: 'Hubi Fahamkaaga',
+      reflection: 'Fikir', whatILearned: 'Maxaan maanta baray?',
+      questionIHave: 'Su\'aal aan weli qabo', encouragement: 'Waad awoodaa!',
+      graphicOrganizer: 'Qaab-dhismeedka', lessonContent: 'Nuxurka Casharku',
+      edition: 'Daabacaad'
+    }
+  }
+};
+
+function getLanguageTranslations(language: string) {
+  return LANGUAGE_TRANSLATIONS[language] || null;
+}
+
 const systemPrompt = `You are an expert educator who specializes in differentiating instructional content for diverse learners. Your job is to create a comprehensive differentiated lesson plan with TWO DISTINCT SECTIONS:
 
-1. TEACHER GUIDE - Professional reference document with all teaching directions
-2. STUDENT HANDOUTS - Clean, printable materials for each student group
+1. TEACHER GUIDE - Professional reference document with all teaching directions (ALWAYS IN ENGLISH)
+2. STUDENT HANDOUTS - Clean, printable materials for each student group (IN STUDENT'S HOME LANGUAGE if not English)
+
+CRITICAL: MULTILINGUAL OUTPUT RULES
+- Teacher Guide: ALWAYS in English
+- Student Handouts: If a group's home language is NOT English, output the ENTIRE handout in that language
+- Vocabulary boxes: BILINGUAL format (English term → home language definition)
+- All UI elements, instructions, labels, and encouragement: Translated to home language
+- Keep English academic vocabulary terms with translations in parentheses
 
 CRITICAL: USE STRENGTHS-BASED NAMING ONLY
 - NEVER use "Below Grade Level" or any deficit-based language in student-facing content
-- Use the following flame-based naming system:
+- Use the following flame-based naming system (translate to home language):
   - "Embers" (🔥) = students who need additional scaffolding
   - "Flames" (🔥) = students at grade level
   - "Blazers" (💫) = students above grade level  
@@ -358,14 +523,51 @@ function buildGroupInstructions(group: StudentGroup, options: DifferentiationOpt
 
   instructions += levelGuidance;
 
-  // ELL support
-  if (group.ellStatus !== "None" && group.homeLanguage !== "English") {
+  // Multilingual output support
+  if (group.homeLanguage !== "English") {
+    const translations = getLanguageTranslations(group.homeLanguage);
+    const levelName = translations?.levelNames[friendlyName] || friendlyName;
+    
     instructions += `
 
-ELL SUPPORT:
+🌐 MULTILINGUAL OUTPUT REQUIRED - ${group.homeLanguage.toUpperCase()}:
+**CRITICAL: The ENTIRE student handout for this group MUST be in ${group.homeLanguage}**
+
+${translations ? `Use these translations for UI elements:
+- "${translations.uiElements.name}:" for Name field
+- "${translations.uiElements.date}:" for Date field  
+- "${translations.uiElements.learningTarget}" for Learning Target header
+- "${translations.uiElements.todayYouWillLearn}:" for the learning objective prompt
+- "${translations.uiElements.keyWords}" for vocabulary box header
+- "${translations.uiElements.practice}" for Practice section
+- "${translations.uiElements.checkUnderstanding}" for comprehension check
+- "${translations.uiElements.reflection}" for Reflection section
+- "${translations.uiElements.whatILearned}" for reflection prompt
+- "${translations.uiElements.encouragement}" for encouragement message
+- "${translations.uiElements.graphicOrganizer}" for graphic organizer header
+- Level name: "${levelName}" (translated from "${friendlyName}")
+- Edition label: "${translations.uiElements.edition}"` : `Translate all UI elements to ${group.homeLanguage}`}
+
+VOCABULARY BOX FORMAT (Bilingual):
+- English term (${group.homeLanguage} translation) - definition in ${group.homeLanguage}
+- Example: democracy (democracia) - un sistema donde la gente vota
+
+CONTENT TRANSLATION RULES:
+- Translate ALL lesson content to ${group.homeLanguage}
+- Keep English academic vocabulary terms with ${group.homeLanguage} translations in parentheses
+- Translate all instructions, prompts, and encouragement messages
+- Graphic organizer labels: Translate to ${group.homeLanguage}`;
+  }
+
+  // ELL support (additional scaffolding)
+  if (group.ellStatus !== "None") {
+    instructions += `
+
+ELL SCAFFOLDING (${group.ellStatus} level):
 - Add bilingual vocabulary box (English → ${group.homeLanguage}) for 5-7 key terms
 - Include visual supports for abstract concepts
-- Add sentence frames for verbal responses`;
+- Add sentence frames for verbal responses
+- Use shorter sentences and clear transitions`;
   }
 
   return instructions;
@@ -502,56 +704,59 @@ ${(selectedGroups as StudentGroup[]).map((g: StudentGroup) => `| ${g.groupName} 
 ═══════════════════════════════════════════════════════════════
 # 📄 STUDENT HANDOUTS
 ## Print from here for student distribution
+## ⚠️ MULTILINGUAL NOTE: Handouts for non-English home language groups must be FULLY TRANSLATED
 ═══════════════════════════════════════════════════════════════
 
-[For EACH student group, create a separate printable handout:]
+[For EACH student group, create a separate printable handout.
+**IF the group's home language is NOT English, the ENTIRE handout must be in that language.**]
 
 ---
 
 ## ${getStudentFriendlyIcon((selectedGroups as StudentGroup[])[0]?.readingLevelLabel || 'On Grade')} [Group Name] Handout
-### [Lesson Title] - ${getStudentFriendlyName((selectedGroups as StudentGroup[])[0]?.readingLevelLabel || 'On Grade')} Edition ✨
+### [Lesson Title] - [Level Name, translated if non-English] ${(selectedGroups as StudentGroup[]).some((g: StudentGroup) => g.homeLanguage !== 'English') ? '(Use translated "Edition" label)' : 'Edition'} ✨
 
-**Name:** _________________________ **Date:** _______________
-
----
-
-#### 🎯 Learning Target
-*Today you will learn to:* [Write in student-friendly language]
+**[Name label in home language]:** _________________________ **[Date label in home language]:** _______________
 
 ---
 
-#### 📖 Lesson Content
-[Full adapted lesson content for this group - NO teacher directions]
+#### 🎯 [Learning Target header in home language]
+*[Today you will learn prompt in home language]:* [Objective in home language]
 
-${options.includeVocabularyScaffolding ? `#### 📚 Key Words
-| Word | What it means |
-|------|---------------|
-| [term 1] | [student-friendly definition] |
-| [term 2] | [student-friendly definition] |
-[For ELL students, add home language translations in a third column]
+---
+
+#### 📖 [Lesson Content header in home language]
+[Full adapted lesson content - IN THE GROUP'S HOME LANGUAGE if not English]
+
+${options.includeVocabularyScaffolding ? `#### 📚 [Key Words header - bilingual if non-English]
+| English Word | [Home Language Translation] | [Definition in Home Language] |
+|--------------|----------------------------|------------------------------|
+| [term 1] | [translation] | [definition in home language] |
+| [term 2] | [translation] | [definition in home language] |
 
 ` : ''}${options.includeVisualPlaceholders ? `[VISUAL: Include appropriate visual support here]
 
-` : ''}${options.includeGraphicOrganizers ? `#### 📊 Graphic Organizer
-[Generate a complete, printable ASCII/Unicode graphic organizer customized for this lesson]
+` : ''}${options.includeGraphicOrganizers ? `#### 📊 [Graphic Organizer header in home language]
+[Generate a complete, printable ASCII/Unicode graphic organizer]
+[Translate all labels and prompts to the group's home language if not English]
 [Include blank lines (___________) for student responses]
 
-` : ''}#### ✏️ Practice
-[Differentiated practice activities appropriate for this group's level]
+` : ''}#### ✏️ [Practice header in home language]
+[Differentiated practice activities - IN THE GROUP'S HOME LANGUAGE if not English]
 
-${options.generateComprehensionQuestions ? `#### 💭 Check Your Understanding
-[3-5 level-appropriate questions]
+${options.generateComprehensionQuestions ? `#### 💭 [Check Your Understanding header in home language]
+[3-5 level-appropriate questions - IN THE GROUP'S HOME LANGUAGE if not English]
 
-` : ''}#### 🌟 Reflection
-*What I learned today:* _________________________________
-*One question I still have:* _________________________________
-
----
-⭐ **You've got this!** ⭐
+` : ''}#### 🌟 [Reflection header in home language]
+*[What I learned today prompt in home language]:* _________________________________
+*[One question I still have prompt in home language]:* _________________________________
 
 ---
+⭐ **[Encouragement message in home language]** ⭐
 
-[REPEAT the above handout structure for EACH student group, with appropriate differentiation]
+---
+
+[REPEAT the above handout structure for EACH student group]
+[Remember: Non-English groups get FULLY TRANSLATED handouts]
 
 ═══════════════════════════════════════════════════════════════
 # 🎯 Cross-Group Teaching Notes
