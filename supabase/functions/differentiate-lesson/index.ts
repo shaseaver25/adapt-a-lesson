@@ -21,7 +21,10 @@ function getStudentFriendlyIcon(level: string): string {
   return STUDENT_LEVEL_NAMES[level]?.icon || '📖';
 }
 
-const systemPrompt = `You are an expert educator who specializes in differentiating instructional content for diverse learners. Your job is to create a comprehensive differentiated lesson plan that includes adapted versions for MULTIPLE student groups.
+const systemPrompt = `You are an expert educator who specializes in differentiating instructional content for diverse learners. Your job is to create a comprehensive differentiated lesson plan with TWO DISTINCT SECTIONS:
+
+1. TEACHER GUIDE - Professional reference document with all teaching directions
+2. STUDENT HANDOUTS - Clean, printable materials for each student group
 
 CRITICAL: USE STRENGTHS-BASED NAMING ONLY
 - NEVER use "Below Grade Level" or any deficit-based language in student-facing content
@@ -30,19 +33,20 @@ CRITICAL: USE STRENGTHS-BASED NAMING ONLY
   - "Flames" (🔥) = students at grade level
   - "Blazers" (💫) = students above grade level  
   - "Supernovas" (🌟) = advanced/gifted students
-- These names celebrate growth, not deficits
 
-CORE RULES:
+FORMATTING RULES:
+- Teacher Guide: Include all pedagogical notes, pacing, assessment checkpoints
+- Student Handouts: ONLY student-facing content, no teacher directions
+- Use clear visual separators and professional formatting
+- Each student group gets their own printable handout section
+
+CORE DIFFERENTIATION RULES:
 1. NEVER change the learning objectives - all students learn the same content
-2. Adjust vocabulary, sentence complexity, and text density appropriately for each group
+2. Adjust vocabulary, sentence complexity, and text density appropriately
 3. Add scaffolds for Embers groups (more support)
 4. Add extensions and deeper questions for Blazers/Supernovas
-5. Preserve all key concepts and accurate information
-6. Match each group's reading level precisely
-7. Include bilingual vocabulary supports for ELL students
-8. Embed specific IEP accommodations when requested
-
-Format your output as a comprehensive markdown document with clear sections for each student group.`;
+5. Include bilingual vocabulary supports for ELL students
+6. Embed specific IEP accommodations when requested`;
 
 interface StudentGroup {
   id: string;
@@ -175,46 +179,100 @@ ${lessonContent}
 ---
 
 OUTPUT STRUCTURE:
-Create a single, comprehensive document with this structure:
+Create a comprehensive document with TWO MAIN SECTIONS:
 
-# [Extract Lesson Title from Content] - Differentiated Lesson Plan
-**Generated:** ${new Date().toLocaleDateString()}  
-**Groups Included:** ${(selectedGroups as StudentGroup[]).map((g: StudentGroup) => `${getStudentFriendlyIcon(g.readingLevelLabel)} ${g.groupName} (${getStudentFriendlyName(g.readingLevelLabel)})`).join(", ")}
+═══════════════════════════════════════════════════════════════
+# 📋 TEACHER GUIDE
+## [Extract Lesson Title] - Differentiated Instruction Plan
+═══════════════════════════════════════════════════════════════
 
-## 📋 Level Key (Teacher Reference Only)
-| Symbol | Level Name | Description |
-|--------|------------|-------------|
-| 🔥 Embers | Warming up | Additional scaffolding and support |
-| 🔥 Flames | Building momentum | Grade-level content |
-| 💫 Blazers | Burning bright | Above grade level enrichment |
-| 🌟 Supernovas | Explosive excellence | Advanced/gifted extensions |
+**📅 Generated:** ${new Date().toLocaleDateString()}
+**📊 Groups Included:** ${(selectedGroups as StudentGroup[]).map((g: StudentGroup) => `${getStudentFriendlyIcon(g.readingLevelLabel)} ${g.groupName} (${getStudentFriendlyName(g.readingLevelLabel)})`).join(", ")}
 
 ---
 
-[For EACH student group, create a section:]
+### 📑 Quick Reference: Group Accommodations
 
-## ${getStudentFriendlyIcon((selectedGroups as StudentGroup[])[0]?.readingLevelLabel || 'On Grade')} Group: [Group Name]
-**Level:** [Use ONLY the flame-based name - e.g., "Embers" not "Below Grade"] | [ELL Status if not None] | [# Students]  
-**Accommodations Applied:** [list as badges/tags]
-
-### Adapted Content:
-[Full lesson content adapted for this specific group - NEVER use deficit language like "below grade" in student-facing content]
-
-${options.includeVocabularyScaffolding ? `### Vocabulary Support:
-[Key terms with definitions, translations if ELL]
-
-` : ''}${options.generateComprehensionQuestions ? `### Comprehension Questions:
-[3-5 questions appropriate for this group's level]
-
-` : ''}### Scaffolding Notes (Teacher Only):
-[Brief teacher guidance for supporting this group - can reference actual grade levels here]
+| Group Name | Level | Key Modifications |
+|------------|-------|-------------------|
+${(selectedGroups as StudentGroup[]).map((g: StudentGroup) => `| ${g.groupName} | ${getStudentFriendlyIcon(g.readingLevelLabel)} ${getStudentFriendlyName(g.readingLevelLabel)} | ${g.accommodations.slice(0, 3).map(a => '• ' + a).join(' ')}${g.ellStatus !== 'None' ? ' • ELL: ' + g.ellStatus : ''} |`).join('\n')}
 
 ---
 
-## 🎯 Cross-Group Teaching Notes
+### 🎯 Lesson Overview
+[Extract and summarize objectives and standards from the original content]
+
+### 📦 Materials Needed
+[List all materials across all groups, noting group-specific items]
+
+### ⏱️ Pacing Guide
+[Suggested timing for each section]
+
+### 🔄 Differentiation Strategy
+[How to manage multiple groups simultaneously - specific actionable suggestions]
+
+### ✅ Formative Assessment Checkpoints
+[When and how to check understanding per group]
+
+---
+
+═══════════════════════════════════════════════════════════════
+# 📄 STUDENT HANDOUTS
+## Print from here for student distribution
+═══════════════════════════════════════════════════════════════
+
+[For EACH student group, create a separate printable handout:]
+
+---
+
+## ${getStudentFriendlyIcon((selectedGroups as StudentGroup[])[0]?.readingLevelLabel || 'On Grade')} [Group Name] Handout
+### [Lesson Title] - ${getStudentFriendlyName((selectedGroups as StudentGroup[])[0]?.readingLevelLabel || 'On Grade')} Edition ✨
+
+**Name:** _________________________ **Date:** _______________
+
+---
+
+#### 🎯 Learning Target
+*Today you will learn to:* [Write in student-friendly language]
+
+---
+
+#### 📖 Lesson Content
+[Full adapted lesson content for this group - NO teacher directions]
+
+${options.includeVocabularyScaffolding ? `#### 📚 Key Words
+| Word | What it means |
+|------|---------------|
+| [term 1] | [student-friendly definition] |
+| [term 2] | [student-friendly definition] |
+[For ELL students, add home language translations in a third column]
+
+` : ''}${options.includeVisualPlaceholders ? `[VISUAL: Include appropriate graphic organizer or visual support here]
+
+` : ''}#### ✏️ Practice
+[Differentiated practice activities appropriate for this group's level]
+
+${options.generateComprehensionQuestions ? `#### 💭 Check Your Understanding
+[3-5 level-appropriate questions]
+
+` : ''}#### 🌟 Reflection
+*What I learned today:* _________________________________
+*One question I still have:* _________________________________
+
+---
+⭐ **You've got this!** ⭐
+
+---
+
+[REPEAT the above handout structure for EACH student group, with appropriate differentiation]
+
+═══════════════════════════════════════════════════════════════
+# 🎯 Cross-Group Teaching Notes
+═══════════════════════════════════════════════════════════════
+
 [AI-generated suggestions for:
 - Managing instruction across multiple groups simultaneously
-- Flexible grouping strategies using the flame-based level names
+- Flexible grouping strategies
 - Common misconceptions to address
 - Extension activities for early finishers]`;
 
