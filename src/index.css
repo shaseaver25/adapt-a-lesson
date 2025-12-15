@@ -455,3 +455,35 @@
 .lesson-audio-title {
   @apply font-display font-semibold text-foreground;
 }
+
+/* ============================
+   Bilingual Vocabulary Player
+   ============================ */
+
+.bilingual-vocabulary-player {
+  @apply border rounded-xl p-4;
+  border-color: hsl(var(--accent) / 0.3);
+  background: hsl(var(--accent) / 0.05);
+}
+
+.bilingual-vocabulary-player .vocab-item {
+  transition: background-color 0.2s ease;
+}
+
+.bilingual-vocabulary-player .vocab-item:hover {
+  background: hsl(var(--card));
+}
+
+.bilingual-vocabulary-player .vocab-term,
+.bilingual-vocabulary-player .vocab-definition {
+  @apply flex items-start justify-between gap-3;
+}
+
+.bilingual-vocabulary-player .vocab-term {
+  @apply pb-2;
+}
+
+.bilingual-vocabulary-player .vocab-definition {
+  @apply pt-2;
+  border-top: 1px dashed hsl(var(--border) / 0.5);
+}

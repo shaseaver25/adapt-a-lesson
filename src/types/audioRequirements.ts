@@ -1,4 +1,4 @@
-import { StudentGroup } from './studentGroup';
+import { StudentGroup } from '@/types/studentGroup';
 
 export type AudioType = 'read-aloud' | 'multilingual' | 'both';
 export type AudioSectionType = 'learning-target' | 'instructions' | 'content' | 'vocabulary' | 'reflection-prompt';
@@ -12,11 +12,20 @@ export interface AudioSection {
   priority: AudioPriority;
 }
 
+export interface VocabularyAudioItem {
+  englishTerm: string;
+  translatedTerm: string;
+  definition?: string;
+  translatedDefinition?: string;
+  language: string;
+}
+
 export interface AudioRequirements {
   needsAudio: boolean;
   audioType: AudioType | null;
   language: string;
   sections: AudioSection[];
+  needsBilingualVocabulary: boolean;
 }
 
 export interface GroupAudioRequirements {
@@ -37,7 +46,8 @@ export function analyzeAudioNeeds(group: StudentGroup): AudioRequirements {
       needsAudio: false, 
       audioType: null, 
       language: 'English', 
-      sections: [] 
+      sections: [],
+      needsBilingualVocabulary: false
     };
   }
 
@@ -47,6 +57,7 @@ export function analyzeAudioNeeds(group: StudentGroup): AudioRequirements {
                hasReadAloud ? 'read-aloud' : 'multilingual',
     language: group.homeLanguage,
     sections: identifyAudioSections(group),
+    needsBilingualVocabulary: needsTranslation, // ELL students need bilingual vocabulary
   };
 }
 
@@ -112,4 +123,98 @@ export function analyzeGroupsAudioNeeds(groups: StudentGroup[]): GroupAudioRequi
  */
 export function anyGroupNeedsAudio(groups: StudentGroup[]): boolean {
   return groups.some(group => analyzeAudioNeeds(group).needsAudio);
+}
+
+/**
+ * Check if any groups need bilingual vocabulary audio
+ */
+export function anyGroupNeedsBilingualVocabulary(groups: StudentGroup[]): boolean {
+  return groups.some(group => analyzeAudioNeeds(group).needsBilingualVocabulary);
+}
+
+/**
+ * Extract vocabulary items from lesson content for bilingual audio
+ */
+export function extractVocabularyFromContent(
+  content: string, 
+  homeLanguage: string
+): VocabularyAudioItem[] {
+  const vocabularyItems: VocabularyAudioItem[] = [];
+  
+  // Look for vocabulary sections in the content
+  // Common patterns: "Vocabulary Box", "Key Terms", "Vocabulario"
+  const vocabPatterns = [
+    /(?:vocabulary|vocabulario|key terms|términos clave)[:\s]*\n([\s\S]*?)(?:\n\n|\n---|\n##|$)/gi,
+    /\*\*([^*]+)\*\*\s*[-–:]\s*([^\n]+)/g, // **Term** - Definition
+    /•\s*([^:–-]+)\s*[-–:]\s*([^\n]+)/g,   // • Term - Definition
+  ];
+
+  // Try to extract vocabulary items
+  const lines = content.split('\n');
+  let inVocabSection = false;
+  
+  for (const line of lines) {
+    const lowerLine = line.toLowerCase();
+    
+    if (lowerLine.includes('vocabulary') || lowerLine.includes('vocabulario') || 
+        lowerLine.includes('key terms') || lowerLine.includes('términos')) {
+      inVocabSection = true;
+      continue;
+    }
+    
+    if (inVocabSection) {
+      // End of vocab section
+      if (line.startsWith('##') || line.startsWith('---') || line.trim() === '') {
+        if (vocabularyItems.length > 0) break;
+        continue;
+      }
+      
+      // Try to parse vocabulary item
+      // Pattern: **English Term** - Translation / Definition
+      const boldMatch = line.match(/\*\*([^*]+)\*\*\s*[-–:]\s*(.+)/);
+      if (boldMatch) {
+        vocabularyItems.push({
+          englishTerm: boldMatch[1].trim(),
+          translatedTerm: boldMatch[2].trim(),
+          language: homeLanguage
+        });
+        continue;
+      }
+      
+      // Pattern: • English Term - Translation
+      const bulletMatch = line.match(/[•\-]\s*([^:–-]+)\s*[-–:]\s*(.+)/);
+      if (bulletMatch) {
+        vocabularyItems.push({
+          englishTerm: bulletMatch[1].trim(),
+          translatedTerm: bulletMatch[2].trim(),
+          language: homeLanguage
+        });
+      }
+    }
+  }
+  
+  return vocabularyItems;
+}
+
+/**
+ * Get language display name
+ */
+export function getLanguageDisplayName(code: string): string {
+  const names: Record<string, string> = {
+    'en': 'English',
+    'es': 'Español',
+    'zh': '中文',
+    'vi': 'Tiếng Việt',
+    'ar': 'العربية',
+    'so': 'Soomaali',
+    'hmn': 'Hmoob',
+    'ru': 'Русский',
+    'fr': 'Français',
+    'pt': 'Português',
+    'ko': '한국어',
+    'tl': 'Tagalog',
+    'sw': 'Kiswahili',
+    'ht': 'Kreyòl Ayisyen',
+  };
+  return names[code.toLowerCase()] || code;
 }
