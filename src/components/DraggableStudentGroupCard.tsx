@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, Pencil, Trash2, Languages, GripVertical } from 'lucide-react';
+import { Users, Pencil, Trash2, Languages, GripVertical, FolderOpen } from 'lucide-react';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import { cn } from '@/lib/utils';
 import type { StudentGroup } from '@/types/studentGroup';
@@ -12,6 +12,8 @@ interface DraggableStudentGroupCardProps {
   onDelete: () => void;
   isDragging?: boolean;
   compact?: boolean;
+  folderName?: string;
+  folderColor?: string;
 }
 
 export function DraggableStudentGroupCard({ 
@@ -19,7 +21,9 @@ export function DraggableStudentGroupCard({
   onEdit, 
   onDelete, 
   isDragging,
-  compact = false 
+  compact = false,
+  folderName,
+  folderColor = 'blue'
 }: DraggableStudentGroupCardProps) {
   const readingLevelColorClass = getReadingLevelColor(group.readingLevelLabel);
 
@@ -52,6 +56,15 @@ export function DraggableStudentGroupCard({
     );
   }
 
+  const folderColorClasses: Record<string, string> = {
+    blue: 'bg-blue-500/20 text-blue-700 dark:text-blue-400',
+    green: 'bg-green-500/20 text-green-700 dark:text-green-400',
+    purple: 'bg-purple-500/20 text-purple-700 dark:text-purple-400',
+    orange: 'bg-orange-500/20 text-orange-700 dark:text-orange-400',
+    red: 'bg-red-500/20 text-red-700 dark:text-red-400',
+    teal: 'bg-teal-500/20 text-teal-700 dark:text-teal-400',
+  };
+
   return (
     <Card 
       draggable
@@ -82,6 +95,13 @@ export function DraggableStudentGroupCard({
             </Button>
           </div>
         </div>
+        {/* Class/Folder Label */}
+        {folderName && (
+          <Badge variant="secondary" className={cn('mt-2 w-fit text-xs', folderColorClasses[folderColor] || folderColorClasses.blue)}>
+            <FolderOpen className="h-3 w-3 mr-1" />
+            {folderName}
+          </Badge>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Reading Level & ELL Status */}
