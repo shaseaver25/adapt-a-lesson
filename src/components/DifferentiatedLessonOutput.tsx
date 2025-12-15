@@ -24,6 +24,7 @@ import {
   exportBilingualHandoutDocx,
   type AudioSection,
   type BilingualSection,
+  type ExtendedStudentGroupInfo,
 } from '@/lib/documentExport';
 import { supabase } from '@/integrations/supabase/client';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
@@ -380,14 +381,29 @@ export function DifferentiatedLessonOutput({
 
   const handleExportStudentDocx = async () => {
     try {
-      const groups = selectedGroups.map((g) => ({
-        id: g.id,
-        groupName: g.groupName,
-        readingLevelLabel: g.readingLevelLabel,
-      }));
+      // Build extended group info with audio and language data
+      const groups = selectedGroups.map((g) => {
+        // Get pre-generated audio for this group
+        const groupAudio = preGeneratedAudio.filter(a => a.group_name === g.groupName);
+        
+        return {
+          id: g.id,
+          groupName: g.groupName,
+          readingLevelLabel: g.readingLevelLabel,
+          homeLanguage: g.homeLanguage,
+          accommodations: g.accommodations,
+          preGeneratedAudio: groupAudio.map(a => ({
+            section_type: a.section_type,
+            section_id: a.section_id,
+            audio_url: a.audio_url,
+            language: a.language,
+          })),
+        };
+      });
       await exportStudentHandoutsDocx(content, lessonTitle, groups);
-      toast({ title: 'Downloaded', description: 'Student Handouts Word document created' });
+      toast({ title: 'Downloaded', description: 'Student Handouts Word document created (landscape with QR codes)' });
     } catch (error) {
+      console.error('Export error:', error);
       toast({ 
         title: 'Export failed', 
         description: 'Could not generate Student Handouts document',

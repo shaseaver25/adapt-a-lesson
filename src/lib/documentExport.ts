@@ -864,11 +864,23 @@ export async function exportTeacherGuideDocx(
   saveAs(blob, filename);
 }
 
-// Export Student Handouts only as .docx
+// Extended StudentGroupInfo with audio and language support
+export interface ExtendedStudentGroupInfo extends StudentGroupInfo {
+  homeLanguage?: string;
+  accommodations?: string[];
+  preGeneratedAudio?: Array<{
+    section_type: string;
+    section_id: string;
+    audio_url: string;
+    language: string;
+  }>;
+}
+
+// Export Student Handouts only as .docx with landscape orientation and QR codes
 export async function exportStudentHandoutsDocx(
   content: string,
   title: string,
-  groups: StudentGroupInfo[]
+  groups: StudentGroupInfo[] | ExtendedStudentGroupInfo[]
 ): Promise<void> {
   const { studentHandouts } = parseMarkdownContent(content);
   
@@ -876,21 +888,83 @@ export async function exportStudentHandoutsDocx(
     throw new Error('No Student Handouts section found in content');
   }
 
-  const children: Paragraph[] = [
+  const children: (Paragraph | Table)[] = [
     new Paragraph({
       text: 'STUDENT HANDOUTS',
       heading: HeadingLevel.HEADING_1,
       alignment: AlignmentType.CENTER,
-      spacing: { before: 200, after: 400 },
+      spacing: { before: 200, after: 200 },
+    }),
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: 'Print from here for student distribution',
+          italics: true,
+          size: 20,
+          font: 'Arial',
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 100 },
+    }),
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: 'ORDER: Handouts are arranged from lowest to highest reading level',
+          size: 18,
+          font: 'Arial',
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 400 },
     }),
   ];
 
-  studentHandouts.forEach((handout, index) => {
+  for (let index = 0; index < studentHandouts.length; index++) {
+    const handout = studentHandouts[index];
+    const groupInfo = groups[index] as ExtendedStudentGroupInfo | undefined;
+    
     if (index > 0) {
       children.push(new Paragraph({ children: [new PageBreak()] }));
     }
+    
+    // Check if this is a bilingual group (non-English home language)
+    const isBilingual = groupInfo?.homeLanguage && groupInfo.homeLanguage !== 'English';
+    const hasReadAloud = groupInfo?.accommodations?.includes('Read Aloud');
+    
+    // Add QR code header for audio if pre-generated audio exists
+    if (groupInfo?.preGeneratedAudio && groupInfo.preGeneratedAudio.length > 0) {
+      const qrHeader = await createGroupAudioQRHeader(
+        groupInfo.groupName,
+        groupInfo.homeLanguage || 'English',
+        groupInfo.preGeneratedAudio,
+        hasReadAloud
+      );
+      children.push(...qrHeader);
+    }
+    
+    // Add bilingual indicator if applicable
+    if (isBilingual) {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `📚 Bilingual: ${getLanguageFlag(groupInfo.homeLanguage!)} ${groupInfo.homeLanguage} | ${getLanguageFlag('English')} English`,
+              bold: true,
+              size: 22,
+              font: 'Arial',
+            }),
+          ],
+          alignment: AlignmentType.CENTER,
+          shading: { type: ShadingType.SOLID, color: 'FFF3CD' },
+          spacing: { before: 100, after: 200 },
+        })
+      );
+    }
+    
+    // Add handout content
     children.push(...markdownToParagraphs(handout.content));
-  });
+  }
 
   const doc = new Document({
     creator: 'Educator Tools',
@@ -899,11 +973,14 @@ export async function exportStudentHandoutsDocx(
       {
         properties: {
           page: {
+            size: {
+              orientation: PageOrientation.LANDSCAPE,
+            },
             margin: {
-              top: convertInchesToTwip(1),
-              bottom: convertInchesToTwip(1),
-              left: convertInchesToTwip(1),
-              right: convertInchesToTwip(1),
+              top: convertInchesToTwip(0.75),
+              bottom: convertInchesToTwip(0.5),
+              left: convertInchesToTwip(0.5),
+              right: convertInchesToTwip(0.5),
             },
           },
         },
@@ -917,6 +994,195 @@ export async function exportStudentHandoutsDocx(
     .replace(/[^a-z0-9-_.]/gi, '-')
     .toLowerCase();
   saveAs(blob, filename);
+}
+
+/**
+ * Create QR code header block for a student group's audio
+ */
+async function createGroupAudioQRHeader(
+  groupName: string,
+  homeLanguage: string,
+  audioRecords: Array<{ section_type: string; section_id: string; audio_url: string; language: string }>,
+  hasReadAloud?: boolean
+): Promise<(Paragraph | Table)[]> {
+  const elements: (Paragraph | Table)[] = [];
+  
+  // Header
+  elements.push(
+    new Paragraph({
+      children: [
+        new TextRun({ text: '🔊 ', size: 28 }),
+        new TextRun({
+          text: 'AUDIO SUPPORT - Scan QR codes to listen',
+          bold: true,
+          size: 24,
+          font: 'Arial',
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 100, after: 150 },
+      shading: { type: ShadingType.SOLID, color: 'FFF8E7' },
+    })
+  );
+  
+  // Group audio by section type
+  const sectionGroups = new Map<string, { english?: string; homeLanguage?: string }>();
+  
+  for (const audio of audioRecords) {
+    const key = audio.section_type;
+    if (!sectionGroups.has(key)) {
+      sectionGroups.set(key, {});
+    }
+    const group = sectionGroups.get(key)!;
+    if (audio.language === 'English') {
+      group.english = audio.audio_url;
+    } else {
+      group.homeLanguage = audio.audio_url;
+    }
+  }
+  
+  // Create QR cells for each section
+  const qrCells: TableCell[] = [];
+  const sectionLabels: Record<string, string> = {
+    'learning-target': '🎯 Learning Target',
+    'instructions': '📋 Instructions',
+    'vocabulary': '📚 Vocabulary',
+    'content': '📖 Content',
+    'practice': '✏️ Practice',
+    'reflection-prompt': '💭 Reflection',
+    'independent-practice': '✏️ Practice',
+    'exit-ticket': '📝 Exit Ticket',
+  };
+  
+  for (const [sectionType, urls] of sectionGroups) {
+    if (!urls.english && !urls.homeLanguage) continue;
+    
+    const cellContent: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: sectionLabels[sectionType] || sectionType,
+            bold: true,
+            size: 18,
+            font: 'Arial',
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 80 },
+      }),
+    ];
+    
+    // Add QR codes
+    const qrElements: (ImageRun | TextRun)[] = [];
+    
+    // Home language QR (if bilingual)
+    if (urls.homeLanguage && homeLanguage !== 'English') {
+      try {
+        const homeQR = await generateQRCode(urls.homeLanguage, 50);
+        const homeQRBuffer = await dataUrlToArrayBuffer(homeQR);
+        qrElements.push(
+          new ImageRun({
+            type: 'png',
+            data: homeQRBuffer,
+            transformation: { width: 50, height: 50 },
+          })
+        );
+        qrElements.push(new TextRun({ text: ' ' }));
+      } catch (e) {
+        console.error('Failed to generate home language QR:', e);
+      }
+    }
+    
+    // English QR
+    if (urls.english) {
+      try {
+        const engQR = await generateQRCode(urls.english, 50);
+        const engQRBuffer = await dataUrlToArrayBuffer(engQR);
+        qrElements.push(
+          new ImageRun({
+            type: 'png',
+            data: engQRBuffer,
+            transformation: { width: 50, height: 50 },
+          })
+        );
+      } catch (e) {
+        console.error('Failed to generate English QR:', e);
+      }
+    }
+    
+    if (qrElements.length > 0) {
+      cellContent.push(
+        new Paragraph({
+          children: qrElements,
+          alignment: AlignmentType.CENTER,
+        })
+      );
+      
+      // Language labels
+      const langLabel = homeLanguage !== 'English' && urls.homeLanguage
+        ? `${getLanguageFlag(homeLanguage)} / ${getLanguageFlag('English')}`
+        : `${getLanguageFlag('English')} English`;
+      
+      cellContent.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: langLabel,
+              size: 14,
+              font: 'Arial',
+            }),
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 40 },
+        })
+      );
+    }
+    
+    qrCells.push(
+      new TableCell({
+        children: cellContent,
+        width: { size: 25, type: WidthType.PERCENTAGE },
+        shading: { fill: 'FFF8E7' },
+        margins: { top: 80, bottom: 80, left: 60, right: 60 },
+      })
+    );
+  }
+  
+  if (qrCells.length > 0) {
+    // Split into rows of 4
+    const rows: TableRow[] = [];
+    for (let i = 0; i < qrCells.length; i += 4) {
+      const rowCells = qrCells.slice(i, i + 4);
+      // Pad row to 4 cells if needed
+      while (rowCells.length < 4) {
+        rowCells.push(
+          new TableCell({
+            children: [new Paragraph({ text: '' })],
+            shading: { fill: 'FFF8E7' },
+            width: { size: 25, type: WidthType.PERCENTAGE },
+          })
+        );
+      }
+      rows.push(new TableRow({ children: rowCells }));
+    }
+    
+    elements.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows,
+        borders: {
+          top: { style: BorderStyle.SINGLE, size: 1, color: 'E5C07B' },
+          bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E5C07B' },
+          left: { style: BorderStyle.SINGLE, size: 1, color: 'E5C07B' },
+          right: { style: BorderStyle.SINGLE, size: 1, color: 'E5C07B' },
+        },
+      })
+    );
+  }
+  
+  elements.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+  
+  return elements;
 }
 
 /**
