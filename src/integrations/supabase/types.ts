@@ -104,6 +104,66 @@ export type Database = {
           },
         ]
       }
+      bilingual_documents: {
+        Row: {
+          alignment_data: Json | null
+          created_at: string | null
+          document_url: string
+          group_id: string
+          home_language: string
+          id: string
+          lesson_id: string
+          orientation: string | null
+          qr_codes: Json
+          section_type: string
+          storage_path: string
+          updated_at: string | null
+        }
+        Insert: {
+          alignment_data?: Json | null
+          created_at?: string | null
+          document_url: string
+          group_id: string
+          home_language: string
+          id?: string
+          lesson_id: string
+          orientation?: string | null
+          qr_codes?: Json
+          section_type: string
+          storage_path: string
+          updated_at?: string | null
+        }
+        Update: {
+          alignment_data?: Json | null
+          created_at?: string | null
+          document_url?: string
+          group_id?: string
+          home_language?: string
+          id?: string
+          lesson_id?: string
+          orientation?: string | null
+          qr_codes?: Json
+          section_type?: string
+          storage_path?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bilingual_documents_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "student_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bilingual_documents_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "generated_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_folders: {
         Row: {
           color: string | null
