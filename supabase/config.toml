@@ -20,3 +20,12 @@ verify_jwt = false
 
 [functions.generate-lesson-audio]
 verify_jwt = false
+
+[functions.get-lesson-audio-status]
+verify_jwt = false
+
+[functions.retry-audio-generation]
+verify_jwt = false
+
+[functions.get-lesson-with-audio]
+verify_jwt = false
