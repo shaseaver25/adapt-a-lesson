@@ -1,10 +1,24 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { StudentGroup } from '@/types/studentGroup';
 
-interface DifferentiationOptions {
+export type GraphicOrganizerType = 
+  | 'auto' 
+  | 'venn-diagram' 
+  | 'flow-chart' 
+  | 'cause-effect' 
+  | 'web-diagram' 
+  | 'frayer-model' 
+  | 'story-map' 
+  | 'claim-evidence' 
+  | 't-chart'
+  | 'none';
+
+export interface DifferentiationOptions {
   includeVocabularyScaffolding: boolean;
   generateComprehensionQuestions: boolean;
   includeVisualPlaceholders: boolean;
+  includeGraphicOrganizers: boolean;
+  graphicOrganizerType: GraphicOrganizerType;
   outputFormat: 'markdown' | 'pdf-ready' | 'google-docs';
 }
 
@@ -38,6 +52,8 @@ const defaultOptions: DifferentiationOptions = {
   includeVocabularyScaffolding: true,
   generateComprehensionQuestions: false,
   includeVisualPlaceholders: true,
+  includeGraphicOrganizers: false,
+  graphicOrganizerType: 'auto',
   outputFormat: 'markdown',
 };
 
