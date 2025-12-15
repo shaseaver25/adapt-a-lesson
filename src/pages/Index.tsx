@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { DifferentiateForm, DifferentiateInput } from '@/components/DifferentiateForm';
 import { DifferentiatedLessonOutput } from '@/components/DifferentiatedLessonOutput';
 import { AssessmentForm } from '@/components/AssessmentForm';
@@ -19,7 +19,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState('differentiate');
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabParam = searchParams.get('tab');
+    return tabParam && ['differentiate', 'assessment', 'rubric', 'audio'].includes(tabParam) 
+      ? tabParam 
+      : 'differentiate';
+  });
   
   // Differentiation state
   const [differentiatedLesson, setDifferentiatedLesson] = useState<string | null>(null);
