@@ -53,6 +53,113 @@ export type Database = {
         }
         Relationships: []
       }
+      generated_rubrics: {
+        Row: {
+          ai_proof_criteria: Json | null
+          ai_proof_settings: Json | null
+          ai_vulnerability_score: number | null
+          assessment_description: string
+          auto_verification_added: boolean | null
+          auto_verification_count: number | null
+          created_at: string
+          grade_level: string | null
+          id: string
+          learning_objectives: string[]
+          num_criteria: number
+          rubric_content: string
+          updated_at: string
+          user_id: string | null
+          verification_checkpoints: string[] | null
+        }
+        Insert: {
+          ai_proof_criteria?: Json | null
+          ai_proof_settings?: Json | null
+          ai_vulnerability_score?: number | null
+          assessment_description: string
+          auto_verification_added?: boolean | null
+          auto_verification_count?: number | null
+          created_at?: string
+          grade_level?: string | null
+          id?: string
+          learning_objectives: string[]
+          num_criteria?: number
+          rubric_content: string
+          updated_at?: string
+          user_id?: string | null
+          verification_checkpoints?: string[] | null
+        }
+        Update: {
+          ai_proof_criteria?: Json | null
+          ai_proof_settings?: Json | null
+          ai_vulnerability_score?: number | null
+          assessment_description?: string
+          auto_verification_added?: boolean | null
+          auto_verification_count?: number | null
+          created_at?: string
+          grade_level?: string | null
+          id?: string
+          learning_objectives?: string[]
+          num_criteria?: number
+          rubric_content?: string
+          updated_at?: string
+          user_id?: string | null
+          verification_checkpoints?: string[] | null
+        }
+        Relationships: []
+      }
+      rubric_verifications: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          red_flags_detected: string[] | null
+          rubric_id: string | null
+          score: number | null
+          student_id: string | null
+          student_name: string | null
+          verification_passed: boolean | null
+          verification_type: string
+          verified_at: string
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          red_flags_detected?: string[] | null
+          rubric_id?: string | null
+          score?: number | null
+          student_id?: string | null
+          student_name?: string | null
+          verification_passed?: boolean | null
+          verification_type: string
+          verified_at?: string
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          red_flags_detected?: string[] | null
+          rubric_id?: string | null
+          score?: number | null
+          student_id?: string | null
+          student_name?: string | null
+          verification_passed?: boolean | null
+          verification_type?: string
+          verified_at?: string
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rubric_verifications_rubric_id_fkey"
+            columns: ["rubric_id"]
+            isOneToOne: false
+            referencedRelation: "generated_rubrics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_groups: {
         Row: {
           accommodations: string[] | null
