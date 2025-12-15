@@ -14,9 +14,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles, BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-
+import { useDifferentiation } from '@/contexts/DifferentiationContext';
 const Index = () => {
   const [searchParams] = useSearchParams();
+  const { setCachedLessonContent, clearSelection } = useDifferentiation();
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
     return tabParam && ['differentiate', 'assessment', 'rubric'].includes(tabParam) 
@@ -143,6 +144,8 @@ const Index = () => {
   const handleResetDifferentiation = () => {
     setDifferentiatedLesson(null);
     setSelectedGroups([]);
+    setCachedLessonContent('');
+    clearSelection();
   };
 
   const handleResetAssessment = () => {
