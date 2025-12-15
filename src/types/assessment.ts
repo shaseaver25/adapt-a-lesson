@@ -19,18 +19,18 @@ export const AI_POLICIES = [
 ] as const;
 
 export const SUBJECTS = [
-  'English Language Arts',
-  'Mathematics',
-  'Science',
-  'Social Studies',
-  'History',
-  'Geography',
   'Art',
+  'Computer Science',
+  'English Language Arts',
+  'Foreign Language',
+  'Geography',
+  'Health',
+  'History',
+  'Mathematics',
   'Music',
   'Physical Education',
-  'Health',
-  'Computer Science',
-  'Foreign Language',
+  'Science',
+  'Social Studies',
   'Other',
 ] as const;
 
