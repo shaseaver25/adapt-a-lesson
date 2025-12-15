@@ -23,6 +23,7 @@ import {
 import { Users, BookOpen, Settings2, ExternalLink, CheckSquare, XSquare, HelpCircle, Sparkles } from 'lucide-react';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
 import { READING_LEVEL_DESCRIPTIONS, ELL_STATUS_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
+import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentGroup } from '@/types/studentGroup';
 
 interface DBStudentGroup {
@@ -119,20 +120,6 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
   };
 
   const wordCount = cachedLessonContent.trim().split(/\s+/).filter(Boolean).length;
-  
-  const readingLevelColor = (level: string) => ({
-    'Below Grade': 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30',
-    'On Grade': 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
-    'Above Grade': 'bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30',
-    'Advanced': 'bg-violet-500/20 text-violet-700 dark:text-violet-400 border-violet-500/30',
-  }[level] || 'bg-muted text-muted-foreground border-border');
-
-  const readingLevelIcon = (level: string) => ({
-    'Below Grade': '📕',
-    'On Grade': '📗',
-    'Above Grade': '📘',
-    'Advanced': '📙',
-  }[level] || '📖');
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
@@ -212,9 +199,9 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
                         <div className="flex flex-wrap gap-1.5 mt-1.5">
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Badge variant="secondary" className={`text-xs border ${readingLevelColor(group.readingLevelLabel)}`}>
-                                <span className="mr-1">{readingLevelIcon(group.readingLevelLabel)}</span>
-                                {group.readingLevelLabel}
+                              <Badge variant="secondary" className={`text-xs border ${getReadingLevelColor(group.readingLevelLabel)}`}>
+                                <span className="mr-1">{getStudentFriendlyIcon(group.readingLevelLabel)}</span>
+                                {getStudentFriendlyName(group.readingLevelLabel)}
                               </Badge>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="max-w-xs">

@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Copy, Download, Check, Users, ChevronDown, FileText, FolderArchive, Clipboard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentGroup } from '@/types/studentGroup';
 
 interface DifferentiatedLessonOutputProps {
@@ -131,12 +132,7 @@ export function DifferentiatedLessonOutput({ content, selectedGroups, lessonTitl
     toast({ title: 'Copied', description: `${groupName} section copied to clipboard` });
   };
 
-  const readingLevelColor = (level: string) => ({
-    'Below Grade': 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30',
-    'On Grade': 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
-    'Above Grade': 'bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30',
-    'Advanced': 'bg-violet-500/20 text-violet-700 dark:text-violet-400 border-violet-500/30',
-  }[level] || 'bg-muted text-muted-foreground border-border');
+  // Use centralized reading level colors
 
   return (
     <div className="space-y-6">
@@ -202,9 +198,9 @@ export function DifferentiatedLessonOutput({ content, selectedGroups, lessonTitl
               <Badge
                 key={group.id}
                 variant="outline"
-                className={`${readingLevelColor(group.readingLevelLabel)}`}
+                className={getReadingLevelColor(group.readingLevelLabel)}
               >
-                <Users className="h-3 w-3 mr-1" />
+                <span className="mr-1">{getStudentFriendlyIcon(group.readingLevelLabel)}</span>
                 {group.groupName}
                 <span className="ml-1 opacity-70">({group.numStudents})</span>
               </Badge>

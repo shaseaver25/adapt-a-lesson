@@ -39,6 +39,7 @@ import {
   LEARNING_PREFERENCE_DESCRIPTIONS,
   IEP_504_DESCRIPTIONS,
 } from '@/lib/tooltipDescriptions';
+import { getTeacherDisplayLabel, getTeacherDisplayIcon } from '@/lib/readingLevelNames';
 import { Users, BookOpen, Languages, ClipboardList, Brain, HelpCircle } from 'lucide-react';
 
 interface StudentGroupFormModalProps {
@@ -191,7 +192,8 @@ export function StudentGroupFormModal({
                       {READING_LEVELS.map((level) => (
                         <SelectItem key={level.value} value={level.value}>
                           <div className="flex items-center gap-2">
-                            <span>{level.label}</span>
+                            <span>{getTeacherDisplayIcon(level.value)}</span>
+                            <span>{getTeacherDisplayLabel(level.value)}</span>
                           </div>
                         </SelectItem>
                       ))}
