@@ -104,6 +104,36 @@ export type Database = {
           },
         ]
       }
+      class_folders: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          folder_name: string
+          id: string
+          organization_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          folder_name: string
+          id?: string
+          organization_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          folder_name?: string
+          id?: string
+          organization_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       generated_audio: {
         Row: {
           audio_url: string
@@ -345,6 +375,7 @@ export type Database = {
           accommodations: string[] | null
           created_at: string
           ell_status: string
+          folder_id: string | null
           group_name: string
           home_language: string
           id: string
@@ -362,6 +393,7 @@ export type Database = {
           accommodations?: string[] | null
           created_at?: string
           ell_status?: string
+          folder_id?: string | null
           group_name: string
           home_language?: string
           id?: string
@@ -379,6 +411,7 @@ export type Database = {
           accommodations?: string[] | null
           created_at?: string
           ell_status?: string
+          folder_id?: string | null
           group_name?: string
           home_language?: string
           id?: string
@@ -392,7 +425,15 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "student_groups_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "class_folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
