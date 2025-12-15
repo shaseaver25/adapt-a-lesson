@@ -7,6 +7,7 @@ import { DifferentiationProvider } from "@/contexts/DifferentiationContext";
 import Index from "./pages/Index";
 import StudentGroups from "./pages/StudentGroups";
 import SavedLessons from "./pages/SavedLessons";
+import SavedRubrics from "./pages/SavedRubrics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/student-groups" element={<StudentGroups />} />
             <Route path="/saved-lessons" element={<SavedLessons />} />
+            <Route path="/saved-rubrics" element={<SavedRubrics />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
