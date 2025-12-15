@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Users, BookOpen, Settings2, ExternalLink, CheckSquare, XSquare, HelpCircle, Sparkles } from 'lucide-react';
-import { useDifferentiation } from '@/contexts/DifferentiationContext';
+import { useDifferentiation, type GraphicOrganizerType } from '@/contexts/DifferentiationContext';
 import { READING_LEVEL_DESCRIPTIONS, ELL_STATUS_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentGroup } from '@/types/studentGroup';
@@ -47,6 +47,8 @@ export interface DifferentiateInput {
     includeVocabularyScaffolding: boolean;
     generateComprehensionQuestions: boolean;
     includeVisualPlaceholders: boolean;
+    includeGraphicOrganizers: boolean;
+    graphicOrganizerType: GraphicOrganizerType;
     outputFormat: 'markdown' | 'pdf-ready' | 'google-docs';
   };
 }
@@ -317,6 +319,45 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
               <p className="text-xs text-muted-foreground mt-0.5">Add [VISUAL: description] markers for images</p>
             </div>
           </label>
+
+          <div className="p-3 rounded-lg border border-border bg-background space-y-3">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <Checkbox
+                checked={options.includeGraphicOrganizers}
+                onCheckedChange={(checked) => setOptions({ includeGraphicOrganizers: !!checked })}
+                className="mt-0.5"
+              />
+              <div>
+                <span className="text-sm font-medium text-foreground">📊 Graphic Organizers</span>
+                <p className="text-xs text-muted-foreground mt-0.5">Generate printable organizers for visual learners</p>
+              </div>
+            </label>
+            
+            {options.includeGraphicOrganizers && (
+              <div className="ml-6">
+                <Label htmlFor="organizerType" className="text-xs text-muted-foreground">Organizer Type</Label>
+                <Select 
+                  value={options.graphicOrganizerType} 
+                  onValueChange={(v) => setOptions({ graphicOrganizerType: v as GraphicOrganizerType })}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">🤖 Auto-detect (based on content)</SelectItem>
+                    <SelectItem value="venn-diagram">⭕ Venn Diagram (compare/contrast)</SelectItem>
+                    <SelectItem value="t-chart">📋 T-Chart (two sides)</SelectItem>
+                    <SelectItem value="flow-chart">➡️ Flow Chart (sequences)</SelectItem>
+                    <SelectItem value="cause-effect">🔗 Cause & Effect Chain</SelectItem>
+                    <SelectItem value="web-diagram">🕸️ Web Diagram (main idea)</SelectItem>
+                    <SelectItem value="frayer-model">📚 Frayer Model (vocabulary)</SelectItem>
+                    <SelectItem value="story-map">📖 Story Map (narrative)</SelectItem>
+                    <SelectItem value="claim-evidence">⚖️ Claim-Evidence-Reasoning</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
 
           <div className="p-3 rounded-lg border border-border bg-background">
             <Label htmlFor="outputFormat" className="text-sm font-medium text-foreground">📄 Output Format</Label>

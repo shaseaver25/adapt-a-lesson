@@ -66,7 +66,246 @@ interface DifferentiationOptions {
   includeVocabularyScaffolding: boolean;
   generateComprehensionQuestions: boolean;
   includeVisualPlaceholders: boolean;
+  includeGraphicOrganizers: boolean;
+  graphicOrganizerType: string;
   outputFormat: string;
+}
+
+// Graphic organizer templates
+const GRAPHIC_ORGANIZER_TEMPLATES: Record<string, string> = {
+  'venn-diagram': `
+┌─────────────────────────────────────────────────────────────────┐
+│                    📊 VENN DIAGRAM                              │
+│                    [Topic Title]                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│         ┌──────────────┐         ┌──────────────┐               │
+│        │              │         │              │               │
+│       │   [Topic A]   │         │   [Topic B]  │               │
+│       │              │         │              │               │
+│      │ _____________ ├─────────┤ _____________ │              │
+│      │ _____________ │  BOTH   │ _____________ │              │
+│      │ _____________ │ _______ │ _____________ │              │
+│       │ _____________ │ _______ │ _____________│               │
+│        │              │ _______ │              │               │
+│         └──────────────┘         └──────────────┘               │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘`,
+
+  't-chart': `
+┌─────────────────────────────────────────────────────────────────┐
+│                      📋 T-CHART                                 │
+│                    [Topic Title]                                │
+├────────────────────────────┬────────────────────────────────────┤
+│        [Category A]        │         [Category B]               │
+├────────────────────────────┼────────────────────────────────────┤
+│                            │                                    │
+│ • _______________________  │ • _______________________          │
+│                            │                                    │
+│ • _______________________  │ • _______________________          │
+│                            │                                    │
+│ • _______________________  │ • _______________________          │
+│                            │                                    │
+│ • _______________________  │ • _______________________          │
+│                            │                                    │
+│ • _______________________  │ • _______________________          │
+│                            │                                    │
+└────────────────────────────┴────────────────────────────────────┘`,
+
+  'flow-chart': `
+┌─────────────────────────────────────────────────────────────────┐
+│                      ➡️ FLOW CHART                               │
+│                    [Process Title]                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│    ┌─────────────────────┐                                      │
+│    │  Step 1: __________ │                                      │
+│    └──────────┬──────────┘                                      │
+│               │                                                 │
+│               ▼                                                 │
+│    ┌─────────────────────┐                                      │
+│    │  Step 2: __________ │                                      │
+│    └──────────┬──────────┘                                      │
+│               │                                                 │
+│               ▼                                                 │
+│    ┌─────────────────────┐                                      │
+│    │  Step 3: __________ │                                      │
+│    └──────────┬──────────┘                                      │
+│               │                                                 │
+│               ▼                                                 │
+│    ┌─────────────────────┐                                      │
+│    │  Result: __________ │                                      │
+│    └─────────────────────┘                                      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘`,
+
+  'cause-effect': `
+┌─────────────────────────────────────────────────────────────────┐
+│                 🔗 CAUSE & EFFECT CHAIN                         │
+│                    [Topic Title]                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────┐        ┌─────────────┐        ┌─────────────┐  │
+│  │   CAUSE 1   │──────▶│   EFFECT    │──────▶│   CAUSE 2   │  │
+│  │ ___________ │        │ ___________ │        │ ___________ │  │
+│  └─────────────┘        └─────────────┘        └─────────────┘  │
+│                                │                                │
+│                                ▼                                │
+│                         ┌─────────────┐                         │
+│                         │   EFFECT    │                         │
+│                         │ ___________ │                         │
+│                         └─────────────┘                         │
+│                                                                 │
+│  BECAUSE...                           SO...                     │
+│  ________________________________     ________________________  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘`,
+
+  'web-diagram': `
+┌─────────────────────────────────────────────────────────────────┐
+│                    🕸️ WEB DIAGRAM                                │
+│                    [Topic Title]                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│              ┌──────────────┐                                   │
+│              │   Detail 1   │                                   │
+│              │ ____________ │                                   │
+│              └──────┬───────┘                                   │
+│                     │                                           │
+│   ┌──────────────┐  │  ┌──────────────┐                        │
+│   │   Detail 2   │──┼──│   Detail 3   │                        │
+│   │ ____________ │  │  │ ____________ │                        │
+│   └──────────────┘  │  └──────────────┘                        │
+│                ┌────┴────┐                                      │
+│                │  MAIN   │                                      │
+│                │  IDEA   │                                      │
+│                │ _______ │                                      │
+│                └────┬────┘                                      │
+│   ┌──────────────┐  │  ┌──────────────┐                        │
+│   │   Detail 4   │──┼──│   Detail 5   │                        │
+│   │ ____________ │  │  │ ____________ │                        │
+│   └──────────────┘  │  └──────────────┘                        │
+│                     │                                           │
+│              ┌──────┴───────┐                                   │
+│              │   Detail 6   │                                   │
+│              │ ____________ │                                   │
+│              └──────────────┘                                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘`,
+
+  'frayer-model': `
+┌─────────────────────────────────────────────────────────────────┐
+│                    📚 FRAYER MODEL                              │
+│              Vocabulary Deep-Dive                               │
+├───────────────────────────────┬─────────────────────────────────┤
+│         DEFINITION            │          CHARACTERISTICS        │
+│   (in your own words)         │       (what makes it this?)     │
+│                               │                                 │
+│ _____________________________ │ _______________________________ │
+│ _____________________________ │ _______________________________ │
+│ _____________________________ │ _______________________________ │
+│                               │                                 │
+├───────────────────────────────┼─────────────────────────────────┤
+│                               │                                 │
+│              ┌────────────────┴────────────────┐                │
+│              │                                 │                │
+│              │     WORD: ________________      │                │
+│              │                                 │                │
+│              └────────────────┬────────────────┘                │
+│                               │                                 │
+├───────────────────────────────┼─────────────────────────────────┤
+│          EXAMPLES             │         NON-EXAMPLES            │
+│     (what IS this?)           │     (what is NOT this?)         │
+│                               │                                 │
+│ _____________________________ │ _______________________________ │
+│ _____________________________ │ _______________________________ │
+│ _____________________________ │ _______________________________ │
+│                               │                                 │
+└───────────────────────────────┴─────────────────────────────────┘`,
+
+  'story-map': `
+┌─────────────────────────────────────────────────────────────────┐
+│                      📖 STORY MAP                               │
+│                    [Story Title]                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │ SETTING: Where? _____________ When? _____________       │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │ CHARACTERS: ____________________________________________│    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │ PROBLEM: _______________________________________________│    │
+│  └───────────────────────────┬─────────────────────────────┘    │
+│                              ▼                                  │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐                 │
+│  │  Event 1   │─▶│  Event 2   │─▶│  Event 3   │                 │
+│  │ __________ │  │ __________ │  │ __________ │                 │
+│  └────────────┘  └────────────┘  └────────────┘                 │
+│                              │                                  │
+│                              ▼                                  │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │ SOLUTION: ______________________________________________│    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │ THEME/LESSON: __________________________________________│    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘`,
+
+  'claim-evidence': `
+┌─────────────────────────────────────────────────────────────────┐
+│               ⚖️ CLAIM-EVIDENCE-REASONING                       │
+│                    [Topic/Question]                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │ 📢 MY CLAIM (What I believe/argue):                     │    │
+│  │                                                         │    │
+│  │ _______________________________________________________ │    │
+│  │ _______________________________________________________ │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                              │                                  │
+│                              ▼                                  │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │ 📋 EVIDENCE (Facts/data that support my claim):         │    │
+│  │                                                         │    │
+│  │ 1. ___________________________________________________  │    │
+│  │                                                         │    │
+│  │ 2. ___________________________________________________  │    │
+│  │                                                         │    │
+│  │ 3. ___________________________________________________  │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                              │                                  │
+│                              ▼                                  │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │ 💡 REASONING (How the evidence supports my claim):      │    │
+│  │                                                         │    │
+│  │ _______________________________________________________ │    │
+│  │ _______________________________________________________ │    │
+│  │ _______________________________________________________ │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘`
+};
+
+function getOrganizerGuidance(type: string): string {
+  const typeDescriptions: Record<string, string> = {
+    'auto': 'Analyze the lesson content and automatically select the most appropriate organizer type based on the content structure (compare/contrast = Venn, sequence = Flow Chart, vocabulary = Frayer, etc.)',
+    'venn-diagram': 'Use for comparing and contrasting two concepts, ideas, or topics',
+    't-chart': 'Use for two-sided comparisons, pros/cons, or before/after',
+    'flow-chart': 'Use for sequences, processes, timelines, or step-by-step procedures',
+    'cause-effect': 'Use for showing relationships between causes and their effects',
+    'web-diagram': 'Use for main idea and supporting details, brainstorming, or concept mapping',
+    'frayer-model': 'Use for deep vocabulary study with definition, characteristics, examples, and non-examples',
+    'story-map': 'Use for narrative structure including setting, characters, problem, events, and solution',
+    'claim-evidence': 'Use for argumentative writing and critical thinking with claims, evidence, and reasoning'
+  };
+  return typeDescriptions[type] || typeDescriptions['auto'];
 }
 
 function buildGroupInstructions(group: StudentGroup, options: DifferentiationOptions): string {
@@ -165,13 +404,57 @@ serve(async (req) => {
     if (options.includeVisualPlaceholders) {
       optionsSection += "- ✅ Include [VISUAL: description] placeholders for images/diagrams\n";
     }
+    if (options.includeGraphicOrganizers) {
+      const organizerType = options.graphicOrganizerType || 'auto';
+      optionsSection += `- ✅ Generate graphic organizers for visual learners\n`;
+      optionsSection += `  - Type: ${organizerType === 'auto' ? 'Auto-detect based on content' : organizerType}\n`;
+      optionsSection += `  - Guidance: ${getOrganizerGuidance(organizerType)}\n`;
+    }
     optionsSection += `- Output Format: ${options.outputFormat}\n`;
+
+    // Build graphic organizer section for the prompt
+    let graphicOrganizerInstructions = '';
+    if (options.includeGraphicOrganizers) {
+      const organizerType = options.graphicOrganizerType || 'auto';
+      graphicOrganizerInstructions = `
+
+## GRAPHIC ORGANIZER INSTRUCTIONS:
+You MUST include a printable graphic organizer in each student handout.
+
+${organizerType === 'auto' ? `
+AUTOMATIC SELECTION: Analyze the lesson content and select the most appropriate organizer:
+- Compare/Contrast content → Venn Diagram or T-Chart
+- Sequence/Process content → Flow Chart
+- Cause/Effect content → Cause & Effect Chain
+- Main Idea content → Web Diagram
+- Vocabulary focus → Frayer Model
+- Narrative/Story content → Story Map
+- Argumentative content → Claim-Evidence-Reasoning
+` : `
+SELECTED TYPE: ${organizerType}
+Use the ${organizerType} organizer format for all groups.
+`}
+
+FORMAT: Use ASCII/Unicode box-drawing characters to create professional, printable organizers.
+Include blank lines (____________) for student responses.
+
+EXAMPLE TEMPLATE STRUCTURE:
+${GRAPHIC_ORGANIZER_TEMPLATES[organizerType !== 'auto' ? organizerType : 'web-diagram'] || GRAPHIC_ORGANIZER_TEMPLATES['web-diagram']}
+
+IMPORTANT:
+- Customize the organizer labels/prompts based on the lesson content
+- For Embers groups: Pre-fill some sections or add more scaffolding
+- For Supernovas groups: Add additional challenge sections
+- Make sure all text fits within the box boundaries
+`;
+    }
 
     const userPrompt = `Create a COMPREHENSIVE DIFFERENTIATED LESSON PLAN for the following student groups.
 
 ${groupsSection}
 
 ${optionsSection}
+${graphicOrganizerInstructions}
 
 ORIGINAL LESSON CONTENT:
 ---
@@ -247,7 +530,11 @@ ${options.includeVocabularyScaffolding ? `#### 📚 Key Words
 | [term 2] | [student-friendly definition] |
 [For ELL students, add home language translations in a third column]
 
-` : ''}${options.includeVisualPlaceholders ? `[VISUAL: Include appropriate graphic organizer or visual support here]
+` : ''}${options.includeVisualPlaceholders ? `[VISUAL: Include appropriate visual support here]
+
+` : ''}${options.includeGraphicOrganizers ? `#### 📊 Graphic Organizer
+[Generate a complete, printable ASCII/Unicode graphic organizer customized for this lesson]
+[Include blank lines (___________) for student responses]
 
 ` : ''}#### ✏️ Practice
 [Differentiated practice activities appropriate for this group's level]
