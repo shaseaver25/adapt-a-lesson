@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import type { StudentGroup } from '@/types/studentGroup';
 import type { SectionAudio } from '@/components/BilingualAudioPlayer';
+import type { BilingualVocabularyAudio } from '@/components/BilingualVocabularyCard';
 
 export interface AudioRecord {
   id: string;
@@ -15,6 +16,24 @@ export interface AudioRecord {
   duration_seconds: number;
   language: string;
   characters_used: number;
+  created_at: string;
+}
+
+export interface VocabularyAudioRecord {
+  id: string;
+  lesson_id: string;
+  group_id: string;
+  group_name: string;
+  vocab_id: string;
+  term: string;
+  definition: string | null;
+  english_term_audio_url: string | null;
+  english_definition_audio_url: string | null;
+  home_language: string;
+  translated_term: string | null;
+  translated_definition: string | null;
+  home_language_term_audio_url: string | null;
+  home_language_definition_audio_url: string | null;
   created_at: string;
 }
 
@@ -41,18 +60,22 @@ export interface UseLessonAudioReturn {
   isGenerating: boolean;
   progress: { generated: number; total: number };
   audioRecords: AudioRecord[];
+  vocabularyAudio: VocabularyAudioRecord[];
   audioStatus: AudioStatusRecord | null;
   generateAudio: (lessonId: string, content: string, groups: (StudentGroup & { id: string })[]) => Promise<AudioGenerationResult>;
   fetchLessonAudio: (lessonId: string) => Promise<AudioRecord[]>;
+  fetchVocabularyAudio: (lessonId: string) => Promise<VocabularyAudioRecord[]>;
   fetchAudioStatus: (lessonId: string) => Promise<AudioStatusRecord | null>;
   getAudioForSection: (groupName: string, sectionType: string, language?: string) => AudioRecord | undefined;
   getBilingualAudioForSection: (groupName: string, sectionType: string) => SectionAudio;
+  getVocabularyAudioForGroup: (groupName: string) => VocabularyAudioRecord[];
 }
 
 export function useLessonAudio(): UseLessonAudioReturn {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState({ generated: 0, total: 0 });
   const [audioRecords, setAudioRecords] = useState<AudioRecord[]>([]);
+  const [vocabularyAudio, setVocabularyAudio] = useState<VocabularyAudioRecord[]>([]);
   const [audioStatus, setAudioStatus] = useState<AudioStatusRecord | null>(null);
 
   const fetchLessonAudio = useCallback(async (lessonId: string): Promise<AudioRecord[]> => {
@@ -70,6 +93,25 @@ export function useLessonAudio(): UseLessonAudioReturn {
       return records;
     } catch (error) {
       console.error('Error fetching lesson audio:', error);
+      return [];
+    }
+  }, []);
+
+  const fetchVocabularyAudio = useCallback(async (lessonId: string): Promise<VocabularyAudioRecord[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('vocabulary_audio')
+        .select('*')
+        .eq('lesson_id', lessonId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      
+      const records = (data || []) as VocabularyAudioRecord[];
+      setVocabularyAudio(records);
+      return records;
+    } catch (error) {
+      console.error('Error fetching vocabulary audio:', error);
       return [];
     }
   }, []);
@@ -165,9 +207,12 @@ export function useLessonAudio(): UseLessonAudioReturn {
         completed_at: new Date().toISOString(),
       }).eq('lesson_id', lessonId);
 
-      // Fetch the updated audio records
-      await fetchLessonAudio(lessonId);
-      await fetchAudioStatus(lessonId);
+      // Fetch the updated audio records (both general and vocabulary)
+      await Promise.all([
+        fetchLessonAudio(lessonId),
+        fetchVocabularyAudio(lessonId),
+        fetchAudioStatus(lessonId),
+      ]);
 
       if (result.status === 'complete') {
         toast({
@@ -246,15 +291,25 @@ export function useLessonAudio(): UseLessonAudioReturn {
     };
   }, [audioRecords]);
 
+  // Get vocabulary audio for a specific group
+  const getVocabularyAudioForGroup = useCallback((
+    groupName: string
+  ): VocabularyAudioRecord[] => {
+    return vocabularyAudio.filter(record => record.group_name === groupName);
+  }, [vocabularyAudio]);
+
   return {
     isGenerating,
     progress,
     audioRecords,
+    vocabularyAudio,
     audioStatus,
     generateAudio,
     fetchLessonAudio,
+    fetchVocabularyAudio,
     fetchAudioStatus,
     getAudioForSection,
     getBilingualAudioForSection,
+    getVocabularyAudioForGroup,
   };
 }

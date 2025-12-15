@@ -123,11 +123,42 @@ Only output the translation, nothing else.`
   }
 }
 
+// Parse vocabulary item into term and definition
+interface ParsedVocabItem {
+  term: string;
+  definition: string;
+}
+
+function parseVocabularyItem(vocabLine: string): ParsedVocabItem {
+  // Common patterns: "Term - Definition", "Term: Definition", "Term – Definition"
+  const patterns = [
+    /^(.+?)\s*[-–—:]\s*(.+)$/,
+    /^(.+?)\s*\((.+?)\)$/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = vocabLine.match(pattern);
+    if (match) {
+      return {
+        term: match[1].trim(),
+        definition: match[2].trim(),
+      };
+    }
+  }
+
+  // If no pattern matches, use the whole line as term
+  return {
+    term: vocabLine.trim(),
+    definition: '',
+  };
+}
+
 // Extract sections from differentiated content for a specific group
 function extractGroupSections(content: string, groupName: string, homeLanguage: string): {
   learningTarget: string;
   instructions: string;
   vocabulary: string[];
+  vocabularyParsed: ParsedVocabItem[];
   mainContent: string;
   reflectionPrompt: string;
 } {
@@ -135,6 +166,7 @@ function extractGroupSections(content: string, groupName: string, homeLanguage: 
     learningTarget: '',
     instructions: '',
     vocabulary: [] as string[],
+    vocabularyParsed: [] as ParsedVocabItem[],
     mainContent: '',
     reflectionPrompt: ''
   };
@@ -167,6 +199,7 @@ function extractGroupSections(content: string, groupName: string, homeLanguage: 
   if (vocabMatch) {
     const vocabLines = vocabMatch[1].split('\n').filter(line => line.trim());
     result.vocabulary = vocabLines.slice(0, 10).map(v => v.replace(/^[•\-*]\s*/, '').replace(/\*\*/g, '').substring(0, 200));
+    result.vocabularyParsed = result.vocabulary.map(parseVocabularyItem);
   }
 
   // Extract main content (after vocabulary, before reflection)
@@ -342,7 +375,7 @@ serve(async (req) => {
         { id: 'reflection', content: sections.reflectionPrompt, priority: 'medium' },
       ];
 
-      // Add vocabulary items
+      // Add vocabulary items (combined term + definition for general audio)
       sections.vocabulary.forEach((vocab, idx) => {
         sectionConfigs.push({
           id: `vocabulary-${idx}`,
@@ -360,6 +393,101 @@ serve(async (req) => {
           priority: 'medium'
         });
       });
+
+      // Generate bilingual vocabulary audio (separate term + definition)
+      if (sections.vocabularyParsed && sections.vocabularyParsed.length > 0) {
+        console.log(`Generating bilingual vocabulary audio for ${sections.vocabularyParsed.length} terms`);
+        
+        for (let idx = 0; idx < sections.vocabularyParsed.length; idx++) {
+          const vocabItem = sections.vocabularyParsed[idx];
+          const vocabId = `vocab-${idx}`;
+          
+          try {
+            const vocabRecord: any = {
+              lesson_id: lessonId,
+              group_id: group.id,
+              group_name: group.groupName,
+              vocab_id: vocabId,
+              term: vocabItem.term,
+              definition: vocabItem.definition || '',
+              home_language: needsHomeLanguage ? group.homeLanguage : 'English',
+            };
+
+            // Generate English term audio
+            if (vocabItem.term) {
+              const termBuffer = await generateTTS(vocabItem.term, 'English', ELEVENLABS_API_KEY);
+              if (termBuffer) {
+                const termUrl = await storeAudio(supabase, lessonId, group.groupName, `${vocabId}-term`, 'english', termBuffer);
+                if (termUrl) {
+                  vocabRecord.english_term_audio_url = termUrl;
+                  results.generated++;
+                }
+              }
+            }
+
+            // Generate English definition audio
+            if (vocabItem.definition) {
+              const defBuffer = await generateTTS(vocabItem.definition, 'English', ELEVENLABS_API_KEY);
+              if (defBuffer) {
+                const defUrl = await storeAudio(supabase, lessonId, group.groupName, `${vocabId}-def`, 'english', defBuffer);
+                if (defUrl) {
+                  vocabRecord.english_definition_audio_url = defUrl;
+                  results.generated++;
+                }
+              }
+            }
+
+            // Generate home language audio if needed
+            if (needsHomeLanguage && LOVABLE_API_KEY) {
+              // Translate term
+              const translatedTerm = await translateContent(vocabItem.term, group.homeLanguage, LOVABLE_API_KEY);
+              vocabRecord.translated_term = translatedTerm;
+              
+              const hlTermBuffer = await generateTTS(translatedTerm, group.homeLanguage, ELEVENLABS_API_KEY);
+              if (hlTermBuffer) {
+                const hlTermUrl = await storeAudio(supabase, lessonId, group.groupName, `${vocabId}-term`, group.homeLanguage.toLowerCase(), hlTermBuffer);
+                if (hlTermUrl) {
+                  vocabRecord.home_language_term_audio_url = hlTermUrl;
+                  results.generated++;
+                }
+              }
+
+              // Translate and generate definition audio
+              if (vocabItem.definition) {
+                const translatedDef = await translateContent(vocabItem.definition, group.homeLanguage, LOVABLE_API_KEY);
+                vocabRecord.translated_definition = translatedDef;
+                
+                const hlDefBuffer = await generateTTS(translatedDef, group.homeLanguage, ELEVENLABS_API_KEY);
+                if (hlDefBuffer) {
+                  const hlDefUrl = await storeAudio(supabase, lessonId, group.groupName, `${vocabId}-def`, group.homeLanguage.toLowerCase(), hlDefBuffer);
+                  if (hlDefUrl) {
+                    vocabRecord.home_language_definition_audio_url = hlDefUrl;
+                    results.generated++;
+                  }
+                }
+              }
+            }
+
+            // Save to vocabulary_audio table
+            const { error: vocabDbError } = await supabase.from('vocabulary_audio').upsert(vocabRecord, {
+              onConflict: 'lesson_id,group_name,vocab_id'
+            });
+
+            if (vocabDbError) {
+              console.error('Vocab audio DB insert error:', vocabDbError);
+            } else {
+              console.log(`Generated vocabulary audio: ${group.groupName}/${vocabId}`);
+            }
+
+            // Small delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+          } catch (error) {
+            console.error(`Error generating vocab audio ${idx} for ${group.groupName}:`, error);
+            results.failed++;
+          }
+        }
+      }
 
       for (const section of sectionConfigs) {
         if (!section.content || section.content.trim().length < 3) continue;
