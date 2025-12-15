@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon, Save, Loader2, Headphones, QrCode, Printer } from 'lucide-react';
+import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon, Save, Loader2, Headphones, QrCode, Printer, Volume2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentGroup } from '@/types/studentGroup';
@@ -26,7 +26,13 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
 import { LessonAudioPlayer } from '@/components/LessonAudioPlayer';
-import { analyzeAudioNeeds, anyGroupNeedsAudio } from '@/types/audioRequirements';
+import { BilingualVocabularyPlayer } from '@/components/BilingualVocabularyPlayer';
+import { 
+  analyzeAudioNeeds, 
+  anyGroupNeedsAudio, 
+  anyGroupNeedsBilingualVocabulary,
+  extractVocabularyFromContent 
+} from '@/types/audioRequirements';
 import { PrintableAudioQR } from '@/components/PrintableAudioQR';
 
 interface DifferentiatedLessonOutputProps {
@@ -576,6 +582,37 @@ export function DifferentiatedLessonOutput({
                 ))
               }
             </div>
+            
+            {/* Bilingual Vocabulary Section for ELL Students */}
+            {anyGroupNeedsBilingualVocabulary(selectedGroups) && (
+              <div className="border-t pt-6">
+                <h4 className="font-semibold mb-4 flex items-center gap-2">
+                  <Volume2 className="h-4 w-4 text-accent" />
+                  Bilingual Vocabulary Audio
+                  <span className="text-xs font-normal text-muted-foreground ml-2">
+                    (Hear terms in English and home language)
+                  </span>
+                </h4>
+                <div className="grid gap-6 md:grid-cols-2">
+                  {selectedGroups
+                    .filter(group => analyzeAudioNeeds(group).needsBilingualVocabulary)
+                    .map(group => {
+                      const vocabulary = extractVocabularyFromContent(
+                        extractGroupContent(group.groupName),
+                        group.homeLanguage
+                      );
+                      if (vocabulary.length === 0) return null;
+                      return (
+                        <BilingualVocabularyPlayer
+                          key={group.id}
+                          vocabulary={vocabulary}
+                          groupName={group.groupName}
+                        />
+                      );
+                    })}
+                </div>
+              </div>
+            )}
             
             {/* Printable QR Codes Section */}
             {showPrintQR && Object.keys(generatedAudioUrls).length > 0 && (
