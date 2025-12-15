@@ -19,6 +19,7 @@ export const ACCOMMODATION_DESCRIPTIONS: Record<string, string> = {
   'Reduced Text Density': 'Use more white space, larger text, shorter paragraphs, and bullet points.',
   'Preferential Seating': 'Include notes about optimal seating for focus and support access.',
   'Check for Understanding': 'Add frequent comprehension checks throughout the lesson content.',
+  'Enrichment Extension': 'Add deeper challenges, extension activities, and advanced connections for students ready for more.',
 };
 
 // Tooltip descriptions for reading levels
