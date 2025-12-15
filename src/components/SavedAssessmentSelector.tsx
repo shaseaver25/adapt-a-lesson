@@ -31,10 +31,12 @@ import {
   Trash2, 
   Loader2,
   Plus,
-  FileUp
+  FileUp,
+  Download
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { downloadAssessmentTemplate } from '@/lib/documentExport';
 
 interface SavedAssessment {
   id: string;
@@ -339,6 +341,18 @@ export function SavedAssessmentSelector({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Download Template Button */}
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="gap-2 text-muted-foreground hover:text-foreground" 
+        onClick={downloadAssessmentTemplate}
+        disabled={disabled}
+      >
+        <Download className="h-4 w-4" />
+        Get Template
+      </Button>
     </div>
   );
 }

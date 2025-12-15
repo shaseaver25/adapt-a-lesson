@@ -12,6 +12,7 @@ import {
   BorderStyle,
   AlignmentType,
   convertInchesToTwip,
+  PageOrientation,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
@@ -680,11 +681,14 @@ function generateRubricDocument(
       {
         properties: {
           page: {
+            size: {
+              orientation: PageOrientation.LANDSCAPE,
+            },
             margin: {
-              top: convertInchesToTwip(0.75),
-              bottom: convertInchesToTwip(0.75),
-              left: convertInchesToTwip(0.75),
-              right: convertInchesToTwip(0.75),
+              top: convertInchesToTwip(0.5),
+              bottom: convertInchesToTwip(0.5),
+              left: convertInchesToTwip(0.5),
+              right: convertInchesToTwip(0.5),
             },
           },
         },
@@ -741,4 +745,59 @@ export function exportRubricAsMarkdown(
   const filename = `rubric-${assessmentDescription.slice(0, 30).replace(/[^a-z0-9]/gi, '-')}.md`
     .toLowerCase();
   saveAs(blob, filename);
+}
+
+// Download assessment template for teachers to fill out
+export function downloadAssessmentTemplate(): void {
+  const template = `# Assessment Description Template
+
+Use this template to prepare your assessment description. Fill out each section, then upload this file or copy-paste the content into the Rubric Generator.
+
+---
+
+## Assessment Title
+[Enter a clear, descriptive title for your assessment]
+
+## Assessment Description
+[Describe what students will create, produce, or demonstrate. Be specific about:
+- The format/product (essay, poster, presentation, project, etc.)
+- Required components or elements
+- Any specific requirements (length, number of sources, etc.)]
+
+Example: "Students will create a food web poster showing at least 10 organisms from their local ecosystem, including producers, primary consumers, secondary consumers, and decomposers. They must include arrows showing energy flow and write a paragraph explaining one example of interdependence."
+
+## Grade Level
+[Enter the grade level: e.g., 5th Grade, High School, etc.]
+
+## Subject Area
+[Enter the subject: e.g., Science, English Language Arts, Math, Social Studies, etc.]
+
+## Learning Objectives
+List the specific learning objectives this assessment addresses:
+
+1. [First learning objective]
+2. [Second learning objective]
+3. [Third learning objective]
+4. [Add more as needed]
+
+## AI-Resistant Elements (Optional)
+Consider including elements that make this assessment harder for AI to complete:
+
+- [ ] Requires local/community-specific knowledge
+- [ ] Requires physical artifacts (photos, handwritten notes, etc.)
+- [ ] Includes live presentation or Q&A component
+- [ ] Requires personal reflection on specific experiences
+- [ ] Involves primary research (interviews, surveys, observations)
+- [ ] Requires process documentation (drafts, research logs)
+
+## Additional Notes
+[Any other context that would help generate a better rubric]
+
+---
+
+Once completed, upload this file using the "Upload File" button or copy the content into the Assessment Description field.
+`;
+
+  const blob = new Blob([template], { type: 'text/markdown;charset=utf-8' });
+  saveAs(blob, 'assessment-template.md');
 }
