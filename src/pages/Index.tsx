@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
 import { DifferentiationProgress, GenerationStatus, createInitialStatus } from '@/components/DifferentiationProgress';
+import { useLessonAudio } from '@/hooks/useLessonAudio';
 
 const Index = () => {
   const [searchParams] = useSearchParams();
@@ -32,6 +33,7 @@ const Index = () => {
   const [selectedGroups, setSelectedGroups] = useState<(StudentGroup & { id: string })[]>([]);
   const [originalLessonContent, setOriginalLessonContent] = useState<string>('');
   const [isDifferentiating, setIsDifferentiating] = useState(false);
+  const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
   const [progressStatus, setProgressStatus] = useState<GenerationStatus>(createInitialStatus());
   const [lastDifferentiateInput, setLastDifferentiateInput] = useState<DifferentiateInput | null>(null);
   const [differentiateError, setDifferentiateError] = useState<string | null>(null);
@@ -49,6 +51,9 @@ const Index = () => {
 
   // Abort controller for cancellation
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Audio generation hook
+  const { isGenerating: isGeneratingAudio, progress: audioProgress, audioRecords, generateAudio, fetchLessonAudio } = useLessonAudio();
 
   // Track if lesson has been saved
   const [isLessonSaved, setIsLessonSaved] = useState(false);
@@ -150,17 +155,76 @@ const Index = () => {
         throw new Error(data.error);
       }
 
-      // Update progress to complete
+      // Update progress - content done
       setProgressStatus(prev => ({
         ...prev,
         analyzing: false,
         analyzingDone: true,
         contentGenerating: false,
         contentDone: true,
-        audioGenerating: false,
-        audioDone: prev.needsAudio,
+      }));
+
+      // Check if groups need audio
+      const needsAudio = input.selectedGroups.some(g => 
+        g.accommodations?.includes('Read Aloud') || g.homeLanguage !== 'English'
+      );
+
+      // Save lesson to database first to get an ID for audio storage
+      let lessonId: string | null = null;
+      try {
+        const { data: lessonData, error: lessonError } = await supabase
+          .from('generated_lessons')
+          .insert({
+            original_content: input.lessonContent,
+            lesson_title: 'Differentiated Lesson',
+            group_ids: input.selectedGroups.map(g => g.id),
+            teacher_guide: data.differentiatedLesson,
+            differentiation_options: input.options as any,
+          })
+          .select('id')
+          .single();
+
+        if (!lessonError && lessonData) {
+          lessonId = lessonData.id;
+          setCurrentLessonId(lessonId);
+        }
+      } catch (saveError) {
+        console.error('Error saving lesson for audio:', saveError);
+      }
+
+      // Generate audio if needed and we have a lesson ID
+      if (needsAudio && lessonId) {
+        setProgressStatus(prev => ({
+          ...prev,
+          audioGenerating: true,
+        }));
+
+        // Generate audio in background (don't block UI)
+        generateAudio(lessonId, data.differentiatedLesson, input.selectedGroups)
+          .then((result) => {
+            console.log('Audio generation result:', result);
+            setProgressStatus(prev => ({
+              ...prev,
+              audioGenerating: false,
+              audioDone: true,
+            }));
+          })
+          .catch((audioError) => {
+            console.error('Audio generation error:', audioError);
+            setProgressStatus(prev => ({
+              ...prev,
+              audioGenerating: false,
+              audioDone: false,
+            }));
+          });
+      }
+
+      // Update final progress
+      setProgressStatus(prev => ({
+        ...prev,
         preparingDownloads: false,
         complete: true,
+        audioDone: !needsAudio, // Mark done if no audio needed
       }));
 
       setDifferentiatedLesson(data.differentiatedLesson);
@@ -410,6 +474,16 @@ const Index = () => {
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   Customized for {selectedGroups.length} student group{selectedGroups.length !== 1 ? 's' : ''}
+                  {isGeneratingAudio && (
+                    <span className="ml-2 text-primary">
+                      • Generating audio ({audioProgress.generated}/{audioProgress.total})...
+                    </span>
+                  )}
+                  {!isGeneratingAudio && audioRecords.length > 0 && (
+                    <span className="ml-2 text-success">
+                      • {audioRecords.length} audio files ready
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -420,6 +494,9 @@ const Index = () => {
               lessonTitle="Differentiated Lesson"
               originalContent={originalLessonContent}
               onSaved={handleLessonSaved}
+              lessonId={currentLessonId}
+              preGeneratedAudio={audioRecords}
+              isGeneratingAudio={isGeneratingAudio}
             />
           </div>
         ) : generatedAssessment ? (
