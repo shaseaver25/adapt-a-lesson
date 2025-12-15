@@ -15,7 +15,7 @@ import { Sparkles, BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpe
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
-import { DifferentiationProgress, GenerationStatus, createInitialStatus } from '@/components/DifferentiationProgress';
+import { DifferentiationProgressModal, DifferentiationProgressState, createInitialProgressState } from '@/components/DifferentiationProgressModal';
 import { useLessonAudio } from '@/hooks/useLessonAudio';
 
 const Index = () => {
@@ -34,7 +34,8 @@ const Index = () => {
   const [originalLessonContent, setOriginalLessonContent] = useState<string>('');
   const [isDifferentiating, setIsDifferentiating] = useState(false);
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
-  const [progressStatus, setProgressStatus] = useState<GenerationStatus>(createInitialStatus());
+  const [progressStatus, setProgressStatus] = useState<DifferentiationProgressState>(createInitialProgressState());
+  const [showProgressModal, setShowProgressModal] = useState(false);
   const [lastDifferentiateInput, setLastDifferentiateInput] = useState<DifferentiateInput | null>(null);
   const [differentiateError, setDifferentiateError] = useState<string | null>(null);
 
@@ -92,7 +93,8 @@ const Index = () => {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
       setIsDifferentiating(false);
-      setProgressStatus(createInitialStatus());
+      setShowProgressModal(false);
+      setProgressStatus(createInitialProgressState());
       toast({
         title: 'Generation cancelled',
         description: 'Lesson differentiation was stopped.',
@@ -111,21 +113,40 @@ const Index = () => {
     setOriginalLessonContent(input.lessonContent);
     setLastDifferentiateInput(input);
 
-    // Reset and start progress
-    const status = createInitialStatus();
-    status.analyzing = true;
-    status.needsAudio = input.selectedGroups.some(g => 
+    // Determine audio needs
+    const groupsNeedingAudio = input.selectedGroups.filter(g => 
       g.accommodations?.includes('Read Aloud') || g.homeLanguage !== 'English'
     );
-    status.audioGroups = input.selectedGroups.filter(g => 
-      g.accommodations?.includes('Read Aloud') || g.homeLanguage !== 'English'
-    ).length;
-    setProgressStatus(status);
+    const audioLanguages = [...new Set(
+      groupsNeedingAudio.flatMap(g => [
+        'English',
+        g.homeLanguage !== 'English' ? g.homeLanguage : null
+      ].filter(Boolean) as string[])
+    )];
 
-    // Simulate progress updates
+    // Initialize progress state
+    const initialProgress: DifferentiationProgressState = {
+      contentStatus: 'generating',
+      groupsProcessed: 0,
+      totalGroups: input.selectedGroups.length,
+      audioStatus: groupsNeedingAudio.length > 0 ? 'pending' : 'skipped',
+      audioSectionsComplete: 0,
+      audioSectionsTotal: groupsNeedingAudio.length * 5, // Estimate ~5 sections per group
+      audioSectionsFailed: 0,
+      audioLanguages,
+      documentsStatus: 'pending',
+      isComplete: false,
+    };
+    setProgressStatus(initialProgress);
+    setShowProgressModal(true);
+
+    // Simulate content generation progress
     const progressTimer = setTimeout(() => {
-      setProgressStatus(prev => ({ ...prev, analyzing: false, analyzingDone: true, contentGenerating: true }));
-    }, 3000);
+      setProgressStatus(prev => ({ 
+        ...prev, 
+        groupsProcessed: Math.floor(prev.totalGroups / 2),
+      }));
+    }, 2000);
 
     try {
       // Create abort controller for timeout
@@ -166,10 +187,9 @@ const Index = () => {
       // Update progress - content done
       setProgressStatus(prev => ({
         ...prev,
-        analyzing: false,
-        analyzingDone: true,
-        contentGenerating: false,
-        contentDone: true,
+        contentStatus: 'complete',
+        groupsProcessed: prev.totalGroups,
+        documentsStatus: 'generating',
       }));
 
       // Check if groups need audio
@@ -204,7 +224,7 @@ const Index = () => {
       if (needsAudio && lessonId) {
         setProgressStatus(prev => ({
           ...prev,
-          audioGenerating: true,
+          audioStatus: 'generating',
         }));
 
         // Generate audio in background (don't block UI)
@@ -213,16 +233,16 @@ const Index = () => {
             console.log('Audio generation result:', result);
             setProgressStatus(prev => ({
               ...prev,
-              audioGenerating: false,
-              audioDone: true,
+              audioStatus: 'complete',
+              audioSectionsComplete: result?.generated || prev.audioSectionsTotal,
             }));
           })
           .catch((audioError) => {
             console.error('Audio generation error:', audioError);
             setProgressStatus(prev => ({
               ...prev,
-              audioGenerating: false,
-              audioDone: false,
+              audioStatus: 'partial',
+              audioSectionsFailed: prev.audioSectionsTotal - prev.audioSectionsComplete,
             }));
           });
       }
@@ -230,9 +250,9 @@ const Index = () => {
       // Update final progress
       setProgressStatus(prev => ({
         ...prev,
-        preparingDownloads: false,
-        complete: true,
-        audioDone: !needsAudio, // Mark done if no audio needed
+        documentsStatus: 'complete',
+        isComplete: true,
+        audioStatus: needsAudio ? prev.audioStatus : 'skipped',
       }));
 
       setDifferentiatedLesson(data.differentiatedLesson);
@@ -240,6 +260,7 @@ const Index = () => {
       clearTimeout(progressTimer);
       console.error('Error differentiating lesson:', error);
       
+      setShowProgressModal(false);
       const errorMessage = error instanceof Error ? error.message : 'Please try again later.';
       const isTimeout = errorMessage.includes('abort') || errorMessage.includes('timeout') || errorMessage.includes('connection');
       
@@ -257,7 +278,6 @@ const Index = () => {
       });
     } finally {
       setIsDifferentiating(false);
-      setProgressStatus(createInitialStatus());
       abortControllerRef.current = null;
     }
   };
@@ -558,6 +578,28 @@ const Index = () => {
           </div>
         ) : null}
       </main>
+
+      {/* Progress Modal */}
+      <DifferentiationProgressModal
+        isOpen={showProgressModal}
+        progress={progressStatus}
+        onViewLesson={() => {
+          setShowProgressModal(false);
+          setProgressStatus(createInitialProgressState());
+        }}
+        onRetryFailed={() => {
+          // Retry failed audio generation
+          if (currentLessonId && lastDifferentiateInput) {
+            generateAudio(currentLessonId, differentiatedLesson || '', lastDifferentiateInput.selectedGroups);
+          }
+        }}
+        onClose={() => {
+          if (progressStatus.isComplete) {
+            setShowProgressModal(false);
+            setProgressStatus(createInitialProgressState());
+          }
+        }}
+      />
 
       {/* Footer */}
       <footer className="border-t border-border mt-auto py-6">
