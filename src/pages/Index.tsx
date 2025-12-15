@@ -11,7 +11,7 @@ import { StudentGroup } from '@/types/studentGroup';
 import { AssessmentInput } from '@/types/assessment';
 import { RubricInput } from '@/types/rubric';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles, BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen } from 'lucide-react';
+import { Sparkles, BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -199,6 +199,12 @@ const Index = () => {
               <Button variant="outline" size="sm" className="gap-2">
                 <Users className="h-4 w-4" />
                 <span className="hidden sm:inline">Student Groups</span>
+              </Button>
+            </Link>
+            <Link to="/audio-usage">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <Volume2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Audio</span>
               </Button>
             </Link>
             {showResults && (

@@ -16,6 +16,7 @@ import type { StudentGroup } from '@/types/studentGroup';
 import { analyzeAudioNeeds, AudioRequirements } from '@/types/audioRequirements';
 import { getStudentFriendlyName, getStudentFriendlyIcon } from '@/lib/readingLevelNames';
 import { cn } from '@/lib/utils';
+import { checkAudioBudget, estimateAudioCost, formatCurrency } from '@/hooks/useAudioUsage';
 
 interface LessonAudioPlayerProps {
   group: StudentGroup & { id: string };
@@ -67,10 +68,22 @@ export function LessonAudioPlayer({
     setError(null);
 
     try {
+      // Check budget before generating
+      const budget = await checkAudioBudget();
+      if (!budget.canGenerate) {
+        throw new Error(`Monthly audio budget exceeded. ${formatCurrency(budget.usageThisMonth)} used of ${formatCurrency(50)} limit.`);
+      }
+
       const audioText = extractAudioContent(groupContent, group.homeLanguage);
 
       if (!audioText || audioText.length < 20) {
         throw new Error('Not enough content to generate audio');
+      }
+
+      // Warn if this generation would exceed budget
+      const estimatedCost = estimateAudioCost(audioText.length);
+      if (estimatedCost > budget.remainingBudget) {
+        throw new Error(`This audio would cost ~${formatCurrency(estimatedCost)}, but only ${formatCurrency(budget.remainingBudget)} remains in budget.`);
       }
 
       const response = await fetch(
