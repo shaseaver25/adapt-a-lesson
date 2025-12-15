@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { StudentGroupForm } from '@/components/StudentGroupForm';
 import { LessonOutput } from '@/components/LessonOutput';
 import { AssessmentForm } from '@/components/AssessmentForm';
@@ -7,12 +8,13 @@ import { RubricForm } from '@/components/RubricForm';
 import { RubricOutput } from '@/components/RubricOutput';
 import { AudioScriptForm } from '@/components/AudioScriptForm';
 import { AudioScriptOutput } from '@/components/AudioScriptOutput';
+import { Button } from '@/components/ui/button';
 import { StudentGroup } from '@/types/studentGroup';
 import { AssessmentInput } from '@/types/assessment';
 import { RubricInput } from '@/types/rubric';
 import { AudioScriptInput } from '@/types/audioScript';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles, BookOpenCheck, ShieldCheck, TableProperties, FileAudio } from 'lucide-react';
+import { Sparkles, BookOpenCheck, ShieldCheck, TableProperties, FileAudio, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -206,14 +208,22 @@ const Index = () => {
               </p>
             </div>
           </div>
-          {showResults && (
-            <button
-              onClick={handleReset}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
-            >
-              ← Start Over
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            <Link to="/student-groups">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Users className="h-4 w-4" />
+                <span className="hidden sm:inline">Student Groups</span>
+              </Button>
+            </Link>
+            {showResults && (
+              <button
+                onClick={handleReset}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
+              >
+                ← Start Over
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
