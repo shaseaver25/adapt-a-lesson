@@ -35,7 +35,7 @@ export function StudentGroupForm({ onSubmit, isLoading }: StudentGroupFormProps)
   const [homeLanguage, setHomeLanguage] = useState('English');
   const [ellStatus, setEllStatus] = useState<StudentGroup['ellStatus']>('None');
   const [iep504Status, setIep504Status] = useState<StudentGroup['iep504Status']>('None');
-  const [learningPreference, setLearningPreference] = useState<StudentGroup['learningPreference']>('Mixed');
+  const [learningPreferences, setLearningPreferences] = useState<string[]>([]);
   const [accommodations, setAccommodations] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [lessonContent, setLessonContent] = useState('');
@@ -45,6 +45,14 @@ export function StudentGroupForm({ onSubmit, isLoading }: StudentGroupFormProps)
       prev.includes(accommodation)
         ? prev.filter((a) => a !== accommodation)
         : [...prev, accommodation]
+    );
+  };
+
+  const handleLearningPrefToggle = (pref: string) => {
+    setLearningPreferences((prev) =>
+      prev.includes(pref)
+        ? prev.filter((p) => p !== pref)
+        : [...prev, pref]
     );
   };
 
@@ -58,7 +66,7 @@ export function StudentGroupForm({ onSubmit, isLoading }: StudentGroupFormProps)
       homeLanguage,
       ellStatus,
       iep504Status,
-      learningPreference,
+      learningPreferences,
       accommodations,
       notes,
     };
@@ -196,21 +204,23 @@ export function StudentGroupForm({ onSubmit, isLoading }: StudentGroupFormProps)
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-foreground">
           <Brain className="h-5 w-5 text-primary" />
-          <h3 className="font-display font-bold text-lg">Learning Preference</h3>
+          <h3 className="font-display font-bold text-lg">Learning Preferences</h3>
         </div>
         
-        <Select value={learningPreference} onValueChange={(v) => setLearningPreference(v as StudentGroup['learningPreference'])}>
-          <SelectTrigger className="w-full md:w-1/2">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {LEARNING_PREFERENCES.map((pref) => (
-              <SelectItem key={pref.value} value={pref.value}>
-                {pref.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {LEARNING_PREFERENCES.map((pref) => (
+            <label
+              key={pref.value}
+              className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background hover:bg-muted/50 cursor-pointer transition-colors"
+            >
+              <Checkbox
+                checked={learningPreferences.includes(pref.value)}
+                onCheckedChange={() => handleLearningPrefToggle(pref.value)}
+              />
+              <span className="text-sm text-foreground">{pref.label}</span>
+            </label>
+          ))}
+        </div>
       </div>
 
       {/* Accommodations */}
