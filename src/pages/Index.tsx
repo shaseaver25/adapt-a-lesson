@@ -36,6 +36,7 @@ const Index = () => {
   const [generatedRubric, setGeneratedRubric] = useState<string | null>(null);
   const [currentRubricInput, setCurrentRubricInput] = useState<RubricInput | null>(null);
   const [isGeneratingRubric, setIsGeneratingRubric] = useState(false);
+  const [rubricAutoVerification, setRubricAutoVerification] = useState<{ added: boolean; count: number } | null>(null);
 
   // Audio Script state
   const [generatedAudioScript, setGeneratedAudioScript] = useState<string | null>(null);
@@ -125,6 +126,10 @@ const Index = () => {
       }
 
       setGeneratedRubric(data.rubric);
+      setRubricAutoVerification({
+        added: data.autoVerificationAdded || false,
+        count: data.autoVerificationCount || 0,
+      });
     } catch (error) {
       console.error('Error generating rubric:', error);
       toast({
@@ -150,6 +155,7 @@ const Index = () => {
   const handleResetRubric = () => {
     setGeneratedRubric(null);
     setCurrentRubricInput(null);
+    setRubricAutoVerification(null);
   };
 
   const handleResetAudioScript = () => {
@@ -362,7 +368,9 @@ const Index = () => {
 
             <RubricOutput 
               content={generatedRubric} 
-              assessmentTitle={currentRubricInput?.assessmentDescription.slice(0, 50) || 'rubric'} 
+              assessmentTitle={currentRubricInput?.assessmentDescription.slice(0, 50) || 'rubric'}
+              autoVerificationAdded={rubricAutoVerification?.added}
+              autoVerificationCount={rubricAutoVerification?.count}
             />
           </div>
         ) : generatedAudioScript ? (
