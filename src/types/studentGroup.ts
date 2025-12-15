@@ -6,7 +6,7 @@ export interface StudentGroup {
   homeLanguage: string;
   ellStatus: 'None' | 'Emerging' | 'Developing' | 'Expanding' | 'Bridging';
   iep504Status: 'None' | 'IEP' | '504 Plan';
-  learningPreference: 'Visual' | 'Hands-on' | 'Mixed' | 'Verbal' | 'Independent';
+  learningPreferences: string[];
   accommodations: string[];
   notes: string;
 }
