@@ -14,7 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      student_groups: {
+        Row: {
+          accommodations: string[] | null
+          created_at: string
+          ell_status: string
+          group_name: string
+          home_language: string
+          id: string
+          iep_504_status: string
+          learning_preferences: string[] | null
+          notes: string | null
+          num_students: number
+          reading_level_label: string
+          reading_level_lexile: string | null
+          updated_at: string
+        }
+        Insert: {
+          accommodations?: string[] | null
+          created_at?: string
+          ell_status?: string
+          group_name: string
+          home_language?: string
+          id?: string
+          iep_504_status?: string
+          learning_preferences?: string[] | null
+          notes?: string | null
+          num_students?: number
+          reading_level_label?: string
+          reading_level_lexile?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accommodations?: string[] | null
+          created_at?: string
+          ell_status?: string
+          group_name?: string
+          home_language?: string
+          id?: string
+          iep_504_status?: string
+          learning_preferences?: string[] | null
+          notes?: string | null
+          num_students?: number
+          reading_level_label?: string
+          reading_level_lexile?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
