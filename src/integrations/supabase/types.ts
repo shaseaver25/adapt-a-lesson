@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      generated_lessons: {
+        Row: {
+          created_at: string
+          differentiation_options: Json | null
+          group_ids: string[]
+          id: string
+          lesson_title: string | null
+          original_content: string
+          student_handouts: Json | null
+          teacher_guide: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          differentiation_options?: Json | null
+          group_ids: string[]
+          id?: string
+          lesson_title?: string | null
+          original_content: string
+          student_handouts?: Json | null
+          teacher_guide?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          differentiation_options?: Json | null
+          group_ids?: string[]
+          id?: string
+          lesson_title?: string | null
+          original_content?: string
+          student_handouts?: Json | null
+          teacher_guide?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       student_groups: {
         Row: {
           accommodations: string[] | null
