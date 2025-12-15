@@ -13,9 +13,13 @@ import {
   AlignmentType,
   convertInchesToTwip,
   PageOrientation,
+  ImageRun,
+  ExternalHyperlink,
+  ShadingType,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
+import { generateQRCode } from './audioQRCode';
 
 // Document styling constants
 const DOC_STYLES = {
@@ -30,6 +34,123 @@ interface StudentGroupInfo {
   id: string;
   groupName: string;
   readingLevelLabel: string;
+}
+
+export interface AudioSection {
+  groupId: string;
+  groupName: string;
+  audioUrl: string;
+  language: string;
+}
+
+/**
+ * Convert base64 data URL to ArrayBuffer for docx ImageRun
+ */
+async function dataUrlToArrayBuffer(dataUrl: string): Promise<ArrayBuffer> {
+  const base64 = dataUrl.split(',')[1];
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+/**
+ * Create an audio access block paragraph with QR code for docx
+ */
+async function createAudioBlockParagraph(
+  audioUrl: string,
+  language: string = 'English'
+): Promise<Paragraph[]> {
+  try {
+    const qrCodeDataUrl = await generateQRCode(audioUrl, 60);
+    const qrImageBuffer = await dataUrlToArrayBuffer(qrCodeDataUrl);
+    
+    return [
+      new Paragraph({
+        children: [
+          new TextRun({ text: '🔊 ', size: 24 }),
+          new TextRun({ 
+            text: 'LISTEN TO THIS SECTION', 
+            bold: true, 
+            size: 20,
+            font: 'Arial'
+          }),
+          new TextRun({ 
+            text: language !== 'English' ? ` (${language})` : '',
+            size: 18,
+            italics: true,
+            font: 'Arial'
+          }),
+        ],
+        spacing: { before: 200, after: 100 },
+        shading: {
+          type: ShadingType.SOLID,
+          color: 'FFF8E7', // Light amber background
+        },
+      }),
+      new Paragraph({
+        children: [
+          new ImageRun({
+            type: 'png',
+            data: qrImageBuffer,
+            transformation: { width: 60, height: 60 },
+          }),
+          new TextRun({ text: '  ', size: 20 }),
+          new TextRun({ 
+            text: 'Scan QR code or visit: ',
+            size: 18,
+            font: 'Arial'
+          }),
+          new ExternalHyperlink({
+            children: [
+              new TextRun({
+                text: audioUrl.length > 50 ? audioUrl.slice(0, 50) + '...' : audioUrl,
+                style: 'Hyperlink',
+                size: 18,
+                font: 'Arial',
+              }),
+            ],
+            link: audioUrl,
+          }),
+        ],
+        spacing: { after: 200 },
+        shading: {
+          type: ShadingType.SOLID,
+          color: 'FFF8E7',
+        },
+      }),
+    ];
+  } catch (error) {
+    console.error('Failed to create audio block:', error);
+    // Fallback without QR code
+    return [
+      new Paragraph({
+        children: [
+          new TextRun({ text: '🔊 ', size: 24 }),
+          new TextRun({ 
+            text: 'LISTEN: ', 
+            bold: true, 
+            size: 20,
+            font: 'Arial'
+          }),
+          new ExternalHyperlink({
+            children: [
+              new TextRun({
+                text: audioUrl,
+                style: 'Hyperlink',
+                size: 18,
+                font: 'Arial',
+              }),
+            ],
+            link: audioUrl,
+          }),
+        ],
+        spacing: { before: 200, after: 200 },
+      }),
+    ];
+  }
 }
 
 // Parse markdown content into structured sections
@@ -539,6 +660,80 @@ export async function exportStudentHandoutsDocx(
 
   const blob = await Packer.toBlob(doc);
   const filename = `${title || 'lesson'}-student-handouts.docx`
+    .replace(/[^a-z0-9-_.]/gi, '-')
+    .toLowerCase();
+  saveAs(blob, filename);
+}
+
+/**
+ * Export Student Handouts with embedded audio QR codes
+ */
+export async function exportStudentHandoutsWithAudioDocx(
+  content: string,
+  title: string,
+  groups: StudentGroupInfo[],
+  audioSections: AudioSection[]
+): Promise<void> {
+  const { studentHandouts } = parseMarkdownContent(content);
+  
+  if (!studentHandouts.length) {
+    throw new Error('No Student Handouts section found in content');
+  }
+
+  const children: (Paragraph | Table)[] = [
+    new Paragraph({
+      text: 'STUDENT HANDOUTS',
+      heading: HeadingLevel.HEADING_1,
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 200, after: 400 },
+    }),
+  ];
+
+  for (let index = 0; index < studentHandouts.length; index++) {
+    const handout = studentHandouts[index];
+    const groupInfo = groups[index];
+    
+    if (index > 0) {
+      children.push(new Paragraph({ children: [new PageBreak()] }));
+    }
+    
+    // Find audio for this group
+    const audio = audioSections.find(
+      a => a.groupId === groupInfo?.id || a.groupName === groupInfo?.groupName
+    );
+    
+    // Add audio block at top of handout if audio exists
+    if (audio) {
+      const audioBlocks = await createAudioBlockParagraph(audio.audioUrl, audio.language);
+      children.push(...audioBlocks);
+    }
+    
+    // Add handout content
+    children.push(...markdownToParagraphs(handout.content));
+  }
+
+  const doc = new Document({
+    creator: 'Educator Tools',
+    title: `${title} - Student Handouts with Audio`,
+    sections: [
+      {
+        properties: {
+          page: {
+            margin: {
+              top: convertInchesToTwip(1),
+              bottom: convertInchesToTwip(1),
+              left: convertInchesToTwip(1),
+              right: convertInchesToTwip(1),
+            },
+          },
+        },
+        children,
+      },
+    ],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  const filename = `${title || 'lesson'}-student-handouts-with-audio.docx`
     .replace(/[^a-z0-9-_.]/gi, '-')
     .toLowerCase();
   saveAs(blob, filename);
