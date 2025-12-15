@@ -226,6 +226,10 @@ export default function StudentGroups() {
     group.groupName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Helper to get folder info for a group
+  const getFolderForGroup = (folderId: string | null) => 
+    folders.find((f) => f.id === folderId);
+
   const ungroupedGroups = filteredGroups.filter((g) => !g.folderId);
   const getGroupsInFolder = (folderId: string) => 
     filteredGroups.filter((g) => g.folderId === folderId);

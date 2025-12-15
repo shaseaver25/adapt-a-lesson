@@ -38,6 +38,13 @@ interface DBStudentGroup {
   learning_preferences: string[];
   accommodations: string[];
   notes: string | null;
+  folder_id: string | null;
+}
+
+interface ClassFolder {
+  id: string;
+  folder_name: string;
+  color: string;
 }
 
 export interface DifferentiateInput {
@@ -58,7 +65,7 @@ interface DifferentiateFormProps {
   isLoading?: boolean;
 }
 
-function dbToStudentGroup(db: DBStudentGroup): StudentGroup & { id: string } {
+function dbToStudentGroup(db: DBStudentGroup): StudentGroup & { id: string; folderId: string | null } {
   return {
     id: db.id,
     groupName: db.group_name,
@@ -71,6 +78,7 @@ function dbToStudentGroup(db: DBStudentGroup): StudentGroup & { id: string } {
     learningPreferences: db.learning_preferences || [],
     accommodations: db.accommodations || [],
     notes: db.notes || '',
+    folderId: db.folder_id,
   };
 }
 
@@ -101,6 +109,22 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
       return (data as DBStudentGroup[]).map(dbToStudentGroup);
     },
   });
+
+  const { data: folders = [] } = useQuery({
+    queryKey: ['class-folders'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('class_folders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data as ClassFolder[];
+    },
+  });
+
+  const getFolderForGroup = (folderId: string | null) => 
+    folders.find((f) => f.id === folderId);
 
   // Show cache notice if there's cached content
   useEffect(() => {
@@ -188,6 +212,15 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
               <div className="p-2 space-y-2">
                 {groups.map((group) => {
                   const isSelected = selectedGroupIds.includes(group.id);
+                  const folder = getFolderForGroup(group.folderId);
+                  const folderColorClasses: Record<string, string> = {
+                    blue: 'bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30',
+                    green: 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30',
+                    purple: 'bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/30',
+                    orange: 'bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30',
+                    red: 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30',
+                    teal: 'bg-teal-500/20 text-teal-700 dark:text-teal-400 border-teal-500/30',
+                  };
                   return (
                     <label
                       key={group.id}
@@ -208,6 +241,12 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
                           <span className="text-xs text-muted-foreground">
                             ({group.numStudents} student{group.numStudents !== 1 ? 's' : ''})
                           </span>
+                          {folder && (
+                            <Badge variant="outline" className={`text-xs border ${folderColorClasses[folder.color] || folderColorClasses.blue}`}>
+                              <FolderOpen className="h-3 w-3 mr-1" />
+                              {folder.folder_name}
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex flex-wrap gap-1.5 mt-1.5">
                           <Tooltip>
