@@ -27,6 +27,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
 import { LessonAudioPlayer } from '@/components/LessonAudioPlayer';
 import { BilingualVocabularyPlayer } from '@/components/BilingualVocabularyPlayer';
+import { BilingualAudioPlayer, type SectionAudio } from '@/components/BilingualAudioPlayer';
 import { 
   analyzeAudioNeeds, 
   anyGroupNeedsAudio, 
@@ -608,7 +609,7 @@ export function DifferentiatedLessonOutput({
             {/* Budget Indicator */}
             <AudioUsageDashboard compact />
             
-            {/* Pre-generated Audio Players */}
+            {/* Pre-generated Audio Players with Bilingual Support */}
             {preGeneratedAudio.length > 0 && (
               <div className="space-y-4">
                 <h4 className="font-semibold text-sm text-muted-foreground">Pre-Generated Audio (Instant Playback)</h4>
@@ -618,14 +619,15 @@ export function DifferentiatedLessonOutput({
                     .map(group => {
                       const groupAudio = getPreGeneratedAudioForGroup(group.groupName);
                       const hasNonEnglish = group.homeLanguage !== 'English';
-                      const englishAudio = groupAudio.filter(a => a.language === 'English');
-                      const homeLanguageAudio = groupAudio.filter(a => a.language === group.homeLanguage);
                       
                       if (groupAudio.length === 0) return null;
                       
+                      // Group audio by section type
+                      const sectionTypes = [...new Set(groupAudio.map(a => a.section_type))];
+                      
                       return (
                         <div key={group.id} className="p-4 rounded-lg border bg-card space-y-3">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 mb-3">
                             <Badge variant="secondary" className="text-xs">
                               {getStudentFriendlyIcon(group.readingLevelLabel)} {group.groupName}
                             </Badge>
@@ -636,51 +638,45 @@ export function DifferentiatedLessonOutput({
                             )}
                           </div>
                           
-                          {/* English Audio */}
-                          {englishAudio.length > 0 && (
-                            <div className="space-y-2">
-                              <p className="text-xs text-muted-foreground font-medium">🇺🇸 English</p>
-                              {englishAudio.slice(0, 3).map(audio => (
-                                <div key={audio.id} className="flex items-center gap-2">
-                                  <span className="text-xs text-muted-foreground capitalize w-20 truncate">
-                                    {audio.section_type}
-                                  </span>
-                                  <audio 
-                                    controls 
-                                    src={audio.audio_url} 
-                                    className="h-8 flex-1"
-                                    preload="metadata"
+                          {/* Bilingual Audio Players for each section */}
+                          <div className="space-y-3">
+                            {sectionTypes.slice(0, 4).map(sectionType => {
+                              const englishAudio = groupAudio.find(
+                                a => a.section_type === sectionType && a.language === 'English'
+                              );
+                              const homeLanguageAudio = groupAudio.find(
+                                a => a.section_type === sectionType && a.language !== 'English'
+                              );
+                              
+                              const bilingualAudio: SectionAudio = {
+                                english: englishAudio ? {
+                                  url: englishAudio.audio_url,
+                                  duration: englishAudio.duration_seconds,
+                                } : null,
+                                homeLanguage: homeLanguageAudio ? {
+                                  language: homeLanguageAudio.language,
+                                  url: homeLanguageAudio.audio_url,
+                                  duration: homeLanguageAudio.duration_seconds,
+                                } : null,
+                              };
+                              
+                              return (
+                                <div key={sectionType} className="space-y-1">
+                                  <p className="text-xs font-medium text-muted-foreground capitalize">
+                                    {sectionType.replace(/-/g, ' ')}
+                                  </p>
+                                  <BilingualAudioPlayer 
+                                    audio={bilingualAudio}
+                                    sectionType={sectionType}
+                                    compact
                                   />
                                 </div>
-                              ))}
-                              {englishAudio.length > 3 && (
-                                <p className="text-xs text-muted-foreground">+ {englishAudio.length - 3} more sections</p>
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* Home Language Audio */}
-                          {hasNonEnglish && homeLanguageAudio.length > 0 && (
-                            <div className="space-y-2 pt-2 border-t">
-                              <p className="text-xs text-muted-foreground font-medium">🌍 {group.homeLanguage}</p>
-                              {homeLanguageAudio.slice(0, 3).map(audio => (
-                                <div key={audio.id} className="flex items-center gap-2">
-                                  <span className="text-xs text-muted-foreground capitalize w-20 truncate">
-                                    {audio.section_type}
-                                  </span>
-                                  <audio 
-                                    controls 
-                                    src={audio.audio_url} 
-                                    className="h-8 flex-1"
-                                    preload="metadata"
-                                  />
-                                </div>
-                              ))}
-                              {homeLanguageAudio.length > 3 && (
-                                <p className="text-xs text-muted-foreground">+ {homeLanguageAudio.length - 3} more sections</p>
-                              )}
-                            </div>
-                          )}
+                              );
+                            })}
+                            {sectionTypes.length > 4 && (
+                              <p className="text-xs text-muted-foreground">+ {sectionTypes.length - 4} more sections available</p>
+                            )}
+                          </div>
                         </div>
                       );
                     })}

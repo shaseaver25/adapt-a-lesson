@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import type { StudentGroup } from '@/types/studentGroup';
+import type { SectionAudio } from '@/components/BilingualAudioPlayer';
 
 export interface AudioRecord {
   id: string;
@@ -24,19 +25,35 @@ export interface AudioGenerationResult {
   audioRecords?: AudioRecord[];
 }
 
+export interface AudioStatusRecord {
+  id: string;
+  lesson_id: string;
+  status: 'pending' | 'generating' | 'complete' | 'partial' | 'failed';
+  total_sections: number;
+  completed_sections: number;
+  failed_sections: number;
+  error_details: any[];
+  started_at: string | null;
+  completed_at: string | null;
+}
+
 export interface UseLessonAudioReturn {
   isGenerating: boolean;
   progress: { generated: number; total: number };
   audioRecords: AudioRecord[];
+  audioStatus: AudioStatusRecord | null;
   generateAudio: (lessonId: string, content: string, groups: (StudentGroup & { id: string })[]) => Promise<AudioGenerationResult>;
   fetchLessonAudio: (lessonId: string) => Promise<AudioRecord[]>;
+  fetchAudioStatus: (lessonId: string) => Promise<AudioStatusRecord | null>;
   getAudioForSection: (groupName: string, sectionType: string, language?: string) => AudioRecord | undefined;
+  getBilingualAudioForSection: (groupName: string, sectionType: string) => SectionAudio;
 }
 
 export function useLessonAudio(): UseLessonAudioReturn {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState({ generated: 0, total: 0 });
   const [audioRecords, setAudioRecords] = useState<AudioRecord[]>([]);
+  const [audioStatus, setAudioStatus] = useState<AudioStatusRecord | null>(null);
 
   const fetchLessonAudio = useCallback(async (lessonId: string): Promise<AudioRecord[]> => {
     try {
@@ -57,6 +74,24 @@ export function useLessonAudio(): UseLessonAudioReturn {
     }
   }, []);
 
+  const fetchAudioStatus = useCallback(async (lessonId: string): Promise<AudioStatusRecord | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('lesson_audio_status')
+        .select('*')
+        .eq('lesson_id', lessonId)
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      setAudioStatus(data as AudioStatusRecord | null);
+      return data as AudioStatusRecord | null;
+    } catch (error) {
+      console.error('Error fetching audio status:', error);
+      return null;
+    }
+  }, []);
+
   const generateAudio = useCallback(async (
     lessonId: string,
     content: string,
@@ -71,12 +106,26 @@ export function useLessonAudio(): UseLessonAudioReturn {
       return { status: 'complete', generated: 0, failed: 0 };
     }
 
-    // Estimate total sections (rough estimate)
-    const estimatedSections = audioGroups.length * 5 * (audioGroups.some(g => g.homeLanguage !== 'English') ? 2 : 1);
+    // Estimate total sections (rough estimate: ~5 sections per group, x2 for bilingual)
+    const estimatedSections = audioGroups.reduce((acc, g) => {
+      const multiplier = g.homeLanguage !== 'English' ? 2 : 1;
+      return acc + (5 * multiplier);
+    }, 0);
+    
     setProgress({ generated: 0, total: estimatedSections });
     setIsGenerating(true);
 
     try {
+      // Create initial status record
+      await supabase.from('lesson_audio_status').upsert({
+        lesson_id: lessonId,
+        status: 'generating',
+        total_sections: estimatedSections,
+        completed_sections: 0,
+        failed_sections: 0,
+        started_at: new Date().toISOString(),
+      }, { onConflict: 'lesson_id' });
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lesson-audio`,
         {
@@ -108,8 +157,17 @@ export function useLessonAudio(): UseLessonAudioReturn {
       
       setProgress({ generated: result.generated, total: result.generated + result.failed });
 
+      // Update status record
+      await supabase.from('lesson_audio_status').update({
+        status: result.failed === 0 ? 'complete' : 'partial',
+        completed_sections: result.generated,
+        failed_sections: result.failed,
+        completed_at: new Date().toISOString(),
+      }).eq('lesson_id', lessonId);
+
       // Fetch the updated audio records
       await fetchLessonAudio(lessonId);
+      await fetchAudioStatus(lessonId);
 
       if (result.status === 'complete') {
         toast({
@@ -127,6 +185,14 @@ export function useLessonAudio(): UseLessonAudioReturn {
       return result as AudioGenerationResult;
     } catch (error) {
       console.error('Error generating audio:', error);
+      
+      // Update status to failed
+      await supabase.from('lesson_audio_status').update({
+        status: 'failed',
+        completed_at: new Date().toISOString(),
+        error_details: [{ message: error instanceof Error ? error.message : 'Unknown error' }],
+      }).eq('lesson_id', lessonId);
+      
       toast({
         title: 'Audio generation failed',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -136,7 +202,7 @@ export function useLessonAudio(): UseLessonAudioReturn {
     } finally {
       setIsGenerating(false);
     }
-  }, [fetchLessonAudio]);
+  }, [fetchLessonAudio, fetchAudioStatus]);
 
   const getAudioForSection = useCallback((
     groupName: string,
@@ -150,12 +216,45 @@ export function useLessonAudio(): UseLessonAudioReturn {
     );
   }, [audioRecords]);
 
+  // Get bilingual audio for a section (both English and home language)
+  const getBilingualAudioForSection = useCallback((
+    groupName: string,
+    sectionType: string
+  ): SectionAudio => {
+    const englishAudio = audioRecords.find(record => 
+      record.group_name === groupName &&
+      record.section_type === sectionType &&
+      record.language === 'English'
+    );
+
+    const homeLanguageAudio = audioRecords.find(record => 
+      record.group_name === groupName &&
+      record.section_type === sectionType &&
+      record.language !== 'English'
+    );
+
+    return {
+      english: englishAudio ? {
+        url: englishAudio.audio_url,
+        duration: englishAudio.duration_seconds,
+      } : null,
+      homeLanguage: homeLanguageAudio ? {
+        language: homeLanguageAudio.language,
+        url: homeLanguageAudio.audio_url,
+        duration: homeLanguageAudio.duration_seconds,
+      } : null,
+    };
+  }, [audioRecords]);
+
   return {
     isGenerating,
     progress,
     audioRecords,
+    audioStatus,
     generateAudio,
     fetchLessonAudio,
+    fetchAudioStatus,
     getAudioForSection,
+    getBilingualAudioForSection,
   };
 }
