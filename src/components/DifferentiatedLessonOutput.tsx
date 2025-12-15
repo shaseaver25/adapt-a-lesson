@@ -36,12 +36,29 @@ import {
 import { PrintableAudioQR } from '@/components/PrintableAudioQR';
 import { AudioUsageDashboard } from '@/components/AudioUsageDashboard';
 
+interface PreGeneratedAudioRecord {
+  id: string;
+  lesson_id: string;
+  group_id: string;
+  group_name: string;
+  section_type: string;
+  section_id: string;
+  audio_url: string;
+  duration_seconds: number;
+  language: string;
+  characters_used: number;
+  created_at: string;
+}
+
 interface DifferentiatedLessonOutputProps {
   content: string;
   selectedGroups: (StudentGroup & { id: string })[];
   lessonTitle?: string;
   originalContent?: string;
   onSaved?: () => void;
+  lessonId?: string | null;
+  preGeneratedAudio?: PreGeneratedAudioRecord[];
+  isGeneratingAudio?: boolean;
 }
 
 export function DifferentiatedLessonOutput({ 
@@ -49,7 +66,10 @@ export function DifferentiatedLessonOutput({
   selectedGroups, 
   lessonTitle = 'Lesson',
   originalContent = '',
-  onSaved
+  onSaved,
+  lessonId,
+  preGeneratedAudio = [],
+  isGeneratingAudio = false
 }: DifferentiatedLessonOutputProps) {
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -172,6 +192,25 @@ export function DifferentiatedLessonOutput({
     }
     
     return sectionContent.join('\n');
+  };
+
+  // Get pre-generated audio for a specific group and section type
+  const getPreGeneratedAudioForGroup = (groupName: string, sectionType?: string, language?: string) => {
+    return preGeneratedAudio.filter(audio => 
+      audio.group_name === groupName &&
+      (!sectionType || audio.section_type === sectionType) &&
+      (!language || audio.language === language)
+    );
+  };
+
+  // Get all audio URLs for a group (for QR codes)
+  const getGroupAudioUrls = (groupName: string): Record<string, string> => {
+    const groupAudio = preGeneratedAudio.filter(a => a.group_name === groupName);
+    const urls: Record<string, string> = {};
+    groupAudio.forEach(audio => {
+      urls[`${audio.section_id}-${audio.language}`] = audio.audio_url;
+    });
+    return urls;
   };
 
   const handleDownloadTeacherGuide = () => {
@@ -543,6 +582,16 @@ export function DifferentiatedLessonOutput({
                 <span className="text-sm font-normal text-muted-foreground ml-2">
                   (for Read Aloud accommodations & multilingual students)
                 </span>
+                {isGeneratingAudio && (
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full animate-pulse">
+                    Generating...
+                  </span>
+                )}
+                {preGeneratedAudio.length > 0 && !isGeneratingAudio && (
+                  <span className="text-xs bg-success/10 text-success px-2 py-1 rounded-full">
+                    {preGeneratedAudio.length} files ready
+                  </span>
+                )}
               </CardTitle>
               <Button 
                 variant="outline" 
@@ -559,36 +608,133 @@ export function DifferentiatedLessonOutput({
             {/* Budget Indicator */}
             <AudioUsageDashboard compact />
             
-            {/* Audio Players */}
-            <div className="grid gap-4 md:grid-cols-2">
-              {selectedGroups
-                .filter(group => analyzeAudioNeeds(group).needsAudio)
-                .map(group => (
-                  <LessonAudioPlayer
-                    key={group.id}
-                    group={group}
-                    lessonContent={content}
-                    groupContent={extractGroupContent(group.groupName)}
-                    onAudioGenerated={(url) => {
-                      setGeneratedAudioUrls(prev => ({
-                        ...prev,
-                        [group.id]: url
-                      }));
-                      // Store full audio section info for export
-                      setAudioSections(prev => {
-                        const filtered = prev.filter(a => a.groupId !== group.id);
-                        return [...filtered, {
-                          groupId: group.id,
-                          groupName: group.groupName,
-                          audioUrl: url,
-                          language: group.homeLanguage
-                        }];
-                      });
-                    }}
-                  />
-                ))
-              }
-            </div>
+            {/* Pre-generated Audio Players */}
+            {preGeneratedAudio.length > 0 && (
+              <div className="space-y-4">
+                <h4 className="font-semibold text-sm text-muted-foreground">Pre-Generated Audio (Instant Playback)</h4>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {selectedGroups
+                    .filter(group => analyzeAudioNeeds(group).needsAudio)
+                    .map(group => {
+                      const groupAudio = getPreGeneratedAudioForGroup(group.groupName);
+                      const hasNonEnglish = group.homeLanguage !== 'English';
+                      const englishAudio = groupAudio.filter(a => a.language === 'English');
+                      const homeLanguageAudio = groupAudio.filter(a => a.language === group.homeLanguage);
+                      
+                      if (groupAudio.length === 0) return null;
+                      
+                      return (
+                        <div key={group.id} className="p-4 rounded-lg border bg-card space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs">
+                              {getStudentFriendlyIcon(group.readingLevelLabel)} {group.groupName}
+                            </Badge>
+                            {hasNonEnglish && (
+                              <Badge variant="outline" className="text-xs">
+                                Bilingual: EN + {group.homeLanguage}
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {/* English Audio */}
+                          {englishAudio.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-xs text-muted-foreground font-medium">🇺🇸 English</p>
+                              {englishAudio.slice(0, 3).map(audio => (
+                                <div key={audio.id} className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground capitalize w-20 truncate">
+                                    {audio.section_type}
+                                  </span>
+                                  <audio 
+                                    controls 
+                                    src={audio.audio_url} 
+                                    className="h-8 flex-1"
+                                    preload="metadata"
+                                  />
+                                </div>
+                              ))}
+                              {englishAudio.length > 3 && (
+                                <p className="text-xs text-muted-foreground">+ {englishAudio.length - 3} more sections</p>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Home Language Audio */}
+                          {hasNonEnglish && homeLanguageAudio.length > 0 && (
+                            <div className="space-y-2 pt-2 border-t">
+                              <p className="text-xs text-muted-foreground font-medium">🌍 {group.homeLanguage}</p>
+                              {homeLanguageAudio.slice(0, 3).map(audio => (
+                                <div key={audio.id} className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground capitalize w-20 truncate">
+                                    {audio.section_type}
+                                  </span>
+                                  <audio 
+                                    controls 
+                                    src={audio.audio_url} 
+                                    className="h-8 flex-1"
+                                    preload="metadata"
+                                  />
+                                </div>
+                              ))}
+                              {homeLanguageAudio.length > 3 && (
+                                <p className="text-xs text-muted-foreground">+ {homeLanguageAudio.length - 3} more sections</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+            
+            {/* On-demand Audio Players (fallback when no pre-generated audio) */}
+            {preGeneratedAudio.length === 0 && !isGeneratingAudio && (
+              <div className="grid gap-4 md:grid-cols-2">
+                {selectedGroups
+                  .filter(group => analyzeAudioNeeds(group).needsAudio)
+                  .map(group => (
+                    <LessonAudioPlayer
+                      key={group.id}
+                      group={group}
+                      lessonContent={content}
+                      groupContent={extractGroupContent(group.groupName)}
+                      onAudioGenerated={(url) => {
+                        setGeneratedAudioUrls(prev => ({
+                          ...prev,
+                          [group.id]: url
+                        }));
+                        // Store full audio section info for export
+                        setAudioSections(prev => {
+                          const filtered = prev.filter(a => a.groupId !== group.id);
+                          return [...filtered, {
+                            groupId: group.id,
+                            groupName: group.groupName,
+                            audioUrl: url,
+                            language: group.homeLanguage
+                          }];
+                        });
+                      }}
+                    />
+                  ))
+                }
+              </div>
+            )}
+            
+            {/* Loading indicator */}
+            {isGeneratingAudio && preGeneratedAudio.length === 0 && (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center space-y-3">
+                  <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-sm text-muted-foreground">
+                    Generating bilingual audio files...
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    This may take 1-2 minutes for multiple groups
+                  </p>
+                </div>
+              </div>
+            )}
             
             {/* Bilingual Vocabulary Section for ELL Students */}
             {anyGroupNeedsBilingualVocabulary(selectedGroups) && (
