@@ -51,6 +51,7 @@ export const ACCOMMODATION_OPTIONS = [
   'Reduced Text Density',
   'Preferential Seating',
   'Check for Understanding',
+  'Enrichment Extension',
 ] as const;
 
 export const LANGUAGES = [
