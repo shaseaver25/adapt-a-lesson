@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon } from 'lucide-react';
+import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon, Save, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentGroup } from '@/types/studentGroup';
@@ -21,16 +21,100 @@ import {
   exportTeacherGuideDocx,
   exportStudentHandoutsDocx,
 } from '@/lib/documentExport';
+import { supabase } from '@/integrations/supabase/client';
+import { useDifferentiation } from '@/contexts/DifferentiationContext';
 
 interface DifferentiatedLessonOutputProps {
   content: string;
   selectedGroups: (StudentGroup & { id: string })[];
   lessonTitle?: string;
+  originalContent?: string;
 }
 
-export function DifferentiatedLessonOutput({ content, selectedGroups, lessonTitle = 'Lesson' }: DifferentiatedLessonOutputProps) {
+export function DifferentiatedLessonOutput({ 
+  content, 
+  selectedGroups, 
+  lessonTitle = 'Lesson',
+  originalContent = ''
+}: DifferentiatedLessonOutputProps) {
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const { toast } = useToast();
+  const { options } = useDifferentiation();
+
+  // Save lesson to database
+  const handleSaveLesson = async () => {
+    if (saved) return;
+    
+    setSaving(true);
+    try {
+      // Extract teacher guide section
+      const teacherGuide = extractSection('TEACHER GUIDE', 'STUDENT HANDOUTS');
+      
+      // Build student handouts as JSON
+      const studentHandouts = selectedGroups.map((group) => ({
+        groupId: group.id,
+        groupName: group.groupName,
+        readingLevel: group.readingLevelLabel,
+        content: extractGroupContent(group.groupName),
+      }));
+
+      const { error } = await supabase
+        .from('generated_lessons')
+        .insert({
+          original_content: originalContent || content,
+          lesson_title: lessonTitle,
+          group_ids: selectedGroups.map((g) => g.id),
+          teacher_guide: teacherGuide,
+          student_handouts: studentHandouts as unknown as Record<string, unknown>,
+          differentiation_options: options as unknown as Record<string, unknown>,
+        } as any);
+
+      if (error) throw error;
+
+      setSaved(true);
+      toast({ 
+        title: 'Lesson saved!', 
+        description: 'Your differentiated lesson has been saved for future access.' 
+      });
+      
+      // Reset saved state after 3 seconds
+      setTimeout(() => setSaved(false), 3000);
+    } catch (error) {
+      console.error('Error saving lesson:', error);
+      toast({ 
+        title: 'Save failed', 
+        description: 'Could not save lesson. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Extract content for a specific group from the full content
+  const extractGroupContent = (groupName: string): string => {
+    const lines = content.split('\n');
+    let inGroup = false;
+    let groupContent: string[] = [];
+    
+    for (const line of lines) {
+      // Look for group section markers
+      if (line.includes(groupName) && (line.includes('Edition') || line.includes('Edición') || line.includes('✨'))) {
+        inGroup = true;
+        groupContent.push(line);
+      } else if (inGroup) {
+        // End when we hit the next group or major section
+        if ((line.includes('Edition') || line.includes('Edición')) && line.includes('✨') && !line.includes(groupName)) {
+          break;
+        }
+        groupContent.push(line);
+      }
+    }
+    
+    return groupContent.join('\n');
+  };
 
   const handleCopyAll = async () => {
     await navigator.clipboard.writeText(content);
@@ -269,7 +353,24 @@ export function DifferentiatedLessonOutput({ content, selectedGroups, lessonTitl
                 Generated for {selectedGroups.length} student group{selectedGroups.length !== 1 ? 's' : ''}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                variant={saved ? "default" : "outline"} 
+                size="sm" 
+                onClick={handleSaveLesson} 
+                disabled={saving}
+                className="gap-2"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : saved ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Lesson'}
+              </Button>
+              
               <Button variant="outline" size="sm" onClick={handleCopyAll} className="gap-2">
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 {copied ? 'Copied!' : 'Copy All'}

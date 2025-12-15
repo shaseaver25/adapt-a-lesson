@@ -24,6 +24,7 @@ const Index = () => {
   // Differentiation state
   const [differentiatedLesson, setDifferentiatedLesson] = useState<string | null>(null);
   const [selectedGroups, setSelectedGroups] = useState<(StudentGroup & { id: string })[]>([]);
+  const [originalLessonContent, setOriginalLessonContent] = useState<string>('');
   const [isDifferentiating, setIsDifferentiating] = useState(false);
 
   // Assessment state
@@ -44,6 +45,7 @@ const Index = () => {
   const handleDifferentiate = async (input: DifferentiateInput) => {
     setIsDifferentiating(true);
     setSelectedGroups(input.selectedGroups);
+    setOriginalLessonContent(input.lessonContent);
 
     try {
       const { data, error } = await supabase.functions.invoke('differentiate-lesson', {
@@ -309,7 +311,8 @@ const Index = () => {
             <DifferentiatedLessonOutput 
               content={differentiatedLesson} 
               selectedGroups={selectedGroups}
-              lessonTitle="lesson"
+              lessonTitle="Differentiated Lesson"
+              originalContent={originalLessonContent}
             />
           </div>
         ) : generatedAssessment ? (
