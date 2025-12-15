@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Users, BookOpen, Settings2, ExternalLink, CheckSquare, XSquare, HelpCircle, Sparkles } from 'lucide-react';
+import { Users, BookOpen, Settings2, ExternalLink, CheckSquare, XSquare, HelpCircle, Sparkles, FolderOpen } from 'lucide-react';
 import { useDifferentiation, type GraphicOrganizerType } from '@/contexts/DifferentiationContext';
 import { READING_LEVEL_DESCRIPTIONS, ELL_STATUS_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
@@ -124,8 +124,19 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
   const wordCount = cachedLessonContent.trim().split(/\s+/).filter(Boolean).length;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Section 1: Select Student Groups */}
+    <div className="space-y-8">
+      {/* View Saved Lessons Button */}
+      <div className="flex justify-end">
+        <Link to="/saved-lessons">
+          <Button variant="outline" size="sm" className="gap-2">
+            <FolderOpen className="h-4 w-4" />
+            View Saved Lessons
+          </Button>
+        </Link>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Section 1: Select Student Groups */}
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2 text-foreground">
@@ -394,6 +405,7 @@ export function DifferentiateForm({ onSubmit, isLoading }: DifferentiateFormProp
           `✨ Differentiate Lesson for ${selectedGroupIds.length} Group${selectedGroupIds.length !== 1 ? 's' : ''}`
         )}
       </Button>
-    </form>
+      </form>
+    </div>
   );
 }
