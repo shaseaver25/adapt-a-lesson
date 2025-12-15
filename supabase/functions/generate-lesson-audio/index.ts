@@ -22,6 +22,8 @@ const VOICE_CONFIG: Record<string, { voiceId: string; stability: number; similar
   hmong: { voiceId: 'pqHfZKP75CvOlQylNhV4', stability: 0.8, similarityBoost: 0.8, style: 0.4 },
   swahili: { voiceId: 'pqHfZKP75CvOlQylNhV4', stability: 0.8, similarityBoost: 0.8, style: 0.4 },
   'haitian creole': { voiceId: 'pqHfZKP75CvOlQylNhV4', stability: 0.8, similarityBoost: 0.8, style: 0.4 },
+  karen: { voiceId: 'pqHfZKP75CvOlQylNhV4', stability: 0.8, similarityBoost: 0.8, style: 0.4 },
+  oromo: { voiceId: 'pqHfZKP75CvOlQylNhV4', stability: 0.8, similarityBoost: 0.8, style: 0.4 },
 };
 
 function getVoiceConfig(language: string) {
@@ -53,6 +55,72 @@ interface GenerateAudioRequest {
   lessonId: string;
   differentiatedContent: string;
   selectedGroups: StudentGroup[];
+}
+
+// Translation cache to avoid re-translating the same content
+const translationCache = new Map<string, string>();
+
+// Translate content to target language using Lovable AI
+async function translateContent(
+  text: string,
+  targetLanguage: string,
+  apiKey: string
+): Promise<string> {
+  if (!text || text.trim().length < 3) return text;
+  if (targetLanguage.toLowerCase() === 'english') return text;
+
+  // Check cache first
+  const cacheKey = `${text.substring(0, 100)}_${targetLanguage}`;
+  if (translationCache.has(cacheKey)) {
+    return translationCache.get(cacheKey)!;
+  }
+
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a professional translator. Translate the following educational content from English to ${targetLanguage}. 
+Preserve:
+- All formatting and structure
+- Educational terminology (translate accurately)
+- Numbers and proper nouns (keep original where appropriate)
+- Sentence structure appropriate for the target language
+
+Only output the translation, nothing else.`
+          },
+          {
+            role: 'user',
+            content: text
+          }
+        ],
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`Translation API error: ${response.status}`);
+      return text; // Return original if translation fails
+    }
+
+    const data = await response.json();
+    const translatedText = data.choices?.[0]?.message?.content?.trim() || text;
+    
+    // Cache the translation
+    translationCache.set(cacheKey, translatedText);
+    
+    return translatedText;
+  } catch (error) {
+    console.error('Translation error:', error);
+    return text; // Return original if translation fails
+  }
 }
 
 // Extract sections from differentiated content for a specific group
@@ -221,6 +289,7 @@ serve(async (req) => {
     const { lessonId, differentiatedContent, selectedGroups }: GenerateAudioRequest = await req.json();
 
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -257,8 +326,8 @@ serve(async (req) => {
 
     // Process each group
     for (const group of audioGroups) {
-      const needsEnglish = group.accommodations?.includes('Read Aloud') || true; // Always provide English
       const needsHomeLanguage = group.homeLanguage !== 'English';
+      // ALWAYS generate English first, then home language if different
       const languages = needsHomeLanguage ? ['English', group.homeLanguage] : ['English'];
 
       console.log(`Processing group: ${group.groupName}, languages: ${languages.join(', ')}`);
@@ -299,8 +368,15 @@ serve(async (req) => {
           try {
             const sectionId = `${section.id}-${language.toLowerCase()}`;
             
-            // Generate TTS
-            const audioBuffer = await generateTTS(section.content, language, ELEVENLABS_API_KEY);
+            // Get content - translate if not English
+            let textToSpeak = section.content;
+            if (language !== 'English' && LOVABLE_API_KEY) {
+              console.log(`Translating ${section.id} to ${language}...`);
+              textToSpeak = await translateContent(section.content, language, LOVABLE_API_KEY);
+            }
+            
+            // Generate TTS with appropriate content
+            const audioBuffer = await generateTTS(textToSpeak, language, ELEVENLABS_API_KEY);
             
             if (!audioBuffer) {
               results.failed++;
@@ -324,7 +400,7 @@ serve(async (req) => {
 
             // Estimate duration (~128kbps MP3)
             const estimatedDuration = (audioBuffer.byteLength * 8) / (128 * 1000);
-            const estimatedCost = section.content.length * 0.00003;
+            const estimatedCost = textToSpeak.length * 0.00003;
 
             // Save to generated_audio table
             const { error: dbError } = await supabase.from('generated_audio').upsert({
@@ -336,7 +412,7 @@ serve(async (req) => {
               audio_url: audioUrl,
               duration_seconds: estimatedDuration,
               language: language,
-              characters_used: section.content.length,
+              characters_used: textToSpeak.length,
             }, {
               onConflict: 'lesson_id,group_name,section_id'
             });
@@ -350,7 +426,7 @@ serve(async (req) => {
               lesson_id: lessonId,
               group_id: group.id,
               section_type: section.id.split('-')[0],
-              characters_used: section.content.length,
+              characters_used: textToSpeak.length,
               estimated_cost: estimatedCost,
               language: language,
               audio_url: audioUrl,
