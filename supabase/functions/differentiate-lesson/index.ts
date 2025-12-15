@@ -5,13 +5,38 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Strengths-based naming system for student-facing materials
+const STUDENT_LEVEL_NAMES: Record<string, { label: string; icon: string }> = {
+  'Below Grade': { label: 'Embers', icon: '🔥' },
+  'On Grade': { label: 'Flames', icon: '🔥' },
+  'Above Grade': { label: 'Blazers', icon: '💫' },
+  'Advanced': { label: 'Supernovas', icon: '🌟' },
+};
+
+function getStudentFriendlyName(level: string): string {
+  return STUDENT_LEVEL_NAMES[level]?.label || level;
+}
+
+function getStudentFriendlyIcon(level: string): string {
+  return STUDENT_LEVEL_NAMES[level]?.icon || '📖';
+}
+
 const systemPrompt = `You are an expert educator who specializes in differentiating instructional content for diverse learners. Your job is to create a comprehensive differentiated lesson plan that includes adapted versions for MULTIPLE student groups.
+
+CRITICAL: USE STRENGTHS-BASED NAMING ONLY
+- NEVER use "Below Grade Level" or any deficit-based language in student-facing content
+- Use the following flame-based naming system:
+  - "Embers" (🔥) = students who need additional scaffolding
+  - "Flames" (🔥) = students at grade level
+  - "Blazers" (💫) = students above grade level  
+  - "Supernovas" (🌟) = advanced/gifted students
+- These names celebrate growth, not deficits
 
 CORE RULES:
 1. NEVER change the learning objectives - all students learn the same content
 2. Adjust vocabulary, sentence complexity, and text density appropriately for each group
-3. Add scaffolds for lower reading levels
-4. Add extensions and deeper questions for higher levels
+3. Add scaffolds for Embers groups (more support)
+4. Add extensions and deeper questions for Blazers/Supernovas
 5. Preserve all key concepts and accurate information
 6. Match each group's reading level precisely
 7. Include bilingual vocabulary supports for ELL students
@@ -41,8 +66,12 @@ interface DifferentiationOptions {
 }
 
 function buildGroupInstructions(group: StudentGroup, options: DifferentiationOptions): string {
+  const friendlyName = getStudentFriendlyName(group.readingLevelLabel);
+  const friendlyIcon = getStudentFriendlyIcon(group.readingLevelLabel);
+  
   let instructions = `\n### Group: ${group.groupName} (${group.numStudents} students)
-- Reading Level: ${group.readingLevelLabel}${group.readingLevelLexile ? ` (${group.readingLevelLexile} Lexile)` : ''}
+- Student-Friendly Level: ${friendlyIcon} ${friendlyName}
+- Internal Reading Level: ${group.readingLevelLabel}${group.readingLevelLexile ? ` (${group.readingLevelLexile} Lexile)` : ''}
 - Home Language: ${group.homeLanguage}
 - ELL Status: ${group.ellStatus}
 - IEP/504: ${group.iep504Status}`;
@@ -150,18 +179,26 @@ Create a single, comprehensive document with this structure:
 
 # [Extract Lesson Title from Content] - Differentiated Lesson Plan
 **Generated:** ${new Date().toLocaleDateString()}  
-**Groups Included:** ${(selectedGroups as StudentGroup[]).map((g: StudentGroup) => g.groupName).join(", ")}
+**Groups Included:** ${(selectedGroups as StudentGroup[]).map((g: StudentGroup) => `${getStudentFriendlyIcon(g.readingLevelLabel)} ${g.groupName} (${getStudentFriendlyName(g.readingLevelLabel)})`).join(", ")}
+
+## 📋 Level Key (Teacher Reference Only)
+| Symbol | Level Name | Description |
+|--------|------------|-------------|
+| 🔥 Embers | Warming up | Additional scaffolding and support |
+| 🔥 Flames | Building momentum | Grade-level content |
+| 💫 Blazers | Burning bright | Above grade level enrichment |
+| 🌟 Supernovas | Explosive excellence | Advanced/gifted extensions |
 
 ---
 
 [For EACH student group, create a section:]
 
-## 📚 Group: [Group Name]
-**Profile:** [Reading Level] | [ELL Status if not None] | [# Students]  
+## ${getStudentFriendlyIcon((selectedGroups as StudentGroup[])[0]?.readingLevelLabel || 'On Grade')} Group: [Group Name]
+**Level:** [Use ONLY the flame-based name - e.g., "Embers" not "Below Grade"] | [ELL Status if not None] | [# Students]  
 **Accommodations Applied:** [list as badges/tags]
 
 ### Adapted Content:
-[Full lesson content adapted for this specific group]
+[Full lesson content adapted for this specific group - NEVER use deficit language like "below grade" in student-facing content]
 
 ${options.includeVocabularyScaffolding ? `### Vocabulary Support:
 [Key terms with definitions, translations if ELL]
@@ -169,15 +206,15 @@ ${options.includeVocabularyScaffolding ? `### Vocabulary Support:
 ` : ''}${options.generateComprehensionQuestions ? `### Comprehension Questions:
 [3-5 questions appropriate for this group's level]
 
-` : ''}### Scaffolding Notes:
-[Brief teacher guidance for supporting this group]
+` : ''}### Scaffolding Notes (Teacher Only):
+[Brief teacher guidance for supporting this group - can reference actual grade levels here]
 
 ---
 
 ## 🎯 Cross-Group Teaching Notes
 [AI-generated suggestions for:
 - Managing instruction across multiple groups simultaneously
-- Flexible grouping strategies
+- Flexible grouping strategies using the flame-based level names
 - Common misconceptions to address
 - Extension activities for early finishers]`;
 

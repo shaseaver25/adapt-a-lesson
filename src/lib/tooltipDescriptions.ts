@@ -22,12 +22,12 @@ export const ACCOMMODATION_DESCRIPTIONS: Record<string, string> = {
   'Enrichment Extension': 'Add deeper challenges, extension activities, and advanced connections for students ready for more.',
 };
 
-// Tooltip descriptions for reading levels
+// Tooltip descriptions for reading levels (teacher-facing context with strengths-based names)
 export const READING_LEVEL_DESCRIPTIONS: Record<string, string> = {
-  'Below Grade': 'Student reads below current grade level. Needs simplified vocabulary and sentence structures.',
-  'On Grade': 'Student reads at expected grade level. Use age-appropriate complexity.',
-  'Above Grade': 'Student reads above grade level. Can handle more complex texts and vocabulary.',
-  'Advanced': 'Highly proficient reader. Include extension challenges and sophisticated content.',
+  'Below Grade': 'Embers — Students warming up who need additional support and scaffolding to build confidence.',
+  'On Grade': 'Flames — Students building momentum at their expected grade level with standard materials.',
+  'Above Grade': 'Blazers — Students burning bright above grade level who benefit from enrichment opportunities.',
+  'Advanced': 'Supernovas — Students with explosive excellence, significantly above grade level, who need challenging extensions.',
 };
 
 // Tooltip descriptions for learning preferences

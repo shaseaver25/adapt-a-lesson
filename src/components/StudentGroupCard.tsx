@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, Pencil, Trash2, BookOpen, Languages } from 'lucide-react';
+import { Users, Pencil, Trash2, Languages } from 'lucide-react';
+import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentGroup } from '@/types/studentGroup';
 
 interface StudentGroupCardProps {
@@ -11,12 +12,7 @@ interface StudentGroupCardProps {
 }
 
 export function StudentGroupCard({ group, onEdit, onDelete }: StudentGroupCardProps) {
-  const readingLevelColor = {
-    'Below Grade': 'bg-amber-500/20 text-amber-700 dark:text-amber-400',
-    'On Grade': 'bg-green-500/20 text-green-700 dark:text-green-400',
-    'Above Grade': 'bg-blue-500/20 text-blue-700 dark:text-blue-400',
-    'Advanced': 'bg-purple-500/20 text-purple-700 dark:text-purple-400',
-  }[group.readingLevelLabel] || 'bg-muted text-muted-foreground';
+  const readingLevelColorClass = getReadingLevelColor(group.readingLevelLabel);
 
   return (
     <Card className="group hover:shadow-lg transition-shadow">
@@ -44,9 +40,9 @@ export function StudentGroupCard({ group, onEdit, onDelete }: StudentGroupCardPr
       <CardContent className="space-y-3">
         {/* Reading Level & ELL Status */}
         <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary" className={readingLevelColor}>
-            <BookOpen className="h-3 w-3 mr-1" />
-            {group.readingLevelLabel}
+          <Badge variant="secondary" className={readingLevelColorClass}>
+            <span className="mr-1">{getStudentFriendlyIcon(group.readingLevelLabel)}</span>
+            {getStudentFriendlyName(group.readingLevelLabel)}
           </Badge>
           {group.ellStatus !== 'None' && (
             <Badge variant="secondary" className="bg-sky-500/20 text-sky-700 dark:text-sky-400">
