@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface BilingualRow {
   id: string;
-  type: 'heading' | 'instruction' | 'question' | 'answer-line' | 'answer-box' | 'spacer' | 'content' | 'vocabulary';
+  type: 'heading' | 'instruction' | 'question' | 'answer-line' | 'answer-box' | 'drawing-space' | 'spacer' | 'content' | 'vocabulary';
   homeLanguage: {
     text: string;
     lineCount: number;
@@ -12,6 +12,7 @@ export interface BilingualRow {
     lineCount: number;
   };
   alignedLineCount: number;
+  drawingHeight?: number; // Height for drawing spaces in lines
 }
 
 export interface AlignedBilingualContent {
@@ -21,10 +22,11 @@ export interface AlignedBilingualContent {
 
 export interface ParsedElement {
   id: string;
-  type: 'heading' | 'instruction' | 'question' | 'content' | 'vocabulary';
+  type: 'heading' | 'instruction' | 'question' | 'content' | 'vocabulary' | 'drawing-instruction';
   text: string;
-  answerType?: 'short' | 'long' | 'multiple-choice';
+  answerType?: 'short' | 'long' | 'multiple-choice' | 'drawing';
   answerLines?: number;
+  drawingHeight?: number;
 }
 
 export interface ParsedAssignmentContent {
@@ -99,8 +101,18 @@ export function parseAssignmentContent(content: string): ParsedAssignmentContent
         text: line,
       });
     }
+    // Detect drawing instructions (Draw, Sketch, Illustrate, etc.)
+    else if (/^(Draw|Sketch|Illustrate|Diagram|Chart|Graph|Map|Create a drawing|Make a drawing)/i.test(line)) {
+      elements.push({
+        id,
+        type: 'drawing-instruction',
+        text: line,
+        answerType: 'drawing',
+        drawingHeight: 6, // Default 6 lines of drawing space
+      });
+    }
     // Detect instructions (imperative/directive sentences)
-    else if (/^(Write|Read|Answer|Complete|Circle|Draw|List|Describe|Explain|Show)/i.test(line)) {
+    else if (/^(Write|Read|Answer|Complete|Circle|List|Describe|Explain|Show)/i.test(line)) {
       elements.push({
         id,
         type: 'instruction',
@@ -165,9 +177,12 @@ export async function generateAlignedBilingualContent(
     // Use the maximum to keep alignment
     const alignedLineCount = Math.max(englishLines, translatedLines);
     
+    // Map drawing-instruction to instruction type for the row
+    const rowType: BilingualRow['type'] = element.type === 'drawing-instruction' ? 'instruction' : element.type;
+    
     rows.push({
       id: element.id,
-      type: element.type,
+      type: rowType,
       homeLanguage: {
         text: translatedText,
         lineCount: translatedLines,
@@ -181,8 +196,21 @@ export async function generateAlignedBilingualContent(
     
     totalLines += alignedLineCount;
     
+    // If this is a drawing instruction, add drawing space
+    if (element.type === 'drawing-instruction') {
+      const drawingHeight = element.drawingHeight || 6;
+      rows.push({
+        id: `${element.id}-drawing`,
+        type: 'drawing-space',
+        homeLanguage: { text: '', lineCount: drawingHeight },
+        english: { text: '', lineCount: drawingHeight },
+        alignedLineCount: drawingHeight,
+        drawingHeight,
+      });
+      totalLines += drawingHeight;
+    }
     // If this is a question, add answer space
-    if (element.type === 'question' && element.answerType) {
+    else if (element.type === 'question' && element.answerType) {
       const answerLines = element.answerLines || 2;
       rows.push({
         id: `${element.id}-answer`,
@@ -222,9 +250,15 @@ export function generateAlignedBilingualContentSync(
     
     // Determine element type
     let type: BilingualRow['type'] = 'content';
+    let isDrawingInstruction = false;
+    
     if (engText.startsWith('#')) type = 'heading';
     else if (/^\d+[\.\)]/.test(engText) || engText.endsWith('?')) type = 'question';
-    else if (/^(Write|Read|Answer|Complete)/i.test(engText)) type = 'instruction';
+    else if (/^(Draw|Sketch|Illustrate|Diagram|Chart|Graph|Map|Create a drawing|Make a drawing)/i.test(engText)) {
+      type = 'instruction';
+      isDrawingInstruction = true;
+    }
+    else if (/^(Write|Read|Answer|Complete|Circle|List|Describe|Explain|Show)/i.test(engText)) type = 'instruction';
     else if (engText.includes(':') && engText.indexOf(':') < 30) type = 'vocabulary';
     
     const englishLines = calculateLineCount(engText);
@@ -247,8 +281,21 @@ export function generateAlignedBilingualContentSync(
     
     totalLines += alignedLineCount;
     
+    // Add drawing space after drawing instructions
+    if (isDrawingInstruction) {
+      const drawingHeight = 6;
+      rows.push({
+        id: `row-${i}-drawing`,
+        type: 'drawing-space',
+        homeLanguage: { text: '', lineCount: drawingHeight },
+        english: { text: '', lineCount: drawingHeight },
+        alignedLineCount: drawingHeight,
+        drawingHeight,
+      });
+      totalLines += drawingHeight;
+    }
     // Add answer space after questions
-    if (type === 'question') {
+    else if (type === 'question') {
       const answerLines = engText.length > 100 ? 4 : 2;
       rows.push({
         id: `row-${i}-answer`,
