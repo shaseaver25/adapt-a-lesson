@@ -223,7 +223,7 @@ export default function SavedRubrics() {
               <p className="text-muted-foreground mb-6">
                 When you generate and save rubrics, they'll appear here for easy access.
               </p>
-              <Link to="/">
+              <Link to="/?tab=rubric">
                 <Button className="gap-2">
                   <TableProperties className="h-4 w-4" />
                   Create Your First Rubric
