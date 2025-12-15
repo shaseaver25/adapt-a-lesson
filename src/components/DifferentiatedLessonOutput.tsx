@@ -378,22 +378,78 @@ export function DifferentiatedLessonOutput({ content, selectedGroups, lessonTitl
       </Card>
 
       {/* Content */}
-      <Card>
-        <CardContent className="pt-6">
-          <article className="prose prose-sm dark:prose-invert max-w-none 
-            prose-headings:font-display prose-headings:font-bold 
-            prose-h1:text-2xl prose-h1:border-b prose-h1:border-border prose-h1:pb-3 prose-h1:mb-6
-            prose-h2:text-xl prose-h2:border-b prose-h2:border-border prose-h2:pb-2 prose-h2:mt-10 prose-h2:mb-4
-            prose-h2:bg-gradient-to-r prose-h2:from-muted/50 prose-h2:to-transparent prose-h2:px-3 prose-h2:py-2 prose-h2:rounded-lg
-            prose-h3:text-lg prose-h3:text-primary prose-h3:mt-6
-            prose-p:leading-relaxed
-            prose-ul:my-2 prose-li:my-0.5
+      <Card className="overflow-hidden">
+        <CardContent className="p-0">
+          <article className="
+            differentiated-output
+            prose prose-base dark:prose-invert max-w-none
+            
+            /* Base typography */
+            [&]:leading-relaxed [&]:text-foreground
+            
+            /* Section spacing */
+            [&>*]:px-6 [&>*]:py-4
+            [&>*:first-child]:pt-6
+            [&>*:last-child]:pb-8
+            
+            /* Headings */
+            prose-headings:font-display prose-headings:font-bold prose-headings:tracking-tight
+            
+            /* H1 - Main section headers */
+            prose-h1:text-2xl prose-h1:mt-0 prose-h1:mb-6 prose-h1:pb-4
+            prose-h1:border-b-2 prose-h1:border-primary/30
+            prose-h1:bg-gradient-to-r prose-h1:from-primary/10 prose-h1:via-primary/5 prose-h1:to-transparent
+            prose-h1:px-6 prose-h1:py-4 prose-h1:-mx-6 prose-h1:rounded-none
+            
+            /* H2 - Section dividers with visual break */
+            prose-h2:text-xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:pb-3
+            prose-h2:border-b prose-h2:border-border
+            prose-h2:bg-gradient-to-r prose-h2:from-muted prose-h2:to-transparent
+            prose-h2:px-6 prose-h2:py-3 prose-h2:-mx-6 prose-h2:rounded-none
+            
+            /* H3 - Subsection headers */
+            prose-h3:text-lg prose-h3:text-primary prose-h3:mt-8 prose-h3:mb-4
+            prose-h3:font-semibold
+            
+            /* H4 - Minor headers */
+            prose-h4:text-base prose-h4:font-semibold prose-h4:mt-6 prose-h4:mb-3
+            prose-h4:text-foreground/90
+            
+            /* Paragraphs */
+            prose-p:leading-7 prose-p:mb-4
+            
+            /* Lists */
+            prose-ul:my-4 prose-ul:space-y-2
+            prose-ol:my-4 prose-ol:space-y-2
+            prose-li:my-1 prose-li:leading-7
+            
+            /* Tables - Accommodations summary */
+            prose-table:my-6 prose-table:w-full
             prose-table:border prose-table:border-border prose-table:rounded-lg prose-table:overflow-hidden
-            prose-th:bg-muted prose-th:p-3 prose-th:text-left prose-th:font-semibold
-            prose-td:p-3 prose-td:border prose-td:border-border
-            prose-strong:text-primary prose-strong:font-semibold
+            prose-th:bg-muted prose-th:p-4 prose-th:text-left prose-th:font-semibold prose-th:text-sm
+            prose-td:p-4 prose-td:border-t prose-td:border-border prose-td:align-top
+            
+            /* Pre/Code blocks - for ASCII tables */
+            prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border 
+            prose-pre:rounded-lg prose-pre:p-4 prose-pre:my-6
+            prose-pre:overflow-x-auto prose-pre:text-sm prose-pre:leading-relaxed
             prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm
-            prose-blockquote:border-l-primary prose-blockquote:bg-primary/5 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-lg
+            prose-code:before:content-none prose-code:after:content-none
+            
+            /* Strong/Bold */
+            prose-strong:text-primary prose-strong:font-semibold
+            
+            /* Blockquotes - for callouts */
+            prose-blockquote:border-l-4 prose-blockquote:border-l-primary 
+            prose-blockquote:bg-primary/5 prose-blockquote:py-4 prose-blockquote:px-6 
+            prose-blockquote:rounded-r-lg prose-blockquote:my-6
+            prose-blockquote:not-italic
+            
+            /* Horizontal rules - group dividers */
+            prose-hr:my-10 prose-hr:border-t-2 prose-hr:border-dashed prose-hr:border-primary/30
+            
+            /* Links */
+            prose-a:text-primary prose-a:underline prose-a:underline-offset-2
           ">
             <ReactMarkdown>{content}</ReactMarkdown>
           </article>
