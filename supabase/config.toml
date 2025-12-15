@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.generate-rubric]
 verify_jwt = false
+
+[functions.generate-audio-script]
+verify_jwt = false
