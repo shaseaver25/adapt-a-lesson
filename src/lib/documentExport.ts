@@ -1663,10 +1663,11 @@ export async function exportBilingualHandoutDocx(
  */
 export interface AlignedRow {
   id: string;
-  type: 'heading' | 'instruction' | 'question' | 'answer-line' | 'answer-box' | 'spacer' | 'content' | 'vocabulary';
+  type: 'heading' | 'instruction' | 'question' | 'answer-line' | 'answer-box' | 'drawing-space' | 'spacer' | 'content' | 'vocabulary';
   homeLanguage: { text: string; lineCount: number };
   english: { text: string; lineCount: number };
   alignedLineCount: number;
+  drawingHeight?: number;
 }
 
 /**
@@ -1771,6 +1772,32 @@ function generateAnswerSpaceParagraph(lines: number, type: 'answer-line' | 'answ
       spacing: { before: 100, after: 100 },
     });
   }
+}
+
+/**
+ * Generate drawing space paragraph for DOCX
+ */
+function generateDrawingSpaceParagraph(height: number = 5): Paragraph {
+  // Create a bordered box for drawing
+  return new Paragraph({
+    children: [
+      new TextRun({
+        text: '[DRAWING SPACE]',
+        size: 18,
+        font: 'Arial',
+        color: '9CA3AF',
+        italics: true,
+      }),
+    ],
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 100, after: 100 },
+    border: {
+      top: { style: BorderStyle.DASHED, size: 8, color: 'D1D5DB' },
+      bottom: { style: BorderStyle.DASHED, size: 8, color: 'D1D5DB' },
+      left: { style: BorderStyle.DASHED, size: 8, color: 'D1D5DB' },
+      right: { style: BorderStyle.DASHED, size: 8, color: 'D1D5DB' },
+    },
+  });
 }
 
 /**
@@ -2114,28 +2141,35 @@ async function generateEnhancedBilingualContentTable(
   for (const row of rows) {
     const cellStyle = getCellStyleForType(row.type);
     const isAnswerSpace = row.type === 'answer-line' || row.type === 'answer-box';
-    const minHeight = row.alignedLineCount * 300;
+    const isDrawingSpace = row.type === 'drawing-space';
+    const minHeight = isDrawingSpace ? (row.drawingHeight || 5) * 300 : row.alignedLineCount * 300;
+
+    const getContentParagraph = (text: string) => {
+      if (isDrawingSpace) {
+        return generateDrawingSpaceParagraph(row.drawingHeight || 5);
+      }
+      if (isAnswerSpace) {
+        return generateAnswerSpaceParagraph(row.alignedLineCount, row.type as 'answer-line' | 'answer-box');
+      }
+      return new Paragraph({
+        children: [
+          new TextRun({
+            text,
+            size: cellStyle.fontSize,
+            font: 'Arial',
+            bold: cellStyle.bold,
+          }),
+        ],
+        spacing: { after: 100 },
+      });
+    };
 
     tableRows.push(
       new TableRow({
         children: [
           // Home Language Column (LEFT)
           new TableCell({
-            children: [
-              isAnswerSpace
-                ? generateAnswerSpaceParagraph(row.alignedLineCount, row.type as 'answer-line' | 'answer-box')
-                : new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: row.homeLanguage.text,
-                        size: cellStyle.fontSize,
-                        font: 'Arial',
-                        bold: cellStyle.bold,
-                      }),
-                    ],
-                    spacing: { after: 100 },
-                  }),
-            ],
+            children: [getContentParagraph(row.homeLanguage.text)],
             width: { size: 48, type: WidthType.PERCENTAGE },
             borders: leftColumnBorders(),
             margins: cellMargins(),
@@ -2150,21 +2184,7 @@ async function generateEnhancedBilingualContentTable(
           }),
           // English Column (RIGHT)
           new TableCell({
-            children: [
-              isAnswerSpace
-                ? generateAnswerSpaceParagraph(row.alignedLineCount, row.type as 'answer-line' | 'answer-box')
-                : new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: row.english.text,
-                        size: cellStyle.fontSize,
-                        font: 'Arial',
-                        bold: cellStyle.bold,
-                      }),
-                    ],
-                    spacing: { after: 100 },
-                  }),
-            ],
+            children: [getContentParagraph(row.english.text)],
             width: { size: 48, type: WidthType.PERCENTAGE },
             borders: rightColumnBorders(),
             margins: cellMargins(),
