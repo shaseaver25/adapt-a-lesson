@@ -34,7 +34,7 @@ import {
   anyGroupNeedsBilingualVocabulary,
   extractVocabularyFromContent 
 } from '@/types/audioRequirements';
-import { PrintableAudioQR } from '@/components/PrintableAudioQR';
+import { PrintableAudioQR, BilingualPrintableAudioQR } from '@/components/PrintableAudioQR';
 import { AudioUsageDashboard } from '@/components/AudioUsageDashboard';
 
 interface PreGeneratedAudioRecord {
@@ -784,7 +784,7 @@ export function DifferentiatedLessonOutput({
             )}
             
             {/* Printable QR Codes Section */}
-            {showPrintQR && Object.keys(generatedAudioUrls).length > 0 && (
+            {showPrintQR && (preGeneratedAudio.length > 0 || Object.keys(generatedAudioUrls).length > 0) && (
               <div className="border-t pt-6">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-semibold flex items-center gap-2">
@@ -804,26 +804,80 @@ export function DifferentiatedLessonOutput({
                 <p className="text-sm text-muted-foreground mb-4">
                   Add these QR codes to printed student handouts. Students can scan to access audio.
                 </p>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {selectedGroups
-                    .filter(group => generatedAudioUrls[group.id])
-                    .map(group => {
-                      const audioNeeds = analyzeAudioNeeds(group);
-                      return (
-                        <PrintableAudioQR
-                          key={group.id}
-                          sectionType={`${group.groupName} - Content`}
-                          audioUrl={generatedAudioUrls[group.id]}
-                          language={group.homeLanguage}
-                          size="md"
-                        />
-                      );
-                    })}
+                <div className="space-y-6">
+                  {selectedGroups.map(group => {
+                    // Get pre-generated audio for this group
+                    const groupAudio = preGeneratedAudio.filter(a => a.group_name === group.groupName);
+                    const hasBilingual = group.homeLanguage && group.homeLanguage !== 'English';
+                    
+                    // Group audio by section type
+                    const sectionTypes = [...new Set(groupAudio.map(a => a.section_type))];
+                    
+                    // Fall back to old generatedAudioUrls if no pre-generated audio
+                    const fallbackAudioUrl = generatedAudioUrls[group.id];
+                    
+                    if (groupAudio.length === 0 && !fallbackAudioUrl) return null;
+                    
+                    return (
+                      <div key={group.id} className="space-y-3">
+                        <h5 className="font-medium text-sm flex items-center gap-2">
+                          <span>{getStudentFriendlyIcon(group.readingLevelLabel)}</span>
+                          {group.groupName}
+                          {hasBilingual && (
+                            <Badge variant="outline" className="text-xs">
+                              {group.homeLanguage}
+                            </Badge>
+                          )}
+                        </h5>
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                          {groupAudio.length > 0 ? (
+                            // Use pre-generated audio - group by section type and show bilingual QR codes
+                            sectionTypes.map(sectionType => {
+                              const englishAudio = groupAudio.find(a => a.section_type === sectionType && a.language === 'English');
+                              const homeLanguageAudio = groupAudio.find(a => a.section_type === sectionType && a.language === group.homeLanguage);
+                              
+                              if (hasBilingual && (englishAudio || homeLanguageAudio)) {
+                                return (
+                                  <BilingualPrintableAudioQR
+                                    key={`${group.id}-${sectionType}`}
+                                    sectionType={sectionType}
+                                    englishAudioUrl={englishAudio?.audio_url}
+                                    homeLanguageAudioUrl={homeLanguageAudio?.audio_url}
+                                    homeLanguage={group.homeLanguage}
+                                    size="sm"
+                                  />
+                                );
+                              } else if (englishAudio) {
+                                return (
+                                  <PrintableAudioQR
+                                    key={`${group.id}-${sectionType}`}
+                                    sectionType={sectionType}
+                                    audioUrl={englishAudio.audio_url}
+                                    language="English"
+                                    size="md"
+                                  />
+                                );
+                              }
+                              return null;
+                            })
+                          ) : (
+                            // Fall back to old on-demand audio
+                            <PrintableAudioQR
+                              sectionType={`${group.groupName} - Content`}
+                              audioUrl={fallbackAudioUrl}
+                              language={group.homeLanguage}
+                              size="md"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
             
-            {showPrintQR && Object.keys(generatedAudioUrls).length === 0 && (
+            {showPrintQR && preGeneratedAudio.length === 0 && Object.keys(generatedAudioUrls).length === 0 && (
               <div className="border-t pt-6">
                 <p className="text-sm text-muted-foreground text-center py-4">
                   Generate audio for student groups above to see QR codes for printing.
