@@ -9,6 +9,7 @@ import {
   BorderStyle,
   AlignmentType,
   convertInchesToTwip,
+  ImageRun,
 } from 'docx';
 
 // Document styling constants
@@ -22,6 +23,28 @@ const DOC_STYLES = {
 };
 
 type DocxChild = Paragraph | Table;
+
+// Map to store graphic organizer images for embedding
+// Key: description or identifier, Value: image URL
+let graphicOrganizerImages: Map<string, string> = new Map();
+
+/**
+ * Set graphic organizer images to be embedded during DOCX generation
+ */
+function setGraphicOrganizerImages(images: Map<string, string> | Record<string, string>): void {
+  if (images instanceof Map) {
+    graphicOrganizerImages = images;
+  } else {
+    graphicOrganizerImages = new Map(Object.entries(images));
+  }
+}
+
+/**
+ * Clear graphic organizer images
+ */
+function clearGraphicOrganizerImages(): void {
+  graphicOrganizerImages.clear();
+}
 
 /**
  * Parse inline markdown formatting to TextRun array
@@ -242,7 +265,7 @@ function createTable(lines: string[]): Table {
 }
 
 /**
- * Create a visual placeholder block
+ * Create a visual placeholder block (sync version)
  */
 function createVisualPlaceholder(description: string): Paragraph {
   return new Paragraph({
@@ -265,6 +288,75 @@ function createVisualPlaceholder(description: string): Paragraph {
     shading: { fill: 'F9FAFB' },
     spacing: { before: 200, after: 200 },
   });
+}
+
+/**
+ * Create an embedded image paragraph from a URL or base64
+ */
+async function createEmbeddedImage(
+  imageUrl: string,
+  description: string,
+  width: number = 500,
+  height: number = 375
+): Promise<Paragraph[]> {
+  const paragraphs: Paragraph[] = [];
+
+  try {
+    let imageBuffer: Uint8Array;
+
+    if (imageUrl.startsWith('data:image/')) {
+      // Handle base64 data URL
+      const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, '');
+      imageBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+    } else {
+      // Fetch remote image
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      imageBuffer = new Uint8Array(arrayBuffer);
+    }
+
+    // Add the image
+    paragraphs.push(
+      new Paragraph({
+        children: [
+          new ImageRun({
+            data: imageBuffer,
+            transformation: { width, height },
+            type: 'png',
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 200, after: 100 },
+      })
+    );
+
+    // Add caption
+    if (description) {
+      paragraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `📊 ${description}`,
+              italics: true,
+              size: 20,
+              color: '6B7280',
+            }),
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 200 },
+        })
+      );
+    }
+  } catch (error) {
+    console.error('Error embedding image:', error);
+    // Fallback to placeholder
+    paragraphs.push(createVisualPlaceholder(description));
+  }
+
+  return paragraphs;
 }
 
 /**
@@ -501,4 +593,176 @@ export function markdownToDocxChildren(markdown: string): (Paragraph | Table)[] 
   return parseMarkdownToDocx(markdown);
 }
 
-export { DOC_STYLES };
+/**
+ * Async version of parseMarkdownToDocx that embeds actual images
+ * Uses graphicOrganizerImages map set via setGraphicOrganizerImages()
+ */
+export async function parseMarkdownToDocxWithImages(markdown: string): Promise<DocxChild[]> {
+  const elements: DocxChild[] = [];
+  const lines = markdown.split('\n');
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+
+    // Skip empty lines but add spacing
+    if (!trimmedLine) {
+      elements.push(new Paragraph({ text: '', spacing: { after: 100 } }));
+      i++;
+      continue;
+    }
+
+    // Horizontal rule --- or ***
+    if (/^[-*_]{3,}$/.test(trimmedLine)) {
+      elements.push(createHorizontalRule());
+      i++;
+      continue;
+    }
+
+    // Separator lines (═══ or ───)
+    if (/^[═─]{3,}$/.test(trimmedLine)) {
+      elements.push(
+        new Paragraph({
+          border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000' } },
+          spacing: { before: 200, after: 200 },
+        })
+      );
+      i++;
+      continue;
+    }
+
+    // Headers # ## ### etc
+    const headerMatch = trimmedLine.match(/^(#{1,6})\s+(.+)$/);
+    if (headerMatch) {
+      const level = headerMatch[1].length;
+      const text = headerMatch[2];
+      elements.push(createHeading(text, level));
+      i++;
+      continue;
+    }
+
+    // Box drawing characters
+    if (/[┌┐└┘├┤┬┴┼─│═║╔╗╚╝╠╣╦╩╬]/.test(trimmedLine)) {
+      const boxParagraph = handleBoxDrawing(trimmedLine);
+      if (boxParagraph) {
+        elements.push(boxParagraph);
+      }
+      i++;
+      continue;
+    }
+
+    // Bullet lists - or * (not bold markers)
+    if (/^[-*•]\s+/.test(trimmedLine) && !/^\*\*/.test(trimmedLine)) {
+      const listItems: string[] = [];
+      while (i < lines.length) {
+        const currentLine = lines[i].trim();
+        if (/^[-*•]\s+/.test(currentLine) && !/^\*\*/.test(currentLine)) {
+          listItems.push(currentLine.replace(/^[-*•]\s+/, ''));
+          i++;
+        } else {
+          break;
+        }
+      }
+      elements.push(...createBulletList(listItems));
+      continue;
+    }
+
+    // Numbered lists 1. 2. etc
+    if (/^\d+\.\s+/.test(trimmedLine)) {
+      const listItems: string[] = [];
+      while (i < lines.length) {
+        const currentLine = lines[i].trim();
+        if (/^\d+\.\s+/.test(currentLine)) {
+          listItems.push(currentLine.replace(/^\d+\.\s+/, ''));
+          i++;
+        } else {
+          break;
+        }
+      }
+      elements.push(...createNumberedList(listItems));
+      continue;
+    }
+
+    // Tables | col1 | col2 |
+    if (trimmedLine.includes('|') && (trimmedLine.startsWith('|') || trimmedLine.endsWith('|'))) {
+      const tableLines: string[] = [];
+      while (i < lines.length) {
+        const currentLine = lines[i].trim();
+        if (currentLine.includes('|')) {
+          tableLines.push(currentLine);
+          i++;
+        } else {
+          break;
+        }
+      }
+      if (tableLines.length > 0) {
+        elements.push(createTable(tableLines));
+        elements.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+      }
+      continue;
+    }
+
+    // [VISUAL: ...] - Check for image URL or stored image
+    const visualMatch = trimmedLine.match(/\[VISUAL:\s*(.+?)\]/i);
+    if (visualMatch) {
+      const description = visualMatch[1];
+      
+      // Check if we have a stored image for this description
+      const imageUrl = graphicOrganizerImages.get(description) || 
+                       graphicOrganizerImages.get(description.toLowerCase());
+      
+      // Also check for URL embedded in description (format: [VISUAL: desc | url])
+      let embeddedUrl = '';
+      if (description.includes('|')) {
+        const parts = description.split('|').map(s => s.trim());
+        if (parts[1] && (parts[1].startsWith('http') || parts[1].startsWith('data:image/'))) {
+          embeddedUrl = parts[1];
+        }
+      }
+      
+      const urlToUse = imageUrl || embeddedUrl;
+      
+      if (urlToUse) {
+        // Embed the actual image
+        const imageParagraphs = await createEmbeddedImage(urlToUse, description.split('|')[0].trim());
+        elements.push(...imageParagraphs);
+      } else {
+        // Fallback to placeholder
+        elements.push(createVisualPlaceholder(description));
+      }
+      i++;
+      continue;
+    }
+
+    // [ANSWER LINES: N] or similar placeholder
+    const answerMatch = trimmedLine.match(/\[ANSWER\s*LINES?:\s*(\d+)\]/i);
+    if (answerMatch) {
+      elements.push(...createAnswerLine(parseInt(answerMatch[1], 10)));
+      i++;
+      continue;
+    }
+
+    // Answer line placeholder (underscores)
+    if (/^_{5,}$/.test(trimmedLine)) {
+      elements.push(...createAnswerLine(1));
+      i++;
+      continue;
+    }
+
+    // Regular paragraph with inline formatting
+    elements.push(createParagraph(trimmedLine));
+    i++;
+  }
+
+  return elements;
+}
+
+/**
+ * Async version of markdownToDocxChildren that supports image embedding
+ */
+export async function markdownToDocxChildrenWithImages(markdown: string): Promise<(Paragraph | Table)[]> {
+  return parseMarkdownToDocxWithImages(markdown);
+}
+
+export { DOC_STYLES, setGraphicOrganizerImages, clearGraphicOrganizerImages };

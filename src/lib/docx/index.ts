@@ -3,6 +3,10 @@ export {
   parseMarkdownToDocx, 
   markdownToParagraphs, 
   markdownToDocxChildren,
+  parseMarkdownToDocxWithImages,
+  markdownToDocxChildrenWithImages,
+  setGraphicOrganizerImages,
+  clearGraphicOrganizerImages,
   DOC_STYLES 
 } from './markdownToDocx';
 
@@ -22,3 +26,12 @@ export {
   createAudioPlaceholder,
   hasValidAudioUrls,
 } from './qrCodeGenerator';
+
+// Image embedding for graphic organizers
+export {
+  fetchImageAsBuffer,
+  createImageParagraph,
+  createImagePlaceholder,
+  parseVisualMarker,
+  isImageUrl,
+} from './imageEmbedder';
