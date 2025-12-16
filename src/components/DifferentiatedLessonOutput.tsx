@@ -83,6 +83,35 @@ const LANGUAGE_FLAGS: Record<string, string> = {
 
 const getFlag = (language: string): string => LANGUAGE_FLAGS[language] || '🌐';
 
+// Process content to replace [VISUAL:] and [NANOBANANA:] tags with actual images
+const processContentWithImages = (content: string, imageMap: Map<string, string>): string => {
+  if (!content || imageMap.size === 0) return content;
+  
+  let processed = content;
+  
+  // Replace [VISUAL: description] with markdown image
+  processed = processed.replace(/\[VISUAL:\s*(.+?)\]/gi, (match, description) => {
+    const desc = description.trim();
+    const imageUrl = imageMap.get(desc);
+    if (imageUrl) {
+      return `\n\n![${desc}](${imageUrl})\n\n*${desc}*\n\n`;
+    }
+    return match; // Keep placeholder if no image
+  });
+  
+  // Also handle [NANOBANANA: "..."] format
+  processed = processed.replace(/\[NANOBANANA:\s*"(.+?)"\]/gi, (match, description) => {
+    const desc = description.trim();
+    const imageUrl = imageMap.get(desc);
+    if (imageUrl) {
+      return `\n\n![${desc}](${imageUrl})\n\n*${desc}*\n\n`;
+    }
+    return match;
+  });
+  
+  return processed;
+};
+
 export function DifferentiatedLessonOutput({ 
   lessonData,
   selectedGroups, 
@@ -480,8 +509,8 @@ export function DifferentiatedLessonOutput({
                                 <span>🌍</span>
                                 <span>{handout.language}</span>
                               </div>
-                              <div className="prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown>{handout.content}</ReactMarkdown>
+                              <div className="prose prose-sm dark:prose-invert max-w-none [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_img]:mx-auto [&_img]:block [&_img]:shadow-md">
+                                <ReactMarkdown>{processContentWithImages(handout.content, imageMap)}</ReactMarkdown>
                               </div>
                             </div>
                             
@@ -491,15 +520,15 @@ export function DifferentiatedLessonOutput({
                                 <span>🇺🇸</span>
                                 <span>English</span>
                               </div>
-                              <div className="prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown>{handout.englishContent}</ReactMarkdown>
+                              <div className="prose prose-sm dark:prose-invert max-w-none [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_img]:mx-auto [&_img]:block [&_img]:shadow-md">
+                                <ReactMarkdown>{processContentWithImages(handout.englishContent || '', imageMap)}</ReactMarkdown>
                               </div>
                             </div>
                           </div>
                         ) : (
                           // Single column for English-only
-                          <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <ReactMarkdown>{handout.content}</ReactMarkdown>
+                          <div className="prose prose-sm dark:prose-invert max-w-none [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_img]:mx-auto [&_img]:block [&_img]:shadow-md">
+                            <ReactMarkdown>{processContentWithImages(handout.content, imageMap)}</ReactMarkdown>
                           </div>
                         )}
                       </TabsContent>
@@ -515,8 +544,8 @@ export function DifferentiatedLessonOutput({
             
             {/* Teacher Guide */}
             <TabsContent value="teacher" className="mt-0 p-4">
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown>{teacherGuide}</ReactMarkdown>
+              <div className="prose prose-sm dark:prose-invert max-w-none [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_img]:mx-auto [&_img]:block [&_img]:shadow-md">
+                <ReactMarkdown>{processContentWithImages(teacherGuide, imageMap)}</ReactMarkdown>
               </div>
             </TabsContent>
           </Tabs>
