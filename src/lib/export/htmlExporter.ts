@@ -15,6 +15,7 @@ interface LessonExportData {
   englishContent?: string;
   group: StudentGroup;
   generatedDate: string;
+  imageMap?: Map<string, string>; // Map of visual description -> image URL
 }
 
 /**
@@ -70,7 +71,7 @@ function sanitizeFilename(name: string): string {
  * Generate a standalone HTML file for a student group
  */
 export function generateStudentHTML(data: LessonExportData): string {
-  const { title, content, englishContent, group, generatedDate } = data;
+  const { title, content, englishContent, group, generatedDate, imageMap } = data;
   
   // Detect if this is a bilingual export
   const isBilingual = group.homeLanguage !== 'English' && englishContent && englishContent.trim().length > 0;
@@ -83,13 +84,32 @@ export function generateStudentHTML(data: LessonExportData): string {
   const direction = isRTL ? 'rtl' : 'ltr';
   const textAlign = isRTL ? 'right' : 'left';
   
-  // Process content - convert [VISUAL: ...] to styled placeholders
+  // Process content - convert [VISUAL: ...] to images or styled placeholders
   const processMarkdown = (md: string): string => {
     let processed = md;
+    
+    // Replace [VISUAL: ...] with actual images if available, or fallback to placeholder
     processed = processed.replace(
       /\[VISUAL:\s*(.+?)\]/g,
-      '<div class="visual-placeholder"><span class="visual-icon">📊</span><span class="visual-label">$1</span></div>'
+      (match, description) => {
+        const imageUrl = imageMap?.get(description.trim());
+        
+        if (imageUrl) {
+          return `<figure class="lesson-figure">
+            <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(description)}" class="lesson-image" loading="lazy" />
+            <figcaption>${escapeHtml(description)}</figcaption>
+          </figure>`;
+        }
+        
+        // Fallback to styled placeholder
+        return `<div class="visual-placeholder">
+          <span class="visual-icon">📐</span>
+          <span class="visual-label">${escapeHtml(description)}</span>
+          <span class="teacher-note">Teacher: Insert diagram or use whiteboard</span>
+        </div>`;
+      }
     );
+    
     processed = processed.replace(/_{10,}/g, '<div class="answer-line"></div>');
     return marked.parse(processed) as string;
   };
@@ -336,6 +356,29 @@ export function generateStudentHTML(data: LessonExportData): string {
       font-weight: 600;
     }
     
+    /* Lesson figures - generated images */
+    .lesson-figure {
+      margin: 1.5rem auto;
+      text-align: center;
+      max-width: 500px;
+    }
+    
+    .lesson-image {
+      max-width: 100%;
+      height: auto;
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--color-border);
+    }
+    
+    .lesson-figure figcaption {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+      font-style: italic;
+    }
+    
+    /* Visual placeholders - fallback when no image */
     .visual-placeholder {
       display: flex;
       flex-direction: column;
@@ -343,14 +386,31 @@ export function generateStudentHTML(data: LessonExportData): string {
       justify-content: center;
       padding: 2rem;
       margin: 1.5rem 0;
-      background: rgba(255,255,255,0.5);
-      border: 2px dashed var(--color-border);
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      border: 2px dashed #0ea5e9;
       border-radius: 0.75rem;
       text-align: center;
+      min-height: 150px;
     }
     
-    .visual-icon { font-size: 2rem; margin-bottom: 0.5rem; }
-    .visual-label { font-size: 0.875rem; color: var(--color-text-muted); font-style: italic; }
+    .visual-icon { 
+      font-size: 2.5rem; 
+      margin-bottom: 0.75rem; 
+    }
+    
+    .visual-label { 
+      font-size: 0.9rem; 
+      color: #0369a1;
+      font-weight: 500;
+      max-width: 400px;
+    }
+    
+    .teacher-note {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 0.5rem;
+      font-style: italic;
+    }
     
     .answer-line {
       border-bottom: 2px solid var(--color-border);
@@ -463,14 +523,16 @@ export function downloadGroupHTML(
   title: string,
   content: string,
   group: StudentGroup,
-  englishContent?: string
+  englishContent?: string,
+  imageMap?: Map<string, string>
 ): void {
   const html = generateStudentHTML({
     title,
     content,
     englishContent,
     group,
-    generatedDate: new Date().toLocaleDateString()
+    generatedDate: new Date().toLocaleDateString(),
+    imageMap
   });
   downloadHTML(html, `${title}_${group.groupName}`);
 }
@@ -480,14 +542,15 @@ export function downloadGroupHTML(
  */
 export async function downloadAllAsZip(
   title: string,
-  groupContents: { group: StudentGroup; content: string; englishContent?: string }[]
+  groupContents: { group: StudentGroup; content: string; englishContent?: string }[],
+  imageMap?: Map<string, string>
 ): Promise<void> {
   const JSZip = (await import('jszip')).default;
   const zip = new JSZip();
   const generatedDate = new Date().toLocaleDateString();
   
   groupContents.forEach(({ group, content, englishContent }) => {
-    const html = generateStudentHTML({ title, content, englishContent, group, generatedDate });
+    const html = generateStudentHTML({ title, content, englishContent, group, generatedDate, imageMap });
     const filename = `${sanitizeFilename(title)}_${sanitizeFilename(group.groupName)}.html`;
     zip.file(filename, html);
   });

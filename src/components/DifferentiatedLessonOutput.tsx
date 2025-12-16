@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Copy, Check, BookOpen, GraduationCap, Save, Loader2, Volume2, Languages, LayoutTemplate, FileText } from 'lucide-react';
+import { Copy, Check, BookOpen, GraduationCap, Save, Loader2, Volume2, Languages, LayoutTemplate, FileText, ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import { OUTPUT_SECTION_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
@@ -16,6 +16,8 @@ import { useDifferentiation } from '@/contexts/DifferentiationContext';
 import { anyGroupNeedsAudio } from '@/types/audioRequirements';
 import { AudioGenerationButton } from '@/components/AudioGenerationButton';
 import { ExportForLMSButton } from '@/components/export/ExportForLMSButton';
+import { useLessonImages } from '@/hooks/useLessonImages';
+import { extractVisualDescriptions } from '@/lib/imageGeneration';
 
 interface PreGeneratedAudioRecord {
   id: string;
@@ -97,11 +99,24 @@ export function DifferentiatedLessonOutput({
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const { toast } = useToast();
   const { options } = useDifferentiation();
+  const { imageMap, isGenerating: isGeneratingImages, progress: imageProgress, generateImages, hasVisuals } = useLessonImages();
 
   const { teacherGuide, studentHandouts } = lessonData;
 
   // Check if audio already exists for this lesson
   const hasExistingAudio = preGeneratedAudio.length > 0;
+
+  // Check if any content has visual placeholders
+  const contentHasVisuals = useMemo(() => {
+    const allContent = studentHandouts.map(h => h.content).join('\n');
+    return extractVisualDescriptions(allContent).length > 0;
+  }, [studentHandouts]);
+
+  // Handle diagram generation
+  const handleGenerateDiagrams = useCallback(async () => {
+    const allContent = studentHandouts.map(h => h.content).join('\n');
+    await generateImages(allContent, lessonId || undefined, undefined, lessonTitle);
+  }, [studentHandouts, generateImages, lessonId, lessonTitle]);
 
   // Get content for a specific group - now using structured data directly
   const getGroupContent = useCallback((groupName: string): string => {
@@ -248,6 +263,7 @@ export function DifferentiatedLessonOutput({
                 lessonTitle={lessonTitle}
                 getGroupContent={getGroupContent}
                 getGroupEnglishContent={getGroupEnglishContent}
+                imageMap={imageMap}
               />
             </div>
           </div>
@@ -300,6 +316,53 @@ export function DifferentiatedLessonOutput({
               <Check className="h-4 w-4 text-green-600" />
               <span className="text-sm text-green-700 dark:text-green-300">
                 Audio ready ({preGeneratedAudio.length} files)
+              </span>
+            </div>
+          )}
+          
+          {/* Diagram Generation - Only show if content has [VISUAL: ...] placeholders */}
+          {contentHasVisuals && imageMap.size === 0 && !isGeneratingImages && (
+            <div className="p-4 rounded-lg border bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/20 dark:to-blue-950/20 border-sky-200 dark:border-sky-800">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-full bg-sky-100 dark:bg-sky-900">
+                    <ImageIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">📐 AI Diagram Generation Available</p>
+                    <p className="text-xs text-muted-foreground">
+                      Generate diagrams for visual placeholders using Nano Banana AI
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleGenerateDiagrams}
+                  size="sm"
+                  className="gap-2 bg-sky-600 hover:bg-sky-700"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  Generate Diagrams
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {/* Diagram generation in progress */}
+          {isGeneratingImages && (
+            <div className="p-3 rounded-lg bg-sky-50 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-800 flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-sky-600" />
+              <span className="text-sm text-sky-700 dark:text-sky-300">
+                Generating diagrams... ({imageProgress.completed}/{imageProgress.total})
+              </span>
+            </div>
+          )}
+          
+          {/* Diagrams ready indicator */}
+          {imageMap.size > 0 && (
+            <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 flex items-center gap-2">
+              <Check className="h-4 w-4 text-green-600" />
+              <span className="text-sm text-green-700 dark:text-green-300">
+                Diagrams ready ({imageMap.size} generated) - export HTML to include images
               </span>
             </div>
           )}

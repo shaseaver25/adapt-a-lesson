@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.generate-graphic-organizer]
 verify_jwt = false
+
+[functions.generate-lesson-diagram]
+verify_jwt = false

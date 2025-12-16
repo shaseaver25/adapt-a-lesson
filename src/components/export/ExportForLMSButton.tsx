@@ -18,13 +18,15 @@ interface ExportForLMSButtonProps {
   lessonTitle: string;
   getGroupContent: (groupName: string) => string;
   getGroupEnglishContent?: (groupName: string) => string;
+  imageMap?: Map<string, string>;
 }
 
 export function ExportForLMSButton({
   groups,
   lessonTitle,
   getGroupContent,
-  getGroupEnglishContent
+  getGroupEnglishContent,
+  imageMap
 }: ExportForLMSButtonProps) {
   const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
@@ -54,7 +56,7 @@ export function ExportForLMSButton({
         return;
       }
       
-      downloadGroupHTML(lessonTitle, content, group, englishContent);
+      downloadGroupHTML(lessonTitle, content, group, englishContent, imageMap);
       
       toast({
         title: 'Downloaded!',
@@ -80,7 +82,7 @@ export function ExportForLMSButton({
         content: getGroupContent(group.groupName),
         englishContent: getGroupEnglishContent?.(group.groupName)
       }));
-      await downloadAllAsZip(lessonTitle, groupContents);
+      await downloadAllAsZip(lessonTitle, groupContents, imageMap);
       
       const bilingualCount = groupContents.filter(g => g.group.homeLanguage !== 'English' && g.englishContent).length;
       
