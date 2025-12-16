@@ -3,8 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -13,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, Shield, User, RefreshCw } from 'lucide-react';
+import { Search, Shield, User, RefreshCw, UserPlus } from 'lucide-react';
 import { useAdmin } from '@/hooks/useAdmin';
 import { toast } from 'sonner';
 
@@ -34,6 +44,13 @@ export function AdminUsers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const { isSuperAdmin } = useAdmin();
+  
+  // Add user modal state
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserRole, setNewUserRole] = useState<string>('user');
+  const [isAddingUser, setIsAddingUser] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -141,6 +158,48 @@ export function AdminUsers() {
     }
   }
 
+  async function handleAddUser() {
+    if (!isSuperAdmin) {
+      toast.error('Only super admins can add users');
+      return;
+    }
+
+    if (!newUserEmail.trim()) {
+      toast.error('Email is required');
+      return;
+    }
+
+    setIsAddingUser(true);
+    try {
+      // Check if user already exists
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', newUserEmail.toLowerCase())
+        .maybeSingle();
+
+      if (existingUser) {
+        toast.error('A user with this email already exists');
+        setIsAddingUser(false);
+        return;
+      }
+
+      // Note: In a production app, you'd use Supabase Admin API or send an invitation
+      // For now, we'll inform the user that the person needs to sign up
+      toast.info(`User ${newUserEmail} will need to sign up. Once they do, you can assign their role here.`);
+      
+      setNewUserEmail('');
+      setNewUserName('');
+      setNewUserRole('user');
+      setIsAddUserOpen(false);
+    } catch (error) {
+      console.error('Error adding user:', error);
+      toast.error('Failed to add user');
+    } finally {
+      setIsAddingUser(false);
+    }
+  }
+
   const filteredUsers = users.filter(user =>
     (user.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
     (user.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
@@ -158,9 +217,73 @@ export function AdminUsers() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-foreground">User Management</h2>
-        <p className="text-muted-foreground">{users.length} registered users</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-foreground">User Management</h2>
+          <p className="text-muted-foreground">{users.length} registered users</p>
+        </div>
+        
+        {isSuperAdmin && (
+          <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Add User
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New User</DialogTitle>
+                <DialogDescription>
+                  Enter the email of the user you want to add. They will need to sign up with this email to access the platform.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="user@example.com"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name (optional)</Label>
+                  <Input
+                    id="name"
+                    placeholder="John Doe"
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select value={newUserRole} onValueChange={setNewUserRole}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="moderator">Moderator</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="super_admin">Super Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAddUser} disabled={isAddingUser}>
+                  {isAddingUser ? 'Adding...' : 'Add User'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <Card>
