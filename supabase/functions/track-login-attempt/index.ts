@@ -13,6 +13,35 @@ interface LoginAttemptRequest {
   userAgent?: string;
 }
 
+// Simple in-memory rate limiting (resets on function cold start)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 10; // Max 10 requests per IP per minute
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip);
+  
+  if (!record || now > record.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  
+  record.count++;
+  if (record.count > RATE_LIMIT_MAX_REQUESTS) {
+    return true;
+  }
+  
+  return false;
+}
+
+function isValidEmail(email: string): boolean {
+  if (!email || typeof email !== 'string') return false;
+  // Basic email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 254;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -20,6 +49,23 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Get IP address for rate limiting
+    const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                      req.headers.get('x-real-ip') || 
+                      'unknown';
+    
+    // Check rate limit
+    if (isRateLimited(ipAddress)) {
+      console.warn(`Rate limit exceeded for IP: ${ipAddress}`);
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        { 
+          status: 429, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -33,9 +79,10 @@ Deno.serve(async (req) => {
     const body: LoginAttemptRequest = await req.json();
     const { email, success, userId, failureReason, userAgent } = body;
 
-    if (!email) {
+    // Validate email format
+    if (!isValidEmail(email)) {
       return new Response(
-        JSON.stringify({ error: 'Email is required' }),
+        JSON.stringify({ error: 'Invalid email format' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -43,10 +90,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get IP address from headers (Supabase edge functions have this)
-    const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-                      req.headers.get('x-real-ip') || 
-                      'unknown';
+    // Sanitize string inputs (prevent injection)
+    const sanitizedFailureReason = failureReason ? String(failureReason).slice(0, 500) : null;
+    const sanitizedUserAgent = userAgent ? String(userAgent).slice(0, 500) : null;
 
     console.log(`Tracking login attempt for ${email}: success=${success}`);
 
@@ -57,8 +103,8 @@ Deno.serve(async (req) => {
         email,
         success,
         user_id: userId || null,
-        failure_reason: failureReason || null,
-        user_agent: userAgent || null,
+        failure_reason: sanitizedFailureReason,
+        user_agent: sanitizedUserAgent,
         ip_address: ipAddress,
       });
 
@@ -112,7 +158,7 @@ Deno.serve(async (req) => {
     console.error('Error tracking login attempt:', errorMessage);
     
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'An error occurred processing your request' }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
