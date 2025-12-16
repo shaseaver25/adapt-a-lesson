@@ -6,6 +6,7 @@ import { AssessmentMethodSelector } from '@/components/assessment/AssessmentMeth
 import { AssessmentOutput } from '@/components/AssessmentOutput';
 import { RubricForm } from '@/components/RubricForm';
 import { RubricOutput } from '@/components/RubricOutput';
+import { ProfileModal } from '@/components/ProfileModal';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, LogIn, LogOut, Settings, UserCircle } from 'lucide-react';
@@ -31,6 +32,8 @@ const Index = () => {
       ? tabParam 
       : 'differentiate';
   });
+
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Audio generation hook
   const { 
@@ -162,12 +165,15 @@ const Index = () => {
             {/* Auth buttons */}
             {user ? (
               <>
-                <Link to="/profile">
-                  <Button variant="ghost" size="sm" className="gap-2">
-                    <UserCircle className="h-4 w-4" />
-                    <span className="hidden sm:inline">Profile</span>
-                  </Button>
-                </Link>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="gap-2"
+                  onClick={() => setIsProfileModalOpen(true)}
+                >
+                  <UserCircle className="h-4 w-4" />
+                  <span className="hidden sm:inline">Profile</span>
+                </Button>
                 <Button 
                   onClick={signOut}
                   size="sm" 
@@ -352,6 +358,13 @@ const Index = () => {
             setProgressStatus(createInitialProgressState());
           }
         }}
+      />
+
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        user={user}
       />
 
       {/* Footer */}
