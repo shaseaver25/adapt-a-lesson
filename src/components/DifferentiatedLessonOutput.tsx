@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -114,11 +114,23 @@ export function DifferentiatedLessonOutput({
     return extractVisualDescriptions(allContent).length > 0;
   }, [studentHandouts]);
 
+  // Track if auto-generation has been attempted
+  const autoGenerationAttempted = useRef(false);
+
   // Handle diagram generation
   const handleGenerateDiagrams = useCallback(async () => {
     const allContent = studentHandouts.map(h => h.content).join('\n');
     await generateImages(allContent, lessonId || undefined, undefined, lessonTitle);
   }, [studentHandouts, generateImages, lessonId, lessonTitle]);
+
+  // Auto-generate images when content has visuals and no images exist yet
+  useEffect(() => {
+    if (contentHasVisuals && imageMap.size === 0 && !isGeneratingImages && !autoGenerationAttempted.current) {
+      autoGenerationAttempted.current = true;
+      console.log('Auto-generating diagrams for lesson content...');
+      handleGenerateDiagrams();
+    }
+  }, [contentHasVisuals, imageMap.size, isGeneratingImages, handleGenerateDiagrams]);
 
   // Get content for a specific group - now using structured data directly
   const getGroupContent = useCallback((groupName: string): string => {
@@ -324,7 +336,7 @@ export function DifferentiatedLessonOutput({
             </div>
           )}
           
-          {/* Diagram Generation - Only show if content has [VISUAL: ...] placeholders */}
+          {/* Diagram Generation - Now auto-generates, but show status */}
           {contentHasVisuals && imageMap.size === 0 && !isGeneratingImages && (
             <div className="p-4 rounded-lg border bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/20 dark:to-blue-950/20 border-sky-200 dark:border-sky-800">
               <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -333,19 +345,20 @@ export function DifferentiatedLessonOutput({
                     <ImageIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">📐 AI Diagram Generation Available</p>
+                    <p className="font-medium text-sm">📐 AI Diagram Generation</p>
                     <p className="text-xs text-muted-foreground">
-                      Generate diagrams for visual placeholders using Nano Banana AI
+                      Diagrams will generate automatically...
                     </p>
                   </div>
                 </div>
                 <Button
                   onClick={handleGenerateDiagrams}
                   size="sm"
-                  className="gap-2 bg-sky-600 hover:bg-sky-700"
+                  variant="outline"
+                  className="gap-2"
                 >
                   <ImageIcon className="h-4 w-4" />
-                  Generate Diagrams
+                  Generate Now
                 </Button>
               </div>
             </div>
@@ -363,11 +376,24 @@ export function DifferentiatedLessonOutput({
           
           {/* Diagrams ready indicator */}
           {imageMap.size > 0 && (
-            <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-600" />
-              <span className="text-sm text-green-700 dark:text-green-300">
-                Diagrams ready ({imageMap.size} generated) - export HTML to include images
-              </span>
+            <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-600" />
+                <span className="text-sm text-green-700 dark:text-green-300">
+                  Diagrams ready ({imageMap.size} generated) - export HTML to include images
+                </span>
+              </div>
+              <Button
+                onClick={() => {
+                  autoGenerationAttempted.current = false;
+                  handleGenerateDiagrams();
+                }}
+                size="sm"
+                variant="ghost"
+                className="text-xs"
+              >
+                Regenerate
+              </Button>
             </div>
           )}
         </CardContent>
