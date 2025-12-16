@@ -161,22 +161,25 @@ export default function Login() {
 
     setIsLoading(true);
     
+    // Normalize email to lowercase for case-insensitive login
+    const normalizedEmail = email.toLowerCase().trim();
+    
     try {
-      const emailExists = await checkEmailExists(email);
+      const emailExists = await checkEmailExists(normalizedEmail);
       if (!emailExists) {
         setIsLoading(false);
         clearPasswordAndSetError('errors.noAccount');
         return;
       }
 
-      const isLocked = await checkAccountLocked(email);
+      const isLocked = await checkAccountLocked(normalizedEmail);
       if (isLocked) {
         setIsLoading(false);
         clearPasswordAndSetError('errors.accountLocked');
         return;
       }
 
-      const { error, data } = await signInWithEmail(email, password);
+      const { error, data } = await signInWithEmail(normalizedEmail, password);
       
       if (error) {
         const errorMessage = error.message?.toLowerCase() || '';
@@ -184,7 +187,7 @@ export default function Login() {
         if (errorMessage.includes('invalid login credentials') || 
             errorMessage.includes('invalid password') ||
             errorMessage.includes('wrong password')) {
-          const { isLocked } = await incrementFailedAttempts(email);
+          const { isLocked } = await incrementFailedAttempts(normalizedEmail);
           
           if (isLocked) {
             setIsLoading(false);
