@@ -102,99 +102,77 @@ export function DifferentiatedLessonOutput({
 
   // Extract content for a specific group from the full content
   const extractGroupContent = useCallback((groupName: string): string => {
-    console.log('=== extractGroupContent DEBUG ===');
-    console.log('Looking for group:', groupName);
-    console.log('Full content length:', content?.length);
-    
-    if (!content) {
-      console.log('ERROR: No content provided');
-      return '';
-    }
+    if (!content) return '';
     
     const lines = content.split('\n');
-    let inGroup = false;
-    let groupContent: string[] = [];
     
-    // Try multiple patterns to find group content
-    const groupPatterns = [
-      // Pattern 1: "GroupName Edition" with emoji
-      (line: string) => line.includes(groupName) && (line.includes('Edition') || line.includes('Edición') || line.includes('✨')),
-      // Pattern 2: Header with just group name (## GroupName or # GroupName)
-      (line: string) => line.match(new RegExp(`^#+\\s*${groupName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i')),
-      // Pattern 3: Bold group name (**GroupName**)
-      (line: string) => line.includes(`**${groupName}**`),
-      // Pattern 4: Group name at start of line
-      (line: string) => line.startsWith(groupName) || line.startsWith(`## ${groupName}`) || line.startsWith(`### ${groupName}`),
-    ];
+    // Normalize the group name for matching
+    const normalizedGroupName = groupName
+      .toLowerCase()
+      .replace(/\s*\(.*?\)\s*/g, '') // Remove parenthetical like "(Embers)"
+      .replace(/readers?$/i, 'reader') // Normalize Reader/Readers
+      .replace(/[-_]/g, ' ')
+      .trim();
     
-    // Try each pattern
-    for (const pattern of groupPatterns) {
-      inGroup = false;
-      groupContent = [];
+    console.log(`Looking for group: "${groupName}" (normalized: "${normalizedGroupName}")`);
+    
+    let startIndex = -1;
+    let endIndex = lines.length;
+    let startHeaderLevel = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        
-        if (!inGroup && pattern(line)) {
-          inGroup = true;
-          groupContent.push(line);
-          console.log(`Found group start at line ${i}:`, line.substring(0, 80));
-        } else if (inGroup) {
-          // Check for end of section (next group or major header)
-          const isNextGroup = groupPatterns.some(p => p(line) && !line.includes(groupName));
-          const isMajorHeader = /^#{1,2}\s+[A-Z]/.test(line) && !line.includes(groupName);
-          
-          if (isNextGroup || (isMajorHeader && groupContent.length > 5)) {
-            console.log(`Found group end at line ${i}:`, line.substring(0, 80));
-            break;
-          }
-          groupContent.push(line);
+      // Check if this line is a markdown header
+      const headerMatch = line.match(/^(#{1,4})\s+(.+)$/);
+      if (!headerMatch) continue;
+      
+      const headerLevel = headerMatch[1].length;
+      const headerText = headerMatch[2];
+      
+      // Normalize the header for comparison
+      const normalizedHeader = headerText
+        .toLowerCase()
+        .replace(/[🔥✨📚🎯⭐💫🌟]/g, '') // Remove emojis
+        .replace(/\s*\(.*?\)\s*/g, '') // Remove parenthetical
+        .replace(/readers?/gi, 'reader') // Normalize Reader/Readers
+        .replace(/[-_]/g, ' ')
+        .replace(/edition|edición/gi, '')
+        .trim();
+      
+      // Check if this header matches our group
+      const isMatch = normalizedHeader.includes(normalizedGroupName) || 
+                      normalizedGroupName.includes(normalizedHeader.split(/\s+/).slice(0, 2).join(' '));
+      
+      if (isMatch) {
+        if (startIndex === -1) {
+          startIndex = i;
+          startHeaderLevel = headerLevel;
+          console.log(`Found group "${groupName}" at line ${i}: ${line}`);
+        } else if (headerLevel <= startHeaderLevel) {
+          // Found another section at same or higher level - this is our end
+          endIndex = i;
+          console.log(`Found end at line ${i}: ${line}`);
+          break;
         }
-      }
-      
-      if (groupContent.length > 0) {
-        console.log(`Pattern matched! Extracted ${groupContent.length} lines`);
+      } else if (startIndex !== -1 && headerLevel <= startHeaderLevel) {
+        // We're inside our section, but hit a same/higher level header for a different group
+        endIndex = i;
+        console.log(`Found end at line ${i}: ${line}`);
         break;
       }
     }
     
-    // If still no content, try to find STUDENT HANDOUTS section and return all of it
-    if (groupContent.length === 0) {
-      console.log('No group-specific content found, looking for STUDENT HANDOUTS section...');
-      let inHandouts = false;
-      for (const line of lines) {
-        if (line.includes('STUDENT HANDOUTS') || line.includes('Student Handouts')) {
-          inHandouts = true;
-          continue;
-        }
-        if (inHandouts) {
-          groupContent.push(line);
-        }
-      }
-      if (groupContent.length > 0) {
-        console.log(`Found ${groupContent.length} lines in STUDENT HANDOUTS section`);
-      }
+    if (startIndex === -1) {
+      console.warn(`Could not find section for group: ${groupName}`);
+      // Fallback: return empty string, don't dump all content
+      return '';
     }
     
-    // Last resort: return content after teacher guide
-    if (groupContent.length === 0) {
-      console.log('Using fallback: content after TEACHER GUIDE');
-      let afterTeacher = false;
-      for (const line of lines) {
-        if (line.includes('TEACHER GUIDE') || line.includes('Teacher Guide')) {
-          afterTeacher = true;
-          continue;
-        }
-        if (afterTeacher) {
-          groupContent.push(line);
-        }
-      }
-    }
+    const extracted = lines.slice(startIndex, endIndex).join('\n').trim();
+    console.log(`Extracted ${endIndex - startIndex} lines (${extracted.length} chars) for ${groupName}`);
     
-    const result = groupContent.join('\n').trim();
-    console.log('Final extracted content length:', result.length);
-    console.log('Content preview:', result.substring(0, 300));
-    return result;
+    return extracted;
   }, [content]);
 
   // Get audio for a specific group and language
