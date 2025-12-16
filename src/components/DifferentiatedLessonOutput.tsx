@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Copy, Check, BookOpen, GraduationCap, Save, Loader2, Volume2, Languages, LayoutTemplate, FileText } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Copy, Check, BookOpen, GraduationCap, Save, Loader2, Volume2, Languages, LayoutTemplate, FileText, Download, FileDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import { OUTPUT_SECTION_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
@@ -14,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
 import { anyGroupNeedsAudio } from '@/types/audioRequirements';
 import { AudioGenerationButton } from '@/components/AudioGenerationButton';
+import { downloadGroupHTML, downloadAllAsZip } from '@/lib/export/htmlExporter';
 
 interface PreGeneratedAudioRecord {
   id: string;
@@ -93,6 +95,7 @@ export function DifferentiatedLessonOutput({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
   const { options } = useDifferentiation();
 
@@ -214,6 +217,41 @@ export function DifferentiatedLessonOutput({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Export single group as HTML
+  const handleExportGroup = useCallback((group: StudentGroup & { id: string }) => {
+    const groupContent = extractGroupContent(group.groupName);
+    downloadGroupHTML(lessonTitle, groupContent, group);
+    toast({
+      title: 'HTML Downloaded',
+      description: `${group.groupName} handout exported for LMS upload.`
+    });
+  }, [lessonTitle, extractGroupContent, toast]);
+
+  // Export all groups as ZIP
+  const handleExportAll = useCallback(async () => {
+    setExporting(true);
+    try {
+      const groupContents = selectedGroups.map(group => ({
+        group,
+        content: extractGroupContent(group.groupName)
+      }));
+      await downloadAllAsZip(lessonTitle, groupContents);
+      toast({
+        title: 'ZIP Downloaded',
+        description: `All ${selectedGroups.length} handouts exported for LMS upload.`
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: 'Export Failed',
+        description: 'Could not generate ZIP file.',
+        variant: 'destructive'
+      });
+    } finally {
+      setExporting(false);
+    }
+  }, [selectedGroups, lessonTitle, extractGroupContent, toast]);
+
   const handleAudioGenerated = useCallback(async () => {
     if (lessonId) {
       toast({
@@ -281,6 +319,37 @@ export function DifferentiatedLessonOutput({
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 {copied ? 'Copied!' : 'Copy All'}
               </Button>
+
+              {/* Export for LMS */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2" disabled={exporting}>
+                    {exporting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    Export for LMS
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={handleExportAll} className="gap-2">
+                    <FileDown className="h-4 w-4" />
+                    Download All as ZIP
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {selectedGroups.map(group => (
+                    <DropdownMenuItem 
+                      key={group.id} 
+                      onClick={() => handleExportGroup(group)}
+                      className="gap-2"
+                    >
+                      <FileText className="h-4 w-4" />
+                      {group.groupName}.html
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </CardHeader>
