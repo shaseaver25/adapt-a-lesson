@@ -100,17 +100,55 @@ export function DifferentiatedLessonOutput({
   // Check if audio already exists for this lesson
   const hasExistingAudio = preGeneratedAudio.length > 0;
 
-  // Extract content for a specific group from the full content
+  // Extract content for a specific group from the full content (STUDENT HANDOUTS only)
   const extractGroupContent = useCallback((groupName: string): string => {
     if (!content) return '';
     
-    const lines = content.split('\n');
+    const allLines = content.split('\n');
     
-    // Normalize the group name for matching
+    // STEP 1: Find STUDENT HANDOUTS section (skip teacher guide entirely)
+    let studentSectionStart = -1;
+    const studentMarkers = [
+      'STUDENT HANDOUTS',
+      'Student Handouts',
+      'PRINT FROM HERE',
+      'Print from here'
+    ];
+    
+    for (let i = 0; i < allLines.length; i++) {
+      const line = allLines[i].toUpperCase();
+      if (studentMarkers.some(marker => line.includes(marker.toUpperCase()))) {
+        studentSectionStart = i;
+        console.log(`Found STUDENT HANDOUTS section at line ${i}`);
+        break;
+      }
+    }
+    
+    // If no explicit marker, look for student content patterns after teacher content
+    if (studentSectionStart === -1) {
+      for (let i = 0; i < allLines.length; i++) {
+        const line = allLines[i];
+        // Student handouts often have "Name:" or "Learning Target" or "Edition"
+        if (line.includes('**Name:**') || 
+            line.includes('Learning Target') ||
+            line.match(/#{2,4}.*Edition/i)) {
+          studentSectionStart = Math.max(0, i - 3);
+          console.log(`Found student content pattern at line ${i}`);
+          break;
+        }
+      }
+    }
+    
+    // Use only the student section
+    const lines = studentSectionStart > 0 
+      ? allLines.slice(studentSectionStart)
+      : allLines;
+    
+    // STEP 2: Find the specific group within student section
     const normalizedGroupName = groupName
       .toLowerCase()
-      .replace(/\s*\(.*?\)\s*/g, '') // Remove parenthetical like "(Embers)"
-      .replace(/readers?$/i, 'reader') // Normalize Reader/Readers
+      .replace(/\s*\(.*?\)\s*/g, '')
+      .replace(/readers?$/i, 'reader')
       .replace(/[-_]/g, ' ')
       .trim();
     
@@ -123,24 +161,21 @@ export function DifferentiatedLessonOutput({
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       
-      // Check if this line is a markdown header
       const headerMatch = line.match(/^(#{1,4})\s+(.+)$/);
       if (!headerMatch) continue;
       
       const headerLevel = headerMatch[1].length;
       const headerText = headerMatch[2];
       
-      // Normalize the header for comparison
       const normalizedHeader = headerText
         .toLowerCase()
-        .replace(/[🔥✨📚🎯⭐💫🌟]/g, '') // Remove emojis
-        .replace(/\s*\(.*?\)\s*/g, '') // Remove parenthetical
-        .replace(/readers?/gi, 'reader') // Normalize Reader/Readers
+        .replace(/[🔥✨📚🎯⭐💫🌟]/g, '')
+        .replace(/\s*\(.*?\)\s*/g, '')
+        .replace(/readers?/gi, 'reader')
         .replace(/[-_]/g, ' ')
         .replace(/edition|edición/gi, '')
         .trim();
       
-      // Check if this header matches our group
       const isMatch = normalizedHeader.includes(normalizedGroupName) || 
                       normalizedGroupName.includes(normalizedHeader.split(/\s+/).slice(0, 2).join(' '));
       
@@ -148,24 +183,21 @@ export function DifferentiatedLessonOutput({
         if (startIndex === -1) {
           startIndex = i;
           startHeaderLevel = headerLevel;
-          console.log(`Found group "${groupName}" at line ${i}: ${line}`);
+          console.log(`Found group "${groupName}" at line ${i + studentSectionStart}: ${line}`);
         } else if (headerLevel <= startHeaderLevel) {
-          // Found another section at same or higher level - this is our end
           endIndex = i;
-          console.log(`Found end at line ${i}: ${line}`);
+          console.log(`Found end at line ${i + studentSectionStart}: ${line}`);
           break;
         }
       } else if (startIndex !== -1 && headerLevel <= startHeaderLevel) {
-        // We're inside our section, but hit a same/higher level header for a different group
         endIndex = i;
-        console.log(`Found end at line ${i}: ${line}`);
+        console.log(`Found end at line ${i + studentSectionStart}: ${line}`);
         break;
       }
     }
     
     if (startIndex === -1) {
-      console.warn(`Could not find section for group: ${groupName}`);
-      // Fallback: return empty string, don't dump all content
+      console.warn(`Could not find section for group: ${groupName} in STUDENT HANDOUTS`);
       return '';
     }
     
