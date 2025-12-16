@@ -358,24 +358,30 @@ export function generateStudentHTML(data: LessonExportData): string {
     
     /* Lesson figures - generated images */
     .lesson-figure {
-      margin: 1.5rem auto;
+      margin: 2rem auto;
       text-align: center;
-      max-width: 500px;
+      max-width: 100%;
+      background: var(--color-bg);
+      padding: 1rem;
+      border-radius: 0.75rem;
+      border: 1px solid var(--color-border);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
     
     .lesson-image {
+      display: block;
       max-width: 100%;
       height: auto;
-      border-radius: 0.5rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      border: 1px solid var(--color-border);
+      border-radius: 0.4rem;
+      margin: 0 auto;
     }
     
     .lesson-figure figcaption {
-      margin-top: 0.5rem;
-      font-size: 0.8rem;
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
       color: var(--color-text-muted);
-      font-style: italic;
+      font-weight: 500;
+      line-height: 1.4;
     }
     
     /* Visual placeholders - fallback when no image */
@@ -450,6 +456,11 @@ export function generateStudentHTML(data: LessonExportData): string {
         page-break-inside: avoid;
       }
       .visual-placeholder { border-style: solid; }
+      .lesson-figure {
+        page-break-inside: avoid;
+        border: 1px solid #ccc;
+        box-shadow: none;
+      }
       h2, h3 { page-break-after: avoid; }
       table { page-break-inside: avoid; }
     }
