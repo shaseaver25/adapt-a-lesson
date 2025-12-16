@@ -236,6 +236,7 @@ Format as a markdown table with clear descriptions for each cell.${hasAutoVerifi
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
+        max_tokens: 16000,
       }),
     });
 

@@ -111,6 +111,7 @@ Format as markdown with clear sections.`;
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
         ],
+        max_tokens: 16000,
       }),
     });
 

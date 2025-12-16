@@ -59,6 +59,7 @@ Guidelines:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: text }
         ],
+        max_tokens: 16000,
       }),
     });
 
