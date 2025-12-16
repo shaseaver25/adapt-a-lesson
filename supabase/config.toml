@@ -6,9 +6,6 @@ verify_jwt = false
 [functions.generate-rubric]
 verify_jwt = false
 
-[functions.generate-audio-script]
-verify_jwt = false
-
 [functions.differentiate-lesson]
 verify_jwt = false
 
