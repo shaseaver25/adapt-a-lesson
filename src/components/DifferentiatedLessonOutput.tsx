@@ -654,62 +654,56 @@ export function DifferentiatedLessonOutput({
                 {copied ? 'Copied!' : 'Copy All'}
               </Button>
               
+              {/* Primary Export Button - Downloads immediately without audio */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
                     <Download className="h-4 w-4" />
-                    Export
+                    Download DOCX
                     <ChevronDown className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-72">
-                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-                    Word Documents (.docx)
+                <DropdownMenuContent align="end" className="w-80">
+                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal flex items-center gap-2">
+                    <FileIcon className="h-3 w-3" />
+                    Word Documents (.docx) - Instant Download
                   </DropdownMenuLabel>
                   <DropdownMenuItem onClick={handleExportDocx} className="gap-2">
                     <FileIcon className="h-4 w-4" />
                     <div>
-                      <p className="font-medium">Combined Word Document</p>
+                      <p className="font-medium">Combined Document</p>
                       <p className="text-xs text-muted-foreground">All groups with page breaks</p>
                     </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleExportSeparateDocx} className="gap-2">
                     <FolderArchive className="h-4 w-4" />
                     <div>
-                      <p className="font-medium">Separate Word Documents</p>
-                      <p className="text-xs text-muted-foreground">ZIP with individual files per group</p>
+                      <p className="font-medium">Separate Documents (ZIP)</p>
+                      <p className="text-xs text-muted-foreground">Individual files per group</p>
                     </div>
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleExportTeacherDocx} className="gap-2">
                     <GraduationCap className="h-4 w-4" />
-                    <div>
-                      <p className="font-medium">Teacher Guide (.docx)</p>
-                      <p className="text-xs text-muted-foreground">Pacing, strategies, assessment tips</p>
-                    </div>
+                    <span>Teacher Guide Only</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleExportStudentDocx} className="gap-2">
                     <BookOpen className="h-4 w-4" />
                     <div>
-                      <p className="font-medium">Student Handouts (.docx)</p>
-                      <p className="text-xs text-muted-foreground">Print-ready for distribution</p>
+                      <p className="font-medium">Student Handouts (Landscape)</p>
+                      <p className="text-xs text-muted-foreground">
+                        {preGeneratedAudio.length > 0 ? 'Includes QR codes' : 'Without QR codes'}
+                      </p>
                     </div>
                   </DropdownMenuItem>
-                  {audioSections.length > 0 && (
-                    <DropdownMenuItem onClick={handleExportStudentWithAudioDocx} className="gap-2">
-                      <Headphones className="h-4 w-4" />
-                      <div>
-                        <p className="font-medium">Student Handouts with Audio</p>
-                        <p className="text-xs text-muted-foreground">Includes QR codes for audio access</p>
-                      </div>
-                    </DropdownMenuItem>
-                  )}
                   
                   {/* Bilingual Export Options */}
                   {selectedGroups.some(g => g.homeLanguage && g.homeLanguage !== 'English') && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-                        📖 Bilingual Side-by-Side (Landscape)
+                      <DropdownMenuLabel className="text-xs text-muted-foreground font-normal flex items-center gap-2">
+                        <Languages className="h-3 w-3" />
+                        Bilingual Side-by-Side (Landscape)
                       </DropdownMenuLabel>
                       {selectedGroups
                         .filter(g => g.homeLanguage && g.homeLanguage !== 'English')
@@ -723,7 +717,7 @@ export function DifferentiatedLessonOutput({
                             <div>
                               <p className="font-medium">{group.groupName}</p>
                               <p className="text-xs text-muted-foreground">
-                                {group.homeLanguage} / English with QR codes
+                                {group.homeLanguage} ↔ English • {preGeneratedAudio.length > 0 ? 'With' : 'Without'} QR
                               </p>
                             </div>
                           </DropdownMenuItem>
@@ -737,44 +731,18 @@ export function DifferentiatedLessonOutput({
                   </DropdownMenuLabel>
                   <DropdownMenuItem onClick={handleDownloadMarkdown} className="gap-2">
                     <FileText className="h-4 w-4" />
-                    <div>
-                      <p className="font-medium">Complete Markdown</p>
-                      <p className="text-xs text-muted-foreground">Teacher guide + all handouts</p>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDownloadTeacherGuide} className="gap-2">
-                    <GraduationCap className="h-4 w-4" />
-                    <span>Teacher Guide (.md)</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDownloadStudentHandouts} className="gap-2">
-                    <BookOpen className="h-4 w-4" />
-                    <span>Student Handouts (.md)</span>
+                    <span>Complete Markdown</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleDownloadSeparateFiles} className="gap-2">
                     <FolderArchive className="h-4 w-4" />
                     <span>Separate Markdown Files</span>
                   </DropdownMenuItem>
-                  
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-                    Copy to Clipboard
-                  </DropdownMenuLabel>
-                  {selectedGroups.map((group) => (
-                    <DropdownMenuItem 
-                      key={group.id} 
-                      onClick={() => handleCopyGroupSection(group.groupName)}
-                      className="gap-2"
-                    >
-                      <Clipboard className="h-4 w-4" />
-                      <span className="truncate">Copy: {group.groupName}</span>
-                    </DropdownMenuItem>
-                  ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {/* Group summary badges */}
           <div className="flex flex-wrap gap-2">
             {selectedGroups.map((group) => (
@@ -789,195 +757,148 @@ export function DifferentiatedLessonOutput({
               </Badge>
             ))}
           </div>
+          
+          {/* Audio Generation Section - Prominent placement */}
+          {anyGroupNeedsAudio(selectedGroups) && (
+            <div className="p-4 rounded-lg border bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-full ${preGeneratedAudio.length > 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-amber-100 dark:bg-amber-900'}`}>
+                    <Headphones className={`h-5 w-5 ${preGeneratedAudio.length > 0 ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`} />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">
+                      {preGeneratedAudio.length > 0 
+                        ? `✓ Audio Ready (${preGeneratedAudio.length} files)` 
+                        : '🔊 Audio Support Available'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {preGeneratedAudio.length > 0 
+                        ? 'QR codes will be included in exported documents' 
+                        : 'Generate audio to add QR codes to printed handouts'}
+                    </p>
+                  </div>
+                </div>
+                
+                {preGeneratedAudio.length === 0 && !isGeneratingAudio && (
+                  <AudioGenerationButton
+                    lessonId={lessonId || null}
+                    differentiatedContent={content}
+                    selectedGroups={selectedGroups}
+                    onAudioGenerated={handleAudioGenerated}
+                    disabled={!saved && !lessonId}
+                  />
+                )}
+                
+                {preGeneratedAudio.length > 0 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setShowPrintQR(!showPrintQR)}
+                    className="gap-2"
+                  >
+                    <QrCode className="h-4 w-4" />
+                    {showPrintQR ? 'Hide' : 'Preview'} QR Codes
+                  </Button>
+                )}
+              </div>
+              
+              {!saved && !lessonId && preGeneratedAudio.length === 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Save the lesson first to enable audio generation
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Audio Players for groups that need audio support */}
-      {anyGroupNeedsAudio(selectedGroups) && (
-        <Card className="border-accent/20 bg-gradient-to-r from-accent/5 to-transparent">
+      {/* Detailed Audio Players Card (shown when audio exists) */}
+      {anyGroupNeedsAudio(selectedGroups) && preGeneratedAudio.length > 0 && (
+        <Card className="border-accent/20">
           <CardHeader className="pb-3">
-            <div className="flex items-start justify-between flex-wrap gap-4">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Headphones className="h-5 w-5 text-accent" />
-                Audio Support
-                <span className="text-sm font-normal text-muted-foreground ml-2">
-                  (for Read Aloud accommodations & multilingual students)
-                </span>
-                {isGeneratingAudio && (
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full animate-pulse">
-                    Generating...
-                  </span>
-                )}
-                {preGeneratedAudio.length > 0 && !isGeneratingAudio && (
-                  <span className="text-xs bg-success/10 text-success px-2 py-1 rounded-full">
-                    {preGeneratedAudio.length} files ready
-                  </span>
-                )}
-              </CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowPrintQR(!showPrintQR)}
-                className="gap-2"
-              >
-                <QrCode className="h-4 w-4" />
-                {showPrintQR ? 'Hide' : 'Show'} Print QR Codes
-              </Button>
-            </div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Volume2 className="h-5 w-5 text-accent" />
+              Audio Files
+              <span className="text-xs bg-success/10 text-success px-2 py-1 rounded-full ml-2">
+                {preGeneratedAudio.length} files ready
+              </span>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Manual Audio Generation Button */}
-            {preGeneratedAudio.length === 0 && !isGeneratingAudio && (
-              <div className="p-4 rounded-lg border border-dashed border-accent/30 bg-accent/5">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-accent mt-0.5" />
-                  <div className="space-y-2 flex-1">
-                    <p className="text-sm font-medium">Audio not yet generated</p>
-                    <p className="text-xs text-muted-foreground">
-                      Generate audio files to enable QR codes in printed handouts. This process takes 1-2 minutes per group.
-                    </p>
-                    <AudioGenerationButton
-                      lessonId={lessonId || null}
-                      differentiatedContent={content}
-                      selectedGroups={selectedGroups}
-                      onAudioGenerated={handleAudioGenerated}
-                      disabled={!saved && !lessonId}
-                    />
-                    {!saved && !lessonId && (
-                      <p className="text-xs text-muted-foreground italic">
-                        💡 Save the lesson first to enable audio generation
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Budget Indicator */}
-            <AudioUsageDashboard compact />
-            
             {/* Pre-generated Audio Players with Bilingual Support */}
-            {preGeneratedAudio.length > 0 && (
-              <div className="space-y-4">
-                <h4 className="font-semibold text-sm text-muted-foreground">Pre-Generated Audio (Instant Playback)</h4>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {selectedGroups
-                    .filter(group => analyzeAudioNeeds(group).needsAudio)
-                    .map(group => {
-                      const groupAudio = getPreGeneratedAudioForGroup(group.groupName);
-                      const hasNonEnglish = group.homeLanguage !== 'English';
-                      
-                      if (groupAudio.length === 0) return null;
-                      
-                      // Group audio by section type
-                      const sectionTypes = [...new Set(groupAudio.map(a => a.section_type))];
-                      
-                      return (
-                        <div key={group.id} className="p-4 rounded-lg border bg-card space-y-3">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Badge variant="secondary" className="text-xs">
-                              {getStudentFriendlyIcon(group.readingLevelLabel)} {group.groupName}
-                            </Badge>
-                            {hasNonEnglish && (
-                              <Badge variant="outline" className="text-xs">
-                                Bilingual: EN + {group.homeLanguage}
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          {/* Bilingual Audio Players for each section */}
-                          <div className="space-y-3">
-                            {sectionTypes.slice(0, 4).map(sectionType => {
-                              const englishAudio = groupAudio.find(
-                                a => a.section_type === sectionType && a.language === 'English'
-                              );
-                              const homeLanguageAudio = groupAudio.find(
-                                a => a.section_type === sectionType && a.language !== 'English'
-                              );
-                              
-                              const bilingualAudio: SectionAudio = {
-                                english: englishAudio ? {
-                                  url: englishAudio.audio_url,
-                                  duration: englishAudio.duration_seconds,
-                                } : null,
-                                homeLanguage: homeLanguageAudio ? {
-                                  language: homeLanguageAudio.language,
-                                  url: homeLanguageAudio.audio_url,
-                                  duration: homeLanguageAudio.duration_seconds,
-                                } : null,
-                              };
-                              
-                              return (
-                                <div key={sectionType} className="space-y-1">
-                                  <p className="text-xs font-medium text-muted-foreground capitalize">
-                                    {sectionType.replace(/-/g, ' ')}
-                                  </p>
-                                  <BilingualAudioPlayer 
-                                    audio={bilingualAudio}
-                                    sectionType={sectionType}
-                                    compact
-                                  />
-                                </div>
-                              );
-                            })}
-                            {sectionTypes.length > 4 && (
-                              <p className="text-xs text-muted-foreground">+ {sectionTypes.length - 4} more sections available</p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-            
-            {/* On-demand Audio Players (fallback when no pre-generated audio) */}
-            {preGeneratedAudio.length === 0 && !isGeneratingAudio && (
+            <div className="space-y-4">
+              <h4 className="font-semibold text-sm text-muted-foreground">Pre-Generated Audio (Instant Playback)</h4>
               <div className="grid gap-4 md:grid-cols-2">
                 {selectedGroups
                   .filter(group => analyzeAudioNeeds(group).needsAudio)
-                  .map(group => (
-                    <LessonAudioPlayer
-                      key={group.id}
-                      group={group}
-                      lessonContent={content}
-                      groupContent={extractGroupContent(group.groupName)}
-                      onAudioGenerated={(url) => {
-                        setGeneratedAudioUrls(prev => ({
-                          ...prev,
-                          [group.id]: url
-                        }));
-                        // Store full audio section info for export
-                        setAudioSections(prev => {
-                          const filtered = prev.filter(a => a.groupId !== group.id);
-                          return [...filtered, {
-                            groupId: group.id,
-                            groupName: group.groupName,
-                            audioUrl: url,
-                            language: group.homeLanguage
-                          }];
-                        });
-                      }}
-                    />
-                  ))
-                }
+                  .map(group => {
+                    const groupAudio = getPreGeneratedAudioForGroup(group.groupName);
+                    const hasNonEnglish = group.homeLanguage !== 'English';
+                    
+                    if (groupAudio.length === 0) return null;
+                    
+                    // Group audio by section type
+                    const sectionTypes = [...new Set(groupAudio.map(a => a.section_type))];
+                    
+                    return (
+                      <div key={group.id} className="p-4 rounded-lg border bg-card space-y-3">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Badge variant="secondary" className="text-xs">
+                            {getStudentFriendlyIcon(group.readingLevelLabel)} {group.groupName}
+                          </Badge>
+                          {hasNonEnglish && (
+                            <Badge variant="outline" className="text-xs">
+                              Bilingual: EN + {group.homeLanguage}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* Bilingual Audio Players for each section */}
+                        <div className="space-y-3">
+                          {sectionTypes.slice(0, 4).map(sectionType => {
+                            const englishAudio = groupAudio.find(
+                              a => a.section_type === sectionType && a.language === 'English'
+                            );
+                            const homeLanguageAudio = groupAudio.find(
+                              a => a.section_type === sectionType && a.language !== 'English'
+                            );
+                            
+                            const bilingualAudio: SectionAudio = {
+                              english: englishAudio ? {
+                                url: englishAudio.audio_url,
+                                duration: englishAudio.duration_seconds,
+                              } : null,
+                              homeLanguage: homeLanguageAudio ? {
+                                language: homeLanguageAudio.language,
+                                url: homeLanguageAudio.audio_url,
+                                duration: homeLanguageAudio.duration_seconds,
+                              } : null,
+                            };
+                            
+                            return (
+                              <div key={sectionType} className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground capitalize">
+                                  {sectionType.replace(/-/g, ' ')}
+                                </p>
+                                <BilingualAudioPlayer 
+                                  audio={bilingualAudio}
+                                  sectionType={sectionType}
+                                  compact
+                                />
+                              </div>
+                            );
+                          })}
+                          {sectionTypes.length > 4 && (
+                            <p className="text-xs text-muted-foreground">+ {sectionTypes.length - 4} more sections available</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
-            )}
-            
-            {/* Loading indicator */}
-            {isGeneratingAudio && preGeneratedAudio.length === 0 && (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-center space-y-3">
-                  <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-                  <p className="text-sm text-muted-foreground">
-                    Generating bilingual audio files...
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    This may take 1-2 minutes for multiple groups
-                  </p>
-                </div>
-              </div>
-            )}
+            </div>
             
             {/* Bilingual Vocabulary Section for ELL Students */}
             {anyGroupNeedsBilingualVocabulary(selectedGroups) && (
