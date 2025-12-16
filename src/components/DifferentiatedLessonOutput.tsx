@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +11,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon, Save, Loader2, Headphones, QrCode, Printer, Volume2, Languages, AlertCircle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon, Save, Loader2, Headphones, QrCode, Printer, Volume2, Languages, AlertCircle, LayoutTemplate } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentGroup } from '@/types/studentGroup';
@@ -40,6 +41,7 @@ import {
 import { PrintableAudioQR, BilingualPrintableAudioQR } from '@/components/PrintableAudioQR';
 import { AudioUsageDashboard } from '@/components/AudioUsageDashboard';
 import { AudioGenerationButton } from '@/components/AudioGenerationButton';
+import { BilingualSideBySideLayout, parseBilingualSections } from '@/components/BilingualSideBySideLayout';
 
 interface PreGeneratedAudioRecord {
   id: string;
@@ -1036,84 +1038,327 @@ export function DifferentiatedLessonOutput({
         </Card>
       )}
 
-      {/* Content */}
+      {/* Content - with Bilingual Side-by-Side for non-English groups */}
       <Card className="overflow-hidden">
         <CardContent className="p-0">
-          <article className="
-            differentiated-output
-            prose prose-base dark:prose-invert max-w-none
-            
-            /* Base typography */
-            [&]:leading-relaxed [&]:text-foreground
-            
-            /* Section spacing */
-            [&>*]:px-6 [&>*]:py-4
-            [&>*:first-child]:pt-6
-            [&>*:last-child]:pb-8
-            
-            /* Headings */
-            prose-headings:font-display prose-headings:font-bold prose-headings:tracking-tight
-            
-            /* H1 - Main section headers */
-            prose-h1:text-2xl prose-h1:mt-0 prose-h1:mb-6 prose-h1:pb-4
-            prose-h1:border-b-2 prose-h1:border-primary/30
-            prose-h1:bg-gradient-to-r prose-h1:from-primary/10 prose-h1:via-primary/5 prose-h1:to-transparent
-            prose-h1:px-6 prose-h1:py-4 prose-h1:-mx-6 prose-h1:rounded-none
-            
-            /* H2 - Section dividers with visual break */
-            prose-h2:text-xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:pb-3
-            prose-h2:border-b prose-h2:border-border
-            prose-h2:bg-gradient-to-r prose-h2:from-muted prose-h2:to-transparent
-            prose-h2:px-6 prose-h2:py-3 prose-h2:-mx-6 prose-h2:rounded-none
-            
-            /* H3 - Subsection headers */
-            prose-h3:text-lg prose-h3:text-primary prose-h3:mt-8 prose-h3:mb-4
-            prose-h3:font-semibold
-            
-            /* H4 - Minor headers */
-            prose-h4:text-base prose-h4:font-semibold prose-h4:mt-6 prose-h4:mb-3
-            prose-h4:text-foreground/90
-            
-            /* Paragraphs */
-            prose-p:leading-7 prose-p:mb-4
-            
-            /* Lists */
-            prose-ul:my-4 prose-ul:space-y-2
-            prose-ol:my-4 prose-ol:space-y-2
-            prose-li:my-1 prose-li:leading-7
-            
-            /* Tables - Accommodations summary */
-            prose-table:my-6 prose-table:w-full
-            prose-table:border prose-table:border-border prose-table:rounded-lg prose-table:overflow-hidden
-            prose-th:bg-muted prose-th:p-4 prose-th:text-left prose-th:font-semibold prose-th:text-sm
-            prose-td:p-4 prose-td:border-t prose-td:border-border prose-td:align-top
-            
-            /* Pre/Code blocks - for ASCII tables */
-            prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border 
-            prose-pre:rounded-lg prose-pre:p-4 prose-pre:my-6
-            prose-pre:overflow-x-auto prose-pre:text-sm prose-pre:leading-relaxed
-            prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm
-            prose-code:before:content-none prose-code:after:content-none
-            
-            /* Strong/Bold */
-            prose-strong:text-primary prose-strong:font-semibold
-            
-            /* Blockquotes - for callouts */
-            prose-blockquote:border-l-4 prose-blockquote:border-l-primary 
-            prose-blockquote:bg-primary/5 prose-blockquote:py-4 prose-blockquote:px-6 
-            prose-blockquote:rounded-r-lg prose-blockquote:my-6
-            prose-blockquote:not-italic
-            
-            /* Horizontal rules - group dividers */
-            prose-hr:my-10 prose-hr:border-t-2 prose-hr:border-dashed prose-hr:border-primary/30
-            
-            /* Links */
-            prose-a:text-primary prose-a:underline prose-a:underline-offset-2
-          ">
-            <ReactMarkdown>{content}</ReactMarkdown>
-          </article>
+          {/* Check if we have bilingual groups */}
+          {selectedGroups.some(g => g.homeLanguage && g.homeLanguage !== 'English') ? (
+            <Tabs defaultValue="bilingual" className="w-full">
+              <div className="border-b px-4 py-2 bg-muted/30">
+                <TabsList className="grid w-full max-w-md grid-cols-2">
+                  <TabsTrigger value="bilingual" className="gap-2">
+                    <LayoutTemplate className="h-4 w-4" />
+                    Side-by-Side View
+                  </TabsTrigger>
+                  <TabsTrigger value="raw" className="gap-2">
+                    <FileText className="h-4 w-4" />
+                    Full Content
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              
+              <TabsContent value="bilingual" className="mt-0 p-4 space-y-6">
+                {/* Teacher Guide Section (always in English) */}
+                <TeacherGuideSection content={content} />
+                
+                {/* Bilingual Student Handouts - Side by Side */}
+                <div className="space-y-6">
+                  <h2 className="text-xl font-display font-bold flex items-center gap-2 pb-3 border-b">
+                    <Languages className="h-5 w-5 text-primary" />
+                    Student Handouts (Bilingual)
+                  </h2>
+                  
+                  {selectedGroups
+                    .filter(g => g.homeLanguage && g.homeLanguage !== 'English')
+                    .map(group => {
+                      const groupContent = extractGroupContent(group.groupName);
+                      const groupAudio = preGeneratedAudio.filter(a => a.group_name === group.groupName);
+                      
+                      // Parse content into bilingual sections
+                      const sections = parseBilingualContentForGroup(groupContent, group.homeLanguage);
+                      
+                      // Map audio data for the layout
+                      const audioData = groupAudio.map(a => ({
+                        sectionType: a.section_type,
+                        englishAudioUrl: a.language === 'English' ? a.audio_url : undefined,
+                        homeLanguageAudioUrl: a.language === group.homeLanguage ? a.audio_url : undefined,
+                      }));
+                      
+                      return (
+                        <BilingualSideBySideLayout
+                          key={group.id}
+                          group={group}
+                          homeLanguage={group.homeLanguage}
+                          sections={sections}
+                          audioData={audioData}
+                          showQRCodes={preGeneratedAudio.length > 0}
+                        />
+                      );
+                    })}
+                  
+                  {/* English-only groups rendered normally */}
+                  {selectedGroups
+                    .filter(g => !g.homeLanguage || g.homeLanguage === 'English')
+                    .map(group => (
+                      <Card key={group.id} className="border-accent/20">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <span>{getStudentFriendlyIcon(group.readingLevelLabel)}</span>
+                            {group.groupName}
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              {getStudentFriendlyName(group.readingLevelLabel)}
+                            </Badge>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <article className="prose prose-sm dark:prose-invert max-w-none">
+                            <ReactMarkdown>{extractGroupContent(group.groupName)}</ReactMarkdown>
+                          </article>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="raw" className="mt-0">
+                <RawContentView content={content} />
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <RawContentView content={content} />
+          )}
         </CardContent>
       </Card>
     </div>
   );
+}
+
+// Helper component to render Teacher Guide section
+function TeacherGuideSection({ content }: { content: string }) {
+  const teacherGuide = useMemo(() => {
+    const lines = content.split('\n');
+    let inTeacherGuide = false;
+    const guideLines: string[] = [];
+    
+    for (const line of lines) {
+      if (line.includes('TEACHER GUIDE') || line.includes('Teacher Guide')) {
+        inTeacherGuide = true;
+        guideLines.push(line);
+      } else if (inTeacherGuide) {
+        if (line.includes('STUDENT HANDOUTS') || line.includes('Student Handouts')) {
+          break;
+        }
+        guideLines.push(line);
+      }
+    }
+    
+    return guideLines.join('\n');
+  }, [content]);
+
+  if (!teacherGuide.trim()) return null;
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-display font-bold flex items-center gap-2 pb-3 border-b">
+        <GraduationCap className="h-5 w-5 text-primary" />
+        Teacher Guide
+      </h2>
+      <article className="prose prose-sm dark:prose-invert max-w-none">
+        <ReactMarkdown>{teacherGuide}</ReactMarkdown>
+      </article>
+    </div>
+  );
+}
+
+// Helper component to render raw markdown content
+function RawContentView({ content }: { content: string }) {
+  return (
+    <article className="
+      differentiated-output
+      prose prose-base dark:prose-invert max-w-none
+      
+      /* Base typography */
+      [&]:leading-relaxed [&]:text-foreground
+      
+      /* Section spacing */
+      [&>*]:px-6 [&>*]:py-4
+      [&>*:first-child]:pt-6
+      [&>*:last-child]:pb-8
+      
+      /* Headings */
+      prose-headings:font-display prose-headings:font-bold prose-headings:tracking-tight
+      
+      /* H1 - Main section headers */
+      prose-h1:text-2xl prose-h1:mt-0 prose-h1:mb-6 prose-h1:pb-4
+      prose-h1:border-b-2 prose-h1:border-primary/30
+      prose-h1:bg-gradient-to-r prose-h1:from-primary/10 prose-h1:via-primary/5 prose-h1:to-transparent
+      prose-h1:px-6 prose-h1:py-4 prose-h1:-mx-6 prose-h1:rounded-none
+      
+      /* H2 - Section dividers with visual break */
+      prose-h2:text-xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:pb-3
+      prose-h2:border-b prose-h2:border-border
+      prose-h2:bg-gradient-to-r prose-h2:from-muted prose-h2:to-transparent
+      prose-h2:px-6 prose-h2:py-3 prose-h2:-mx-6 prose-h2:rounded-none
+      
+      /* H3 - Subsection headers */
+      prose-h3:text-lg prose-h3:text-primary prose-h3:mt-8 prose-h3:mb-4
+      prose-h3:font-semibold
+      
+      /* H4 - Minor headers */
+      prose-h4:text-base prose-h4:font-semibold prose-h4:mt-6 prose-h4:mb-3
+      prose-h4:text-foreground/90
+      
+      /* Paragraphs */
+      prose-p:leading-7 prose-p:mb-4
+      
+      /* Lists */
+      prose-ul:my-4 prose-ul:space-y-2
+      prose-ol:my-4 prose-ol:space-y-2
+      prose-li:my-1 prose-li:leading-7
+      
+      /* Tables - Accommodations summary */
+      prose-table:my-6 prose-table:w-full
+      prose-table:border prose-table:border-border prose-table:rounded-lg prose-table:overflow-hidden
+      prose-th:bg-muted prose-th:p-4 prose-th:text-left prose-th:font-semibold prose-th:text-sm
+      prose-td:p-4 prose-td:border-t prose-td:border-border prose-td:align-top
+      
+      /* Pre/Code blocks - for ASCII tables */
+      prose-pre:bg-muted/50 prose-pre:border prose-pre:border-border 
+      prose-pre:rounded-lg prose-pre:p-4 prose-pre:my-6
+      prose-pre:overflow-x-auto prose-pre:text-sm prose-pre:leading-relaxed
+      prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm
+      prose-code:before:content-none prose-code:after:content-none
+      
+      /* Strong/Bold */
+      prose-strong:text-primary prose-strong:font-semibold
+      
+      /* Blockquotes - for callouts */
+      prose-blockquote:border-l-4 prose-blockquote:border-l-primary 
+      prose-blockquote:bg-primary/5 prose-blockquote:py-4 prose-blockquote:px-6 
+      prose-blockquote:rounded-r-lg prose-blockquote:my-6
+      prose-blockquote:not-italic
+      
+      /* Horizontal rules - group dividers */
+      prose-hr:my-10 prose-hr:border-t-2 prose-hr:border-dashed prose-hr:border-primary/30
+      
+      /* Links */
+      prose-a:text-primary prose-a:underline prose-a:underline-offset-2
+    ">
+      <ReactMarkdown>{content}</ReactMarkdown>
+    </article>
+  );
+}
+
+// Parse differentiated content into bilingual sections
+function parseBilingualContentForGroup(
+  groupContent: string,
+  homeLanguage: string
+): Array<{
+  sectionType: string;
+  sectionLabel: string;
+  englishContent: string;
+  homeLanguageContent: string;
+}> {
+  const sections: Array<{
+    sectionType: string;
+    sectionLabel: string;
+    englishContent: string;
+    homeLanguageContent: string;
+  }> = [];
+
+  // Section patterns to identify content types
+  const sectionPatterns = [
+    { type: 'learning-target', label: '🎯 Learning Target', pattern: /(?:learning target|objetivo|bartilmaamaha|mục tiêu)/i },
+    { type: 'reading', label: '📖 Reading', pattern: /(?:reading|lectura|akhri|đọc)/i },
+    { type: 'vocabulary', label: '📚 Vocabulary', pattern: /(?:vocabulary|vocabulario|ereyga|từ vựng)/i },
+    { type: 'instructions', label: '📋 Instructions', pattern: /(?:instructions|instrucciones|tilmaamaha|hướng dẫn)/i },
+    { type: 'practice', label: '✏️ Practice', pattern: /(?:practice|práctica|ku tababar|thực hành)/i },
+    { type: 'reflection', label: '💭 Reflection', pattern: /(?:reflection|reflexión|fikrad|suy ngẫm)/i },
+    { type: 'content', label: '📄 Content', pattern: /(?:content|contenido|waxa ku jira)/i },
+  ];
+
+  const lines = groupContent.split('\n');
+  let currentSection = { type: 'content', label: '📄 Lesson Content' };
+  let englishBuffer: string[] = [];
+  let homeLanguageBuffer: string[] = [];
+  let isHomeLanguageBlock = false;
+
+  // Language detection patterns
+  const homeLangMarkers = [
+    `(${homeLanguage})`,
+    `[${homeLanguage}]`,
+    `${homeLanguage}:`,
+    // Add common language headers
+    homeLanguage === 'Somali' ? /Soomaali/i : null,
+    homeLanguage === 'Spanish' ? /Español/i : null,
+  ].filter(Boolean);
+
+  for (const line of lines) {
+    // Check for language markers
+    const isHomeLangLine = homeLangMarkers.some(marker => 
+      marker instanceof RegExp ? marker.test(line) : line.includes(marker as string)
+    );
+    const isEnglishLine = line.includes('(English)') || line.includes('[English]') || /English:/i.test(line);
+
+    if (isHomeLangLine) {
+      isHomeLanguageBlock = true;
+    } else if (isEnglishLine) {
+      isHomeLanguageBlock = false;
+    }
+
+    // Check for section changes
+    const matchedSection = sectionPatterns.find(p => p.pattern.test(line));
+    if (matchedSection && (englishBuffer.length > 0 || homeLanguageBuffer.length > 0)) {
+      // Save current section
+      const engContent = englishBuffer.join('\n').trim();
+      const homeContent = homeLanguageBuffer.join('\n').trim();
+      
+      if (engContent || homeContent) {
+        sections.push({
+          sectionType: currentSection.type,
+          sectionLabel: currentSection.label,
+          englishContent: engContent || homeContent,
+          homeLanguageContent: homeContent || engContent,
+        });
+      }
+      englishBuffer = [];
+      homeLanguageBuffer = [];
+    }
+
+    if (matchedSection) {
+      currentSection = matchedSection;
+    }
+
+    // Add line to appropriate buffer
+    if (isHomeLanguageBlock) {
+      homeLanguageBuffer.push(line);
+    } else {
+      englishBuffer.push(line);
+    }
+  }
+
+  // Add final section
+  const engContent = englishBuffer.join('\n').trim();
+  const homeContent = homeLanguageBuffer.join('\n').trim();
+  
+  if (engContent || homeContent) {
+    sections.push({
+      sectionType: currentSection.type,
+      sectionLabel: currentSection.label,
+      englishContent: engContent || homeContent,
+      homeLanguageContent: homeContent || engContent,
+    });
+  }
+
+  // If no sections were parsed, create a single section
+  if (sections.length === 0) {
+    sections.push({
+      sectionType: 'content',
+      sectionLabel: '📄 Lesson Content',
+      englishContent: groupContent,
+      homeLanguageContent: groupContent,
+    });
+  }
+
+  return sections;
 }

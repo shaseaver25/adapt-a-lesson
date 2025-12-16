@@ -188,16 +188,16 @@ export function BilingualSideBySideLayout({
                       />
                     )}
                     
-                    {/* Side-by-Side Content */}
-                    <div className="grid grid-cols-2 gap-4 border rounded-lg overflow-hidden">
-                      {/* Home Language (LEFT) */}
-                      <div className="bg-muted/30 p-4 border-r">
-                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border">
-                          <span className="text-lg">{getFlag(homeLanguage)}</span>
-                          <span className="font-medium text-sm">{homeLanguage}</span>
+                    {/* Side-by-Side Content - English LEFT, Home Language RIGHT */}
+                    <div className="grid grid-cols-2 gap-0 border rounded-lg overflow-hidden">
+                      {/* English (LEFT) - Blue tint */}
+                      <div className="bg-blue-50/50 dark:bg-blue-950/20 p-4 border-r-2 border-border/50">
+                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-blue-200 dark:border-blue-800">
+                          <span className="text-lg">{getFlag('English')}</span>
+                          <span className="font-medium text-sm text-blue-700 dark:text-blue-300">English</span>
                         </div>
                         <div className="prose prose-sm dark:prose-invert max-w-none">
-                          {section.homeLanguageContent.split('\n').map((line, i) => (
+                          {section.englishContent.split('\n').filter(line => line.trim()).map((line, i) => (
                             <p key={i} className="mb-2 leading-relaxed text-sm">
                               {line}
                             </p>
@@ -205,14 +205,14 @@ export function BilingualSideBySideLayout({
                         </div>
                       </div>
 
-                      {/* English (RIGHT) */}
-                      <div className="bg-background p-4">
-                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border">
-                          <span className="text-lg">{getFlag('English')}</span>
-                          <span className="font-medium text-sm">English</span>
+                      {/* Home Language (RIGHT) - Amber tint */}
+                      <div className="bg-amber-50/50 dark:bg-amber-950/20 p-4">
+                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-amber-200 dark:border-amber-800">
+                          <span className="text-lg">{getFlag(homeLanguage)}</span>
+                          <span className="font-medium text-sm text-amber-700 dark:text-amber-300">{homeLanguage}</span>
                         </div>
                         <div className="prose prose-sm dark:prose-invert max-w-none">
-                          {section.englishContent.split('\n').map((line, i) => (
+                          {section.homeLanguageContent.split('\n').filter(line => line.trim()).map((line, i) => (
                             <p key={i} className="mb-2 leading-relaxed text-sm">
                               {line}
                             </p>
