@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DraggableStudentGroupCard } from '@/components/DraggableStudentGroupCard';
@@ -46,7 +47,7 @@ function dbToStudentGroup(db: DBStudentGroup): StudentGroup & { id: string; fold
   };
 }
 
-function studentGroupToDB(group: StudentGroup) {
+function studentGroupToDB(group: StudentGroup, userId?: string) {
   return {
     group_name: group.groupName,
     num_students: group.numStudents,
@@ -58,6 +59,7 @@ function studentGroupToDB(group: StudentGroup) {
     learning_preferences: group.learningPreferences,
     accommodations: group.accommodations,
     notes: group.notes || null,
+    ...(userId && { user_id: userId }),
   };
 }
 
@@ -69,6 +71,7 @@ export default function StudentGroups() {
   const [editingFolder, setEditingFolder] = useState<ClassFolder | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // Fetch student groups
   const { data: groups = [], isLoading: groupsLoading } = useQuery({
@@ -101,9 +104,10 @@ export default function StudentGroups() {
   // Group mutations
   const createMutation = useMutation({
     mutationFn: async (group: StudentGroup) => {
+      if (!user?.id) throw new Error('You must be logged in to create a group');
       const { error } = await supabase
         .from('student_groups')
-        .insert(studentGroupToDB(group));
+        .insert(studentGroupToDB(group, user.id));
       if (error) throw error;
     },
     onSuccess: () => {
