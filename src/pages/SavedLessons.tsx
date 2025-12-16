@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -11,6 +13,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -32,7 +35,8 @@ import {
   Users, 
   FileText,
   Loader2,
-  FolderOpen
+  FolderOpen,
+  Pencil
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
@@ -53,6 +57,8 @@ interface SavedLesson {
 export default function SavedLessons() {
   const [selectedLesson, setSelectedLesson] = useState<SavedLesson | null>(null);
   const [lessonToDelete, setLessonToDelete] = useState<SavedLesson | null>(null);
+  const [lessonToEdit, setLessonToEdit] = useState<SavedLesson | null>(null);
+  const [editName, setEditName] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -93,9 +99,45 @@ export default function SavedLessons() {
     },
   });
 
+  const renameMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { error } = await supabase
+        .from('generated_lessons')
+        .update({ lesson_title: name })
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saved-lessons'] });
+      toast({ title: 'Lesson renamed', description: 'The lesson name has been updated.' });
+      setLessonToEdit(null);
+      setEditName('');
+    },
+    onError: (error) => {
+      console.error('Error renaming lesson:', error);
+      toast({
+        title: 'Rename failed',
+        description: 'Could not rename the lesson. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleDelete = () => {
     if (lessonToDelete) {
       deleteMutation.mutate(lessonToDelete.id);
+    }
+  };
+
+  const handleStartEdit = (lesson: SavedLesson) => {
+    setLessonToEdit(lesson);
+    setEditName(lesson.lesson_title || '');
+  };
+
+  const handleSaveEdit = () => {
+    if (lessonToEdit && editName.trim()) {
+      renameMutation.mutate({ id: lessonToEdit.id, name: editName.trim() });
     }
   };
 
@@ -229,6 +271,13 @@ export default function SavedLessons() {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => handleStartEdit(lesson)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={() => setLessonToDelete(lesson)}
                     >
@@ -298,6 +347,44 @@ export default function SavedLessons() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Name Dialog */}
+      <Dialog open={!!lessonToEdit} onOpenChange={() => { setLessonToEdit(null); setEditName(''); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rename Lesson</DialogTitle>
+            <DialogDescription>
+              Enter a new name for this lesson.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="editName">Lesson Name</Label>
+              <Input
+                id="editName"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Enter lesson name..."
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setLessonToEdit(null); setEditName(''); }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveEdit} 
+              disabled={!editName.trim() || renameMutation.isPending}
+            >
+              {renameMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

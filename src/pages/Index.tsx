@@ -204,7 +204,7 @@ const Index = () => {
           .from('generated_lessons')
           .insert({
             original_content: input.lessonContent,
-            lesson_title: 'Differentiated Lesson',
+            lesson_title: input.lessonName || 'Untitled Lesson',
             group_ids: input.selectedGroups.map(g => g.id),
             teacher_guide: data.differentiatedLesson,
             differentiation_options: input.options as any,

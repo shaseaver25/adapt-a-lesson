@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -49,6 +50,7 @@ interface ClassFolder {
 }
 
 export interface DifferentiateInput {
+  lessonName: string;
   lessonContent: string;
   selectedGroups: (StudentGroup & { id: string })[];
   options: {
@@ -88,6 +90,8 @@ function dbToStudentGroup(db: DBStudentGroup): StudentGroup & { id: string; fold
 
 export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCancel }: DifferentiateFormProps) {
   const {
+    lessonName,
+    setLessonName,
     cachedLessonContent,
     setCachedLessonContent,
     selectedGroupIds,
@@ -143,6 +147,7 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
     e.preventDefault();
     const selectedGroups = groups.filter((g) => selectedGroupIds.includes(g.id));
     onSubmit({
+      lessonName: lessonName.trim() || 'Untitled Lesson',
       lessonContent: cachedLessonContent,
       selectedGroups,
       options,
@@ -313,7 +318,7 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2 text-foreground">
             <BookOpen className="h-5 w-5 text-primary" />
-            <h3 className="font-display font-bold text-lg">Original Lesson Content</h3>
+            <h3 className="font-display font-bold text-lg">Lesson Details</h3>
           </div>
           <div className="flex items-center gap-3">
             {showCacheNotice && cachedLessonContent && (
@@ -325,17 +330,35 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
           </div>
         </div>
 
-        <Textarea
-          placeholder="Paste your lesson content here in markdown format..."
-          value={cachedLessonContent}
-          onChange={(e) => setCachedLessonContent(e.target.value)}
-          rows={10}
-          className="font-mono text-sm resize-y min-h-[200px]"
-          required
-        />
-        <p className="text-xs text-muted-foreground">
-          💡 Your lesson content is automatically saved and will be here when you return.
-        </p>
+        <div className="space-y-2">
+          <Label htmlFor="lessonName" className="text-sm font-medium">Lesson Name</Label>
+          <Input
+            id="lessonName"
+            placeholder="e.g., Photosynthesis Introduction, Civil War Causes..."
+            value={lessonName}
+            onChange={(e) => setLessonName(e.target.value)}
+            className="max-w-md"
+          />
+          <p className="text-xs text-muted-foreground">
+            This name will be used when saving the differentiated lesson.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="lessonContent" className="text-sm font-medium">Lesson Content</Label>
+          <Textarea
+            id="lessonContent"
+            placeholder="Paste your lesson content here in markdown format..."
+            value={cachedLessonContent}
+            onChange={(e) => setCachedLessonContent(e.target.value)}
+            rows={10}
+            className="font-mono text-sm resize-y min-h-[200px]"
+            required
+          />
+          <p className="text-xs text-muted-foreground">
+            💡 Your lesson content is automatically saved and will be here when you return.
+          </p>
+        </div>
       </div>
 
       {/* Section 3: Differentiation Options */}
