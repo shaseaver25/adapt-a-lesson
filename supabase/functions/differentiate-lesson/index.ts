@@ -248,14 +248,67 @@ Remember:
 
     console.log('Raw AI response length:', rawContent.length);
 
-    // Parse the JSON response
+    // Parse the JSON response with fallback handling
     let lessonData;
     try {
+      // First, try direct parsing
       lessonData = JSON.parse(rawContent);
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
       console.error('Raw content preview:', rawContent.substring(0, 500));
-      throw new Error('Failed to parse AI response as JSON');
+      
+      // Try to clean the content - sometimes there's markdown wrapper
+      let cleanedContent = rawContent.trim();
+      
+      // Remove markdown code blocks if present
+      if (cleanedContent.startsWith('```json')) {
+        cleanedContent = cleanedContent.slice(7);
+      } else if (cleanedContent.startsWith('```')) {
+        cleanedContent = cleanedContent.slice(3);
+      }
+      if (cleanedContent.endsWith('```')) {
+        cleanedContent = cleanedContent.slice(0, -3);
+      }
+      cleanedContent = cleanedContent.trim();
+      
+      try {
+        lessonData = JSON.parse(cleanedContent);
+      } catch (secondError) {
+        // If still failing, try to extract teacherGuide at minimum
+        console.error('Second parse attempt failed:', secondError);
+        
+        // Try to extract content using regex as last resort
+        const teacherGuideMatch = rawContent.match(/"teacherGuide"\s*:\s*"([\s\S]*?)(?:","studentHandouts"|"\s*,\s*"studentHandouts")/);
+        const studentHandoutsMatch = rawContent.match(/"studentHandouts"\s*:\s*\[([\s\S]*?)\]\s*}/);
+        
+        if (teacherGuideMatch) {
+          console.log('Attempting regex extraction fallback...');
+          // Create a minimal valid structure
+          lessonData = {
+            teacherGuide: teacherGuideMatch[1]
+              .replace(/\\n/g, '\n')
+              .replace(/\\"/g, '"')
+              .replace(/\\\\/g, '\\'),
+            studentHandouts: []
+          };
+          
+          // Try to parse studentHandouts array if found
+          if (studentHandoutsMatch) {
+            try {
+              const handoutsStr = '[' + studentHandoutsMatch[1] + ']';
+              // Fix common JSON issues
+              const fixedHandouts = handoutsStr
+                .replace(/,\s*]/g, ']')  // Remove trailing commas
+                .replace(/,\s*,/g, ','); // Remove double commas
+              lessonData.studentHandouts = JSON.parse(fixedHandouts);
+            } catch (handoutsError) {
+              console.error('Failed to parse studentHandouts:', handoutsError);
+            }
+          }
+        } else {
+          throw new Error('Failed to parse AI response as JSON - content may be truncated');
+        }
+      }
     }
 
     // Validate structure
