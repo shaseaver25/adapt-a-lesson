@@ -18,6 +18,8 @@ import {
   GRADE_LEVELS,
 } from '@/types/assessment';
 import { FileCheck, GraduationCap, MapPin, Bot, Plus, X } from 'lucide-react';
+import { HelpTooltip } from '@/components/ui/help-tooltip';
+import { ASSESSMENT_SECTION_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
 
 interface AssessmentFormProps {
   onSubmit: (input: AssessmentInput) => void;
@@ -76,6 +78,7 @@ export function AssessmentForm({ onSubmit, isLoading }: AssessmentFormProps) {
         <div className="flex items-center gap-2 text-foreground">
           <FileCheck className="h-5 w-5 text-primary" />
           <h3 className="font-display font-bold text-lg">Lesson Information</h3>
+          <HelpTooltip content={ASSESSMENT_SECTION_DESCRIPTIONS['Lesson Information']} />
         </div>
 
         <div className="space-y-4">
@@ -130,6 +133,7 @@ export function AssessmentForm({ onSubmit, isLoading }: AssessmentFormProps) {
         <div className="flex items-center gap-2 text-foreground">
           <GraduationCap className="h-5 w-5 text-primary" />
           <h3 className="font-display font-bold text-lg">Learning Objectives</h3>
+          <HelpTooltip content={ASSESSMENT_SECTION_DESCRIPTIONS['Learning Objectives']} />
         </div>
 
         <div className="space-y-3">
@@ -172,6 +176,7 @@ export function AssessmentForm({ onSubmit, isLoading }: AssessmentFormProps) {
         <div className="flex items-center gap-2 text-foreground">
           <Bot className="h-5 w-5 text-primary" />
           <h3 className="font-display font-bold text-lg">AI Policy</h3>
+          <HelpTooltip content={ASSESSMENT_SECTION_DESCRIPTIONS['AI Policy']} />
         </div>
 
         <div className="grid gap-3">
@@ -206,6 +211,7 @@ export function AssessmentForm({ onSubmit, isLoading }: AssessmentFormProps) {
         <div className="flex items-center gap-2 text-foreground">
           <MapPin className="h-5 w-5 text-primary" />
           <h3 className="font-display font-bold text-lg">Local Context</h3>
+          <HelpTooltip content={ASSESSMENT_SECTION_DESCRIPTIONS['Local Context']} />
           <span className="text-xs text-muted-foreground">(makes assessment AI-resistant)</span>
         </div>
 

@@ -110,4 +110,22 @@ export const OUTPUT_SECTION_DESCRIPTIONS: Record<string, string> = {
   'Student Handouts': 'Print-ready materials for students. Contains learning targets, differentiated content, vocabulary, and activities. Zero teacher directions.',
   'Accommodations Summary': 'Quick-reference table showing all groups, their reading levels, and key modifications at a glance.',
   'Audio Generation': 'Progress indicator for text-to-speech audio generation. Audio is created for groups with Read Aloud accommodation or non-English home languages.',
+  'Audio Files': 'Pre-generated audio files for each student group. Includes bilingual audio for ELL students.',
+};
+
+// Assessment form section descriptions
+export const ASSESSMENT_SECTION_DESCRIPTIONS: Record<string, string> = {
+  'Lesson Information': 'Basic details about the lesson this assessment will evaluate. Helps the AI generate contextually appropriate assessment tasks.',
+  'Learning Objectives': 'What students should know or be able to do after the lesson. Each objective will be assessed.',
+  'AI Policy': 'How students may use AI tools during this assessment. Different policies require different verification strategies.',
+  'Local Context': 'Specific details about your school and community that make the assessment harder for AI to complete. More local details = higher AI resistance.',
+};
+
+// Rubric form section descriptions
+export const RUBRIC_SECTION_DESCRIPTIONS: Record<string, string> = {
+  'Assessment Description': 'Describe the task students will complete. Be specific about deliverables, requirements, and expectations.',
+  'Learning Objectives': 'What students should demonstrate through this assessment. The rubric will evaluate these objectives.',
+  'Rubric Settings': 'Configure the number of criteria and grade level to adjust rubric complexity and language.',
+  'AI-Proof Settings': 'Controls for making the rubric verify authentic student work. Enable analysis to identify AI vulnerabilities.',
+  'Verification Checkpoints': 'Artifacts and evidence students must provide to verify their work is authentic.',
 };

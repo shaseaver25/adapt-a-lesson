@@ -25,6 +25,8 @@ import { FileText, GraduationCap, Plus, X, Shield, Loader2, ChevronDown, Setting
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { HelpTooltip } from '@/components/ui/help-tooltip';
+import { RUBRIC_SECTION_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
 
 interface RubricFormProps {
   onSubmit: (input: RubricInput) => void;
@@ -236,6 +238,7 @@ ${enhancements.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
             <div className="flex items-center gap-2 text-foreground">
               <FileText className="h-5 w-5 text-primary" />
               <h3 className="font-display font-bold text-lg">Assessment Description</h3>
+              <HelpTooltip content={RUBRIC_SECTION_DESCRIPTIONS['Assessment Description']} />
             </div>
             <SavedAssessmentSelector
               currentDescription={assessmentDescription}
@@ -265,6 +268,7 @@ ${enhancements.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
           <div className="flex items-center gap-2 text-foreground">
             <GraduationCap className="h-5 w-5 text-primary" />
             <h3 className="font-display font-bold text-lg">Learning Objectives</h3>
+            <HelpTooltip content={RUBRIC_SECTION_DESCRIPTIONS['Learning Objectives']} />
           </div>
 
           <div className="space-y-3">
@@ -310,6 +314,7 @@ ${enhancements.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
           <div className="flex items-center gap-2 text-foreground">
             <FileText className="h-5 w-5 text-primary" />
             <h3 className="font-display font-bold text-lg">Rubric Settings</h3>
+            <HelpTooltip content={RUBRIC_SECTION_DESCRIPTIONS['Rubric Settings']} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
