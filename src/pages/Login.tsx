@@ -330,7 +330,7 @@ export default function Login() {
           <p className="text-center text-sm text-muted-foreground">
             Don't have an account?{' '}
             <Link
-              to="/signup"
+              to="/register"
               className="text-primary hover:text-primary/80 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm"
             >
               Sign up
