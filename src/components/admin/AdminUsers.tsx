@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, Shield, User, RefreshCw, UserPlus } from 'lucide-react';
+import { Search, Shield, User, RefreshCw, UserPlus, Pencil } from 'lucide-react';
 import { useAdmin } from '@/hooks/useAdmin';
 import { toast } from 'sonner';
 
@@ -31,6 +31,7 @@ interface UserData {
   id: string;
   email: string | null;
   full_name: string | null;
+  avatar_url: string | null;
   created_at: string;
   last_login_at: string | null;
   login_count: number | null;
@@ -51,6 +52,15 @@ export function AdminUsers() {
   const [newUserName, setNewUserName] = useState('');
   const [newUserRole, setNewUserRole] = useState<string>('user');
   const [isAddingUser, setIsAddingUser] = useState(false);
+
+  // Edit user modal state
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserData | null>(null);
+  const [editUserName, setEditUserName] = useState('');
+  const [editUserEmail, setEditUserEmail] = useState('');
+  const [editUserAvatar, setEditUserAvatar] = useState('');
+  const [editUserRole, setEditUserRole] = useState('user');
+  const [isSavingUser, setIsSavingUser] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -101,6 +111,7 @@ export function AdminUsers() {
         id: profile.id,
         email: profile.email,
         full_name: profile.full_name,
+        avatar_url: profile.avatar_url,
         created_at: profile.created_at,
         last_login_at: profile.last_login_at,
         login_count: profile.login_count,
@@ -200,6 +211,49 @@ export function AdminUsers() {
     }
   }
 
+  function openEditModal(user: UserData) {
+    setEditingUser(user);
+    setEditUserName(user.full_name || '');
+    setEditUserEmail(user.email || '');
+    setEditUserAvatar(user.avatar_url || '');
+    setEditUserRole(user.role);
+    setIsEditUserOpen(true);
+  }
+
+  async function handleSaveUser() {
+    if (!editingUser || !isSuperAdmin) return;
+
+    setIsSavingUser(true);
+    try {
+      // Update profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editUserName,
+          avatar_url: editUserAvatar,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', editingUser.id);
+
+      if (profileError) throw profileError;
+
+      // Update role if changed
+      if (editUserRole !== editingUser.role) {
+        await updateUserRole(editingUser.id, editUserRole);
+      }
+
+      toast.success('User updated successfully');
+      setIsEditUserOpen(false);
+      setEditingUser(null);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast.error('Failed to update user');
+    } finally {
+      setIsSavingUser(false);
+    }
+  }
+
   const filteredUsers = users.filter(user =>
     (user.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
     (user.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
@@ -286,6 +340,78 @@ export function AdminUsers() {
         )}
       </div>
 
+      {/* Edit User Modal */}
+      <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user profile information and role.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editUserEmail}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Full Name</Label>
+              <Input
+                id="edit-name"
+                placeholder="John Doe"
+                value={editUserName}
+                onChange={(e) => setEditUserName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-avatar">Avatar URL</Label>
+              <Input
+                id="edit-avatar"
+                placeholder="https://example.com/avatar.jpg"
+                value={editUserAvatar}
+                onChange={(e) => setEditUserAvatar(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-role">Role</Label>
+              <Select value={editUserRole} onValueChange={setEditUserRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="moderator">Moderator</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {editingUser && (
+              <div className="pt-2 text-xs text-muted-foreground space-y-1">
+                <p>User ID: {editingUser.id}</p>
+                <p>Joined: {new Date(editingUser.created_at).toLocaleDateString()}</p>
+                <p>Last Login: {editingUser.last_login_at ? new Date(editingUser.last_login_at).toLocaleDateString() : 'Never'}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditUserOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveUser} disabled={isSavingUser}>
+              {isSavingUser ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
@@ -371,20 +497,30 @@ export function AdminUsers() {
                         </TableCell>
                         {isSuperAdmin && (
                           <TableCell>
-                            <Select
-                              value={user.role}
-                              onValueChange={(value) => updateUserRole(user.id, value)}
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="user">User</SelectItem>
-                                <SelectItem value="moderator">Moderator</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="super_admin">Super Admin</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEditModal(user)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Select
+                                value={user.role}
+                                onValueChange={(value) => updateUserRole(user.id, value)}
+                              >
+                                <SelectTrigger className="w-28 h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="user">User</SelectItem>
+                                  <SelectItem value="moderator">Moderator</SelectItem>
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </TableCell>
                         )}
                       </TableRow>
