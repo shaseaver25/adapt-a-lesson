@@ -18,6 +18,8 @@ export function useExportPDF() {
   const exportToPDF = async (markdown: string, options: ExportOptions) => {
     setExporting(true);
     
+    let iframe: HTMLIFrameElement | null = null;
+    
     try {
       // Detect if Arabic/RTL content
       const isRTL = isArabicContent(markdown);
@@ -28,16 +30,33 @@ export function useExportPDF() {
         isRTL
       });
       
-      // Create a temporary container
-      const container = document.createElement('div');
-      container.innerHTML = html;
-      container.style.position = 'absolute';
-      container.style.left = '-9999px';
-      document.body.appendChild(container);
+      // Create hidden iframe for proper HTML document rendering
+      iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.left = '-10000px';
+      iframe.style.top = '-10000px';
+      iframe.style.width = '8.5in';
+      iframe.style.height = '11in';
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
+      
+      // Write full HTML document to iframe
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!iframeDoc) throw new Error('Could not access iframe document');
+      
+      iframeDoc.open();
+      iframeDoc.write(html);
+      iframeDoc.close();
+      
+      // Wait for fonts and content to load
+      await new Promise(resolve => setTimeout(resolve, 800));
+      if (iframeDoc.fonts) {
+        await iframeDoc.fonts.ready;
+      }
       
       const filename = `${(options.title || 'document').replace(/[^a-z0-9]/gi, '_')}.pdf`;
       
-      // Generate PDF using html2pdf.js
+      // Generate PDF from iframe body
       await html2pdf()
         .set({
           margin: [0.5, 0.75, 0.5, 0.75],
@@ -55,7 +74,7 @@ export function useExportPDF() {
           },
           pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         })
-        .from(container)
+        .from(iframeDoc.body)
         .save();
       
       toast({
@@ -71,10 +90,9 @@ export function useExportPDF() {
         variant: 'destructive'
       });
     } finally {
-      // Clean up container
-      const tempContainer = document.querySelector('div[style*="-9999px"]');
-      if (tempContainer) {
-        document.body.removeChild(tempContainer);
+      // Clean up iframe
+      if (iframe && iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
       }
       setExporting(false);
     }
