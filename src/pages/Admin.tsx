@@ -7,7 +7,8 @@ import { AdminAnalytics } from '@/components/admin/AdminAnalytics';
 import { AdminCosts } from '@/components/admin/AdminCosts';
 import { AdminFeatureFlags } from '@/components/admin/AdminFeatureFlags';
 import { AdminErrorLogs } from '@/components/admin/AdminErrorLogs';
-import { Shield, Users, BarChart3, DollarSign, ToggleLeft, AlertTriangle } from 'lucide-react';
+import { AdminActivityLog } from '@/components/admin/AdminActivityLog';
+import { Shield, Users, BarChart3, DollarSign, ToggleLeft, AlertTriangle, Activity } from 'lucide-react';
 import { useAdmin } from '@/hooks/useAdmin';
 
 export default function Admin() {
@@ -54,7 +55,7 @@ export default function Admin() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -62,6 +63,10 @@ export default function Admin() {
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              <span className="hidden sm:inline">Activity</span>
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
@@ -87,6 +92,10 @@ export default function Admin() {
 
           <TabsContent value="users">
             <AdminUsers />
+          </TabsContent>
+
+          <TabsContent value="activity">
+            <AdminActivityLog />
           </TabsContent>
 
           <TabsContent value="analytics">

@@ -54,7 +54,7 @@ export function AdminUsers() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const { isSuperAdmin } = useAdmin();
+  const { isSuperAdmin, userId } = useAdmin();
   
   // Add user modal state
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
@@ -144,11 +144,14 @@ export function AdminUsers() {
     }
   }
 
-  async function updateUserRole(userId: string, newRole: string) {
+  async function updateUserRole(targetUserId: string, newRole: string) {
     if (!isSuperAdmin) {
       toast.error('Only super admins can modify roles');
       return;
     }
+
+    const targetUser = users.find(u => u.id === targetUserId);
+    const oldRole = targetUser?.role;
 
     try {
       if (newRole === 'user') {
@@ -156,7 +159,7 @@ export function AdminUsers() {
         const { error } = await supabase
           .from('user_roles')
           .delete()
-          .eq('user_id', userId);
+          .eq('user_id', targetUserId);
 
         if (error) throw error;
       } else {
@@ -164,17 +167,26 @@ export function AdminUsers() {
         await supabase
           .from('user_roles')
           .delete()
-          .eq('user_id', userId);
+          .eq('user_id', targetUserId);
 
         const { error } = await supabase
           .from('user_roles')
           .insert({ 
-            user_id: userId, 
+            user_id: targetUserId, 
             role: newRole as 'super_admin' | 'admin' | 'moderator' | 'user' 
           });
 
         if (error) throw error;
       }
+
+      // Log the activity
+      await supabase.from('activity_logs').insert({
+        action_type: 'role_change',
+        description: `Changed role of ${targetUser?.email || 'user'} from ${oldRole} to ${newRole}`,
+        target_user_id: targetUserId,
+        performed_by: userId,
+        metadata: { old_role: oldRole, new_role: newRole }
+      });
 
       toast.success('Role updated successfully');
       fetchUsers();
@@ -252,6 +264,15 @@ export function AdminUsers() {
 
       if (profileError) throw profileError;
 
+      // Log profile update
+      await supabase.from('activity_logs').insert({
+        action_type: 'profile_updated',
+        description: `Updated profile for ${editingUser.email || editingUser.full_name}`,
+        target_user_id: editingUser.id,
+        performed_by: userId,
+        metadata: { full_name: editUserName, avatar_url: editUserAvatar }
+      });
+
       // Update role if changed
       if (editUserRole !== editingUser.role) {
         await updateUserRole(editingUser.id, editUserRole);
@@ -293,6 +314,15 @@ export function AdminUsers() {
         .eq('id', userToDelete.id);
 
       if (error) throw error;
+
+      // Log the deletion
+      await supabase.from('activity_logs').insert({
+        action_type: 'user_deleted',
+        description: `Deleted user ${userToDelete.email || userToDelete.full_name || 'unknown'}`,
+        target_user_id: userToDelete.id,
+        performed_by: userId,
+        metadata: { deleted_email: userToDelete.email, deleted_name: userToDelete.full_name }
+      });
 
       toast.success(`User ${userToDelete.email || userToDelete.full_name || 'deleted'} has been removed`);
       setIsDeleteDialogOpen(false);
