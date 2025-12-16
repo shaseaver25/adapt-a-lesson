@@ -2,13 +2,14 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { DifferentiateForm, DifferentiateInput } from '@/components/DifferentiateForm';
 import { DifferentiatedLessonOutput } from '@/components/DifferentiatedLessonOutput';
-import { AssessmentForm } from '@/components/AssessmentForm';
+import { AssessmentMethodSelector } from '@/components/assessment/AssessmentMethodSelector';
 import { AssessmentOutput } from '@/components/AssessmentOutput';
+import { LessonContext, LocalContext, MethodOutput } from '@/types/assessmentMethods';
 import { RubricForm } from '@/components/RubricForm';
 import { RubricOutput } from '@/components/RubricOutput';
 import { Button } from '@/components/ui/button';
 import { StudentGroup } from '@/types/studentGroup';
-import { AssessmentInput } from '@/types/assessment';
+
 import { RubricInput } from '@/types/rubric';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles, BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, XCircle } from 'lucide-react';
@@ -41,7 +42,6 @@ const Index = () => {
 
   // Assessment state
   const [generatedAssessment, setGeneratedAssessment] = useState<string | null>(null);
-  const [currentAssessmentInput, setCurrentAssessmentInput] = useState<AssessmentInput | null>(null);
   const [isGeneratingAssessment, setIsGeneratingAssessment] = useState(false);
 
   // Rubric state
@@ -288,13 +288,34 @@ const Index = () => {
     }
   };
 
-  const handleGenerateAssessment = async (input: AssessmentInput) => {
+  const handleGenerateAssessment = async (input: {
+    lessonContext: LessonContext;
+    localContext: LocalContext;
+    selectedCategory: string;
+    selectedMethod: string;
+    methodDetails: MethodOutput;
+  }) => {
     setIsGeneratingAssessment(true);
-    setCurrentAssessmentInput(input);
 
     try {
+      // Transform to the existing API format
+      const assessmentInput = {
+        lessonTitle: input.lessonContext.title,
+        subject: input.lessonContext.subject,
+        gradeLevel: input.lessonContext.gradeLevel,
+        learningObjectives: input.lessonContext.objectives.filter(o => o.trim() !== ''),
+        aiPolicy: 'limited_assist' as const,
+        schoolName: input.localContext.schoolName,
+        city: input.localContext.city,
+        state: input.localContext.state,
+        localContext: input.localContext.details,
+        assessmentMethod: input.selectedMethod,
+        methodCategory: input.selectedCategory,
+        methodOutputs: input.methodDetails.outputs || [],
+      };
+
       const { data, error } = await supabase.functions.invoke('generate-assessment', {
-        body: input,
+        body: assessmentInput,
       });
 
       if (error) {
@@ -361,7 +382,6 @@ const Index = () => {
 
   const handleResetAssessment = () => {
     setGeneratedAssessment(null);
-    setCurrentAssessmentInput(null);
   };
 
   const handleResetRubric = () => {
@@ -480,7 +500,7 @@ const Index = () => {
                 </TabsContent>
 
                 <TabsContent value="assessment" className="mt-0">
-                  <AssessmentForm onSubmit={handleGenerateAssessment} isLoading={isGeneratingAssessment} />
+                  <AssessmentMethodSelector onGenerate={handleGenerateAssessment} isLoading={isGeneratingAssessment} />
                 </TabsContent>
 
                 <TabsContent value="rubric" className="mt-0">
@@ -540,14 +560,14 @@ const Index = () => {
                   AI-Resistant Assessment Ready
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  For lesson: <span className="font-medium text-foreground">{currentAssessmentInput?.lessonTitle}</span>
+                  Generated materials ready for classroom use
                 </p>
               </div>
             </div>
 
             <AssessmentOutput 
               content={generatedAssessment} 
-              lessonTitle={currentAssessmentInput?.lessonTitle || 'assessment'} 
+              lessonTitle={'assessment'} 
             />
           </div>
         ) : generatedRubric ? (
