@@ -102,30 +102,98 @@ export function DifferentiatedLessonOutput({
 
   // Extract content for a specific group from the full content
   const extractGroupContent = useCallback((groupName: string): string => {
-    console.log('extractGroupContent called for:', groupName);
+    console.log('=== extractGroupContent DEBUG ===');
+    console.log('Looking for group:', groupName);
     console.log('Full content length:', content?.length);
-    console.log('Content preview:', content?.substring(0, 500));
+    
+    if (!content) {
+      console.log('ERROR: No content provided');
+      return '';
+    }
     
     const lines = content.split('\n');
     let inGroup = false;
     let groupContent: string[] = [];
     
-    for (const line of lines) {
-      if (line.includes(groupName) && (line.includes('Edition') || line.includes('Edición') || line.includes('✨'))) {
-        inGroup = true;
-        groupContent.push(line);
-        console.log('Found group start:', line);
-      } else if (inGroup) {
-        if ((line.includes('Edition') || line.includes('Edición')) && line.includes('✨') && !line.includes(groupName)) {
-          console.log('Found group end:', line);
-          break;
+    // Try multiple patterns to find group content
+    const groupPatterns = [
+      // Pattern 1: "GroupName Edition" with emoji
+      (line: string) => line.includes(groupName) && (line.includes('Edition') || line.includes('Edición') || line.includes('✨')),
+      // Pattern 2: Header with just group name (## GroupName or # GroupName)
+      (line: string) => line.match(new RegExp(`^#+\\s*${groupName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i')),
+      // Pattern 3: Bold group name (**GroupName**)
+      (line: string) => line.includes(`**${groupName}**`),
+      // Pattern 4: Group name at start of line
+      (line: string) => line.startsWith(groupName) || line.startsWith(`## ${groupName}`) || line.startsWith(`### ${groupName}`),
+    ];
+    
+    // Try each pattern
+    for (const pattern of groupPatterns) {
+      inGroup = false;
+      groupContent = [];
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        if (!inGroup && pattern(line)) {
+          inGroup = true;
+          groupContent.push(line);
+          console.log(`Found group start at line ${i}:`, line.substring(0, 80));
+        } else if (inGroup) {
+          // Check for end of section (next group or major header)
+          const isNextGroup = groupPatterns.some(p => p(line) && !line.includes(groupName));
+          const isMajorHeader = /^#{1,2}\s+[A-Z]/.test(line) && !line.includes(groupName);
+          
+          if (isNextGroup || (isMajorHeader && groupContent.length > 5)) {
+            console.log(`Found group end at line ${i}:`, line.substring(0, 80));
+            break;
+          }
+          groupContent.push(line);
         }
-        groupContent.push(line);
+      }
+      
+      if (groupContent.length > 0) {
+        console.log(`Pattern matched! Extracted ${groupContent.length} lines`);
+        break;
       }
     }
     
-    const result = groupContent.join('\n');
-    console.log('Extracted content length:', result.length, 'Preview:', result.substring(0, 200));
+    // If still no content, try to find STUDENT HANDOUTS section and return all of it
+    if (groupContent.length === 0) {
+      console.log('No group-specific content found, looking for STUDENT HANDOUTS section...');
+      let inHandouts = false;
+      for (const line of lines) {
+        if (line.includes('STUDENT HANDOUTS') || line.includes('Student Handouts')) {
+          inHandouts = true;
+          continue;
+        }
+        if (inHandouts) {
+          groupContent.push(line);
+        }
+      }
+      if (groupContent.length > 0) {
+        console.log(`Found ${groupContent.length} lines in STUDENT HANDOUTS section`);
+      }
+    }
+    
+    // Last resort: return content after teacher guide
+    if (groupContent.length === 0) {
+      console.log('Using fallback: content after TEACHER GUIDE');
+      let afterTeacher = false;
+      for (const line of lines) {
+        if (line.includes('TEACHER GUIDE') || line.includes('Teacher Guide')) {
+          afterTeacher = true;
+          continue;
+        }
+        if (afterTeacher) {
+          groupContent.push(line);
+        }
+      }
+    }
+    
+    const result = groupContent.join('\n').trim();
+    console.log('Final extracted content length:', result.length);
+    console.log('Content preview:', result.substring(0, 300));
     return result;
   }, [content]);
 
