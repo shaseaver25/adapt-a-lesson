@@ -6,6 +6,7 @@ interface AdminStatus {
   isSuperAdmin: boolean;
   loading: boolean;
   error: string | null;
+  userId: string | null;
 }
 
 export function useAdmin(): AdminStatus {
@@ -14,6 +15,7 @@ export function useAdmin(): AdminStatus {
     isSuperAdmin: false,
     loading: true,
     error: null,
+    userId: null,
   });
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export function useAdmin(): AdminStatus {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        setStatus({ isAdmin: false, isSuperAdmin: false, loading: false, error: null });
+        setStatus({ isAdmin: false, isSuperAdmin: false, loading: false, error: null, userId: null });
         return;
       }
 
@@ -35,7 +37,7 @@ export function useAdmin(): AdminStatus {
       });
 
       if (adminError) {
-        setStatus({ isAdmin: false, isSuperAdmin: false, loading: false, error: adminError.message });
+        setStatus({ isAdmin: false, isSuperAdmin: false, loading: false, error: adminError.message, userId: user.id });
         return;
       }
 
@@ -46,7 +48,7 @@ export function useAdmin(): AdminStatus {
       });
 
       if (superError) {
-        setStatus({ isAdmin: !!isAdmin, isSuperAdmin: false, loading: false, error: superError.message });
+        setStatus({ isAdmin: !!isAdmin, isSuperAdmin: false, loading: false, error: superError.message, userId: user.id });
         return;
       }
 
@@ -55,6 +57,7 @@ export function useAdmin(): AdminStatus {
         isSuperAdmin: !!isSuperAdmin,
         loading: false,
         error: null,
+        userId: user.id,
       });
     } catch (err) {
       setStatus({
@@ -62,6 +65,7 @@ export function useAdmin(): AdminStatus {
         isSuperAdmin: false,
         loading: false,
         error: err instanceof Error ? err.message : 'Unknown error',
+        userId: null,
       });
     }
   }
