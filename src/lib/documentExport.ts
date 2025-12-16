@@ -486,7 +486,7 @@ function generateCombinedDocument(
   groups: StudentGroupInfo[]
 ): Document {
   const { teacherGuide, studentHandouts } = parseMarkdownContent(content);
-  const children: Paragraph[] = [];
+  const children: (Paragraph | Table)[] = [];
 
   // Title page
   children.push(
@@ -538,7 +538,7 @@ function generateCombinedDocument(
         spacing: { before: 400, after: 400 },
       })
     );
-    children.push(...markdownToParagraphs(teacherGuide));
+    children.push(...markdownToChildren(teacherGuide));
   }
 
   // Student Handouts - each group on new page
@@ -569,7 +569,7 @@ function generateCombinedDocument(
       if (index > 0) {
         children.push(new Paragraph({ children: [new PageBreak()] }));
       }
-      children.push(...markdownToParagraphs(handout.content));
+      children.push(...markdownToChildren(handout.content));
     });
   }
 
@@ -635,7 +635,7 @@ export async function exportAsSeparateDocx(
               },
             },
           },
-          children: markdownToParagraphs(teacherGuide),
+          children: markdownToChildren(teacherGuide),
         },
       ],
     });
@@ -664,7 +664,7 @@ export async function exportAsSeparateDocx(
               },
             },
           },
-          children: markdownToParagraphs(handout.content),
+          children: markdownToChildren(handout.content),
         },
       ],
     });
@@ -712,7 +712,7 @@ export async function exportTeacherGuideDocx(
             alignment: AlignmentType.CENTER,
             spacing: { before: 200, after: 400 },
           }),
-          ...markdownToParagraphs(teacherGuide),
+          ...markdownToChildren(teacherGuide),
         ],
       },
     ],
@@ -823,8 +823,8 @@ export async function exportStudentHandoutsDocx(
       );
     }
     
-    // Add handout content
-    children.push(...markdownToParagraphs(handout.content));
+    // Add handout content - use markdownToChildren for full table support
+    children.push(...markdownToChildren(handout.content));
   }
 
   const doc = new Document({
@@ -1145,7 +1145,7 @@ export async function exportStudentHandoutsWithAudioDocx(
     }
     
     // Add handout content
-    children.push(...markdownToParagraphs(handout.content));
+    children.push(...markdownToChildren(handout.content));
   }
 
   const doc = new Document({
@@ -1201,7 +1201,7 @@ function generateRubricDocument(
   gradeLevel?: string,
   aiVulnerabilityScore?: number | null
 ): Document {
-  const children: Paragraph[] = [];
+  const children: (Paragraph | Table)[] = [];
 
   // Title
   children.push(
@@ -1301,7 +1301,7 @@ function generateRubricDocument(
   );
 
   // Parse and convert rubric markdown content
-  const rubricParagraphs = markdownToParagraphs(rubricContent);
+  const rubricParagraphs = markdownToChildren(rubricContent);
   children.push(...rubricParagraphs);
 
   return new Document({
