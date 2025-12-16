@@ -36,8 +36,10 @@ import {
   FileText,
   Loader2,
   FolderOpen,
-  Pencil
+  Pencil,
+  Download
 } from 'lucide-react';
+import jsPDF from 'jspdf';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
 import { format } from 'date-fns';
@@ -159,6 +161,87 @@ export default function SavedLessons() {
     return content || lesson.original_content;
   };
 
+  // Download lesson as PDF
+  const handleDownloadPdf = (lesson: SavedLesson) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    const maxWidth = pageWidth - margin * 2;
+    let yPosition = margin;
+
+    // Helper to add text with word wrap and page breaks
+    const addText = (text: string, fontSize: number = 12, isBold: boolean = false) => {
+      doc.setFontSize(fontSize);
+      doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+      
+      const lines = doc.splitTextToSize(text, maxWidth);
+      lines.forEach((line: string) => {
+        if (yPosition > pageHeight - margin) {
+          doc.addPage();
+          yPosition = margin;
+        }
+        doc.text(line, margin, yPosition);
+        yPosition += fontSize * 0.5;
+      });
+      yPosition += 4;
+    };
+
+    // Title
+    addText(lesson.lesson_title || 'Untitled Lesson', 18, true);
+    addText(`Created: ${format(new Date(lesson.created_at), 'MMMM d, yyyy')}`, 10);
+    yPosition += 6;
+
+    // Teacher Guide
+    if (lesson.teacher_guide) {
+      addText('TEACHER GUIDE', 14, true);
+      yPosition += 2;
+      
+      // Strip markdown and add content
+      const cleanContent = lesson.teacher_guide
+        .replace(/#{1,6}\s/g, '')
+        .replace(/\*\*/g, '')
+        .replace(/\*/g, '')
+        .replace(/---/g, '');
+      
+      addText(cleanContent, 11);
+      yPosition += 8;
+    }
+
+    // Student Handouts
+    if (lesson.student_handouts && Array.isArray(lesson.student_handouts)) {
+      addText('STUDENT HANDOUTS', 14, true);
+      yPosition += 4;
+      
+      lesson.student_handouts.forEach((handout: any) => {
+        if (yPosition > pageHeight - 40) {
+          doc.addPage();
+          yPosition = margin;
+        }
+        
+        addText(handout.groupName, 12, true);
+        
+        const cleanHandout = (handout.content || '')
+          .replace(/#{1,6}\s/g, '')
+          .replace(/\*\*/g, '')
+          .replace(/\*/g, '')
+          .replace(/---/g, '');
+        
+        addText(cleanHandout, 10);
+        yPosition += 6;
+      });
+    }
+
+    // Save the PDF
+    const filename = `${(lesson.lesson_title || 'lesson').replace(/[^a-z0-9]/gi, '_')}.pdf`;
+    doc.save(filename);
+    
+    toast({ 
+      title: 'PDF Downloaded', 
+      description: `${lesson.lesson_title || 'Lesson'} has been saved as PDF.` 
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       {/* Header */}
@@ -267,6 +350,14 @@ export default function SavedLessons() {
                     >
                       <Eye className="h-4 w-4" />
                       View
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadPdf(lesson)}
+                      title="Download as PDF"
+                    >
+                      <Download className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
