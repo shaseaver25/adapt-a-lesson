@@ -1,24 +1,26 @@
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, FileText, DollarSign, Volume2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { 
+  Users, 
+  FileText, 
+  Languages, 
+  Download, 
+  TrendingUp,
+  Activity
+} from 'lucide-react';
 
-interface OverviewStats {
+interface Stats {
   totalUsers: number;
   totalLessons: number;
-  totalRubrics: number;
-  totalAudioCharacters: number;
-  estimatedAICost: number;
+  totalExports: number;
+  lessonsToday: number;
+  activeUsers7Days: number;
+  topLanguages: { language: string; count: number }[];
 }
 
 export function AdminOverview() {
-  const [stats, setStats] = useState<OverviewStats>({
-    totalUsers: 0,
-    totalLessons: 0,
-    totalRubrics: 0,
-    totalAudioCharacters: 0,
-    estimatedAICost: 0,
-  });
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,42 +29,55 @@ export function AdminOverview() {
 
   async function fetchStats() {
     try {
-      // Fetch user count
-      const { count: userCount } = await supabase
+      // Get total users from profiles
+      const { count: totalUsers } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
-      // Fetch lesson count
-      const { count: lessonCount } = await supabase
+      // Get total lessons
+      const { count: totalLessons } = await supabase
         .from('generated_lessons')
         .select('*', { count: 'exact', head: true });
 
-      // Fetch rubric count
-      const { count: rubricCount } = await supabase
-        .from('generated_rubrics')
-        .select('*', { count: 'exact', head: true });
+      // Get lessons today
+      const today = new Date().toISOString().split('T')[0];
+      const { count: lessonsToday } = await supabase
+        .from('generated_lessons')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', today);
 
-      // Fetch audio usage
-      const { data: audioData } = await supabase
-        .from('audio_usage')
-        .select('characters_used, estimated_cost');
+      // Get active users in last 7 days
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const { count: activeUsers7Days } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('last_login_at', sevenDaysAgo.toISOString());
 
-      const totalAudioCharacters = audioData?.reduce((sum, row) => sum + (row.characters_used || 0), 0) || 0;
-      const audioEstimatedCost = audioData?.reduce((sum, row) => sum + Number(row.estimated_cost || 0), 0) || 0;
+      // Get language distribution from student groups
+      const { data: languageData } = await supabase
+        .from('student_groups')
+        .select('home_language')
+        .not('home_language', 'is', null);
 
-      // Fetch AI cost logs
-      const { data: aiCostData } = await supabase
-        .from('ai_cost_logs')
-        .select('estimated_cost');
+      const languageCounts: Record<string, number> = {};
+      languageData?.forEach(row => {
+        const lang = row.home_language || 'English';
+        languageCounts[lang] = (languageCounts[lang] || 0) + 1;
+      });
 
-      const aiCost = aiCostData?.reduce((sum, row) => sum + Number(row.estimated_cost || 0), 0) || 0;
+      const topLanguages = Object.entries(languageCounts)
+        .map(([language, count]) => ({ language, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
 
       setStats({
-        totalUsers: userCount || 0,
-        totalLessons: lessonCount || 0,
-        totalRubrics: rubricCount || 0,
-        totalAudioCharacters,
-        estimatedAICost: aiCost + audioEstimatedCost,
+        totalUsers: totalUsers || 0,
+        totalLessons: totalLessons || 0,
+        totalExports: 0,
+        lessonsToday: lessonsToday || 0,
+        activeUsers7Days: activeUsers7Days || 0,
+        topLanguages
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -71,43 +86,10 @@ export function AdminOverview() {
     }
   }
 
-  const statCards = [
-    {
-      title: 'Total Users',
-      value: stats.totalUsers,
-      icon: Users,
-      description: 'Registered accounts',
-    },
-    {
-      title: 'Lessons Generated',
-      value: stats.totalLessons,
-      icon: FileText,
-      description: 'Differentiated lessons',
-    },
-    {
-      title: 'Rubrics Created',
-      value: stats.totalRubrics,
-      icon: FileText,
-      description: 'Assessment rubrics',
-    },
-    {
-      title: 'Audio Characters',
-      value: stats.totalAudioCharacters.toLocaleString(),
-      icon: Volume2,
-      description: 'TTS characters used',
-    },
-    {
-      title: 'Estimated AI Cost',
-      value: `$${stats.estimatedAICost.toFixed(2)}`,
-      icon: DollarSign,
-      description: 'Total AI spending',
-    },
-  ];
-
   if (loading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {[...Array(5)].map((_, i) => (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
           <Card key={i}>
             <CardHeader className="animate-pulse">
               <div className="h-4 bg-muted rounded w-24"></div>
@@ -121,25 +103,172 @@ export function AdminOverview() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-foreground">Platform Overview</h2>
-        <p className="text-muted-foreground">Key metrics at a glance</p>
+      {/* Key Metrics */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Registered accounts
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Lessons Generated</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.totalLessons || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              +{stats?.lessonsToday || 0} today
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">HTML Exports</CardTitle>
+            <Download className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.totalExports || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Files downloaded
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active (7d)</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.activeUsers7Days || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Users this week
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {statCards.map((stat) => (
-          <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">{stat.description}</p>
-            </CardContent>
-          </Card>
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Language Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Languages className="h-5 w-5" />
+              Top Languages Supported
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {stats?.topLanguages.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No language data yet</p>
+              ) : (
+                stats?.topLanguages.map((lang, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{lang.language}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary rounded-full"
+                          style={{ 
+                            width: `${(lang.count / (stats?.topLanguages[0]?.count || 1)) * 100}%` 
+                          }}
+                        />
+                      </div>
+                      <span className="text-sm text-muted-foreground w-8 text-right">
+                        {lang.count}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Recent Activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RecentActivityList />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function RecentActivityList() {
+  const [activities, setActivities] = useState<Array<{
+    id: string;
+    lesson_title: string | null;
+    created_at: string;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchRecentActivity();
+  }, []);
+
+  async function fetchRecentActivity() {
+    try {
+      const { data } = await supabase
+        .from('generated_lessons')
+        .select('id, lesson_title, created_at')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      setActivities(data || []);
+    } catch (error) {
+      console.error('Error fetching recent activity:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-10 bg-muted rounded animate-pulse"></div>
         ))}
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {activities.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No recent activity</p>
+      ) : (
+        activities.map((activity) => (
+          <div key={activity.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
+            <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium truncate">
+                {activity.lesson_title || 'Untitled Lesson'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {new Date(activity.created_at).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        ))
+      )}
     </div>
   );
 }
