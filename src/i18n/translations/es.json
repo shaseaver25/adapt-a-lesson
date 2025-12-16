@@ -8,23 +8,28 @@
     "loading": "Cargando...",
     "or": "o",
     "error": "Error",
-    "back": "Volver"
+    "back": "Volver",
+    "and": "y"
   },
   "login": {
     "title": "Authentic Learning Studio",
-    "subtitle": "Inicia sesión para continuar",
+    "subtitle": "Productividad docente con IA",
     "continueWithGoogle": "Continuar con Google",
     "continueWithMicrosoft": "Continuar con Microsoft",
     "continueWithCanvas": "Continuar con Canvas LMS",
-    "emailPlaceholder": "tu@escuela.edu",
+    "emailPlaceholder": "tu@distrito.org",
     "passwordPlaceholder": "Ingresa tu contraseña",
     "forgotPassword": "¿Olvidaste tu contraseña?",
     "loginButton": "Iniciar sesión",
     "signingIn": "Iniciando sesión...",
     "noAccount": "¿No tienes una cuenta?",
     "signUp": "Regístrate",
+    "createAccount": "Crear cuenta",
     "welcomeBack": "¡Bienvenido de nuevo!",
-    "loginSuccess": "Has iniciado sesión correctamente."
+    "loginSuccess": "Has iniciado sesión correctamente.",
+    "legalText": "Al continuar, aceptas nuestros",
+    "terms": "Términos",
+    "privacy": "Privacidad"
   },
   "register": {
     "title": "Crea tu cuenta",
