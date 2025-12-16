@@ -403,18 +403,13 @@ const Index = () => {
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl gradient-warm shadow-soft">
-              <BookOpenCheck className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="font-display font-bold text-xl text-foreground">
-                Educator Tools
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                AI-powered differentiation & assessment
-              </p>
-            </div>
+          <div>
+            <h1 className="font-display font-bold text-xl text-foreground">
+              Authentic Learning Studio
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              Let's get <span className="font-semibold text-primary">REAL</span>
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Link to="/saved-lessons">
@@ -458,13 +453,12 @@ const Index = () => {
           <div className="max-w-3xl mx-auto">
             {/* Hero section */}
             <div className="text-center mb-8 animate-fade-in">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary text-secondary-foreground text-sm font-medium mb-4">
-                <Sparkles className="h-4 w-4" />
-                AI-Powered Teaching Tools
-              </div>
               <h2 className="font-display font-extrabold text-3xl md:text-4xl text-foreground mb-3">
-                Differentiate & Assess with Confidence
+                Let's Get <span className="text-primary">REAL</span>
               </h2>
+              <p className="text-lg text-muted-foreground mb-2">
+                <span className="font-semibold">R</span>esponsive. <span className="font-semibold">E</span>quitable. <span className="font-semibold">A</span>daptive. <span className="font-semibold">L</span>earning.
+              </p>
               <p className="text-muted-foreground max-w-xl mx-auto">
                 Create personalized lessons for every learner and design authentic, 
                 AI-resistant assessments that reveal genuine student thinking.
