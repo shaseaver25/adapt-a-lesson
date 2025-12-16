@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.generate-lesson-diagram]
 verify_jwt = false
+
+[functions.track-login-attempt]
+verify_jwt = false
