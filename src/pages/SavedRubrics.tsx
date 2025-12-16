@@ -22,12 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   ArrowLeft, 
@@ -39,15 +33,11 @@ import {
   Loader2,
   FolderOpen,
   ShieldCheck,
-  ShieldAlert,
-  Download,
-  FileText,
-  FileDown
+  ShieldAlert
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
 import { format } from 'date-fns';
-import { exportRubricAsDocx, exportRubricAsMarkdown } from '@/lib/documentExport';
 
 interface SavedRubric {
   id: string;
@@ -112,46 +102,6 @@ export default function SavedRubrics() {
   const handleDelete = () => {
     if (rubricToDelete) {
       deleteMutation.mutate(rubricToDelete.id);
-    }
-  };
-
-  const handleExportDocx = async (rubric: SavedRubric) => {
-    try {
-      await exportRubricAsDocx(
-        rubric.rubric_content,
-        rubric.assessment_description,
-        rubric.learning_objectives,
-        rubric.grade_level || undefined,
-        rubric.ai_vulnerability_score
-      );
-      toast({ title: 'Exported', description: 'Rubric downloaded as DOCX.' });
-    } catch (error) {
-      console.error('Export error:', error);
-      toast({
-        title: 'Export failed',
-        description: 'Could not export the rubric.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleExportMarkdown = (rubric: SavedRubric) => {
-    try {
-      exportRubricAsMarkdown(
-        rubric.rubric_content,
-        rubric.assessment_description,
-        rubric.learning_objectives,
-        rubric.grade_level || undefined,
-        rubric.ai_vulnerability_score
-      );
-      toast({ title: 'Exported', description: 'Rubric downloaded as Markdown.' });
-    } catch (error) {
-      console.error('Export error:', error);
-      toast({
-        title: 'Export failed',
-        description: 'Could not export the rubric.',
-        variant: 'destructive',
-      });
     }
   };
 
@@ -290,23 +240,6 @@ export default function SavedRubrics() {
                       <Eye className="h-4 w-4" />
                       View
                     </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-popover border border-border z-50">
-                        <DropdownMenuItem onClick={() => handleExportDocx(rubric)}>
-                          <FileDown className="h-4 w-4 mr-2" />
-                          Download DOCX
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleExportMarkdown(rubric)}>
-                          <FileText className="h-4 w-4 mr-2" />
-                          Download Markdown
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                     <Button
                       variant="outline"
                       size="sm"

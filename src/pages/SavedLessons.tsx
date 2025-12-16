@@ -33,14 +33,10 @@ import {
   Eye, 
   Calendar, 
   Users, 
-  FileText,
   Loader2,
   FolderOpen,
-  Pencil,
-  Download,
-  Loader2 as DownloadLoader
+  Pencil
 } from 'lucide-react';
-import { useExportPDF } from '@/hooks/useExportPDF';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
 import { format } from 'date-fns';
@@ -63,7 +59,6 @@ export default function SavedLessons() {
   const [lessonToEdit, setLessonToEdit] = useState<SavedLesson | null>(null);
   const [editName, setEditName] = useState('');
   const { toast } = useToast();
-  const { exportToPDF, exporting: pdfExporting } = useExportPDF();
   const queryClient = useQueryClient();
 
   const { data: lessons = [], isLoading } = useQuery({
@@ -161,38 +156,6 @@ export default function SavedLessons() {
     }
     
     return content || lesson.original_content;
-  };
-
-  // Download lesson as PDF using the hook
-  const handleDownloadPdf = (lesson: SavedLesson) => {
-    // Build the full content
-    let fullContent = '';
-    
-    // Teacher Guide
-    if (lesson.teacher_guide) {
-      fullContent += `# Teacher Guide\n\n${lesson.teacher_guide}\n\n---\n\n`;
-    }
-    
-    // Student Handouts
-    if (lesson.student_handouts && Array.isArray(lesson.student_handouts)) {
-      fullContent += '# Student Handouts\n\n';
-      lesson.student_handouts.forEach((handout: any, index: number) => {
-        fullContent += `## ${handout.groupName}\n\n${handout.content || ''}\n\n`;
-        if (index < lesson.student_handouts.length - 1) {
-          fullContent += '---\n\n';
-        }
-      });
-    }
-    
-    // If no specific content, use original
-    if (!fullContent.trim()) {
-      fullContent = lesson.original_content;
-    }
-    
-    exportToPDF(fullContent, {
-      title: lesson.lesson_title || 'Lesson',
-      createdAt: format(new Date(lesson.created_at), 'MMMM d, yyyy'),
-    });
   };
 
   return (
@@ -303,19 +266,6 @@ export default function SavedLessons() {
                     >
                       <Eye className="h-4 w-4" />
                       View
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownloadPdf(lesson)}
-                      disabled={pdfExporting}
-                      title="Download as PDF"
-                    >
-                      {pdfExporting ? (
-                        <DownloadLoader className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Download className="h-4 w-4" />
-                      )}
                     </Button>
                     <Button
                       variant="outline"
