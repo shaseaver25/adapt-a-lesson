@@ -1,0 +1,82 @@
+{
+  "common": {
+    "email": "Email address",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "newPassword": "New password",
+    "confirmNewPassword": "Confirm new password",
+    "loading": "Loading...",
+    "or": "or"
+  },
+  "login": {
+    "title": "Authentic Learning Studio",
+    "subtitle": "Sign in to continue",
+    "continueWithGoogle": "Continue with Google",
+    "continueWithMicrosoft": "Continue with Microsoft",
+    "continueWithCanvas": "Continue with Canvas LMS",
+    "emailPlaceholder": "you@school.edu",
+    "passwordPlaceholder": "Enter your password",
+    "forgotPassword": "Forgot password?",
+    "loginButton": "Log in",
+    "signingIn": "Signing in...",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign up",
+    "welcomeBack": "Welcome back!",
+    "loginSuccess": "You have been logged in successfully."
+  },
+  "register": {
+    "title": "Create your account",
+    "subtitle": "Join Authentic Learning Studio",
+    "emailPlaceholder": "you@school.edu",
+    "passwordPlaceholder": "Create a password",
+    "confirmPasswordPlaceholder": "Confirm your password",
+    "passwordRequirements": "Password must be at least 12 characters",
+    "passwordStrength": {
+      "weak": "Weak",
+      "fair": "Fair",
+      "good": "Good",
+      "strong": "Strong"
+    },
+    "createAccount": "Create account",
+    "creating": "Creating account...",
+    "hasAccount": "Already have an account?",
+    "logIn": "Log in",
+    "successTitle": "Check your email",
+    "successMessage": "Check your email to verify your account before logging in."
+  },
+  "forgotPassword": {
+    "title": "Reset your password",
+    "requestSubtitle": "Enter your email to receive a reset link",
+    "verifySubtitle": "Create a new password",
+    "successSubtitle": "Your password has been updated",
+    "sendResetLink": "Send reset link",
+    "sending": "Sending...",
+    "updatePassword": "Update password",
+    "updating": "Updating...",
+    "requestNewLink": "Request a new reset link",
+    "backToLogin": "Back to login",
+    "emailSent": "If an account exists with that email, we've sent a reset link.",
+    "enterNewPassword": "Enter your new password below.",
+    "passwordUpdated": "Password updated successfully!",
+    "redirecting": "Redirecting you to login..."
+  },
+  "errors": {
+    "noAccount": "No Account Exists with This Email",
+    "accountLocked": "This Account is Locked, contact Support",
+    "wrongPassword": "Wrong Password",
+    "tooManyDevices": "Logged Into More than 3 Devices",
+    "networkError": "Unable to connect. Please check your internet connection.",
+    "serverError": "Something went wrong. Please try again.",
+    "popupBlocked": "Sign-in popup was blocked. Please allow popups and try again.",
+    "invalidEmail": "Please enter a valid email address",
+    "passwordTooShort": "Password must be at least 12 characters",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "invalidResetLink": "This reset link is invalid or has expired. Request a new one.",
+    "emailAlreadyRegistered": "An account with this email already exists"
+  },
+  "accessibility": {
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "languageSelector": "Select language"
+  }
+}

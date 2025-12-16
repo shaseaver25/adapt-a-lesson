@@ -1,0 +1,82 @@
+{
+  "common": {
+    "email": "Ciwaanka iimaylka",
+    "password": "Erayga sirta ah",
+    "confirmPassword": "Xaqiiji erayga sirta ah",
+    "newPassword": "Eray sir cusub",
+    "confirmNewPassword": "Xaqiiji erayga sirta cusub",
+    "loading": "Waa la soo rarayaa...",
+    "or": "ama"
+  },
+  "login": {
+    "title": "Authentic Learning Studio",
+    "subtitle": "Soo gal si aad u sii waddo",
+    "continueWithGoogle": "Ku sii wad Google",
+    "continueWithMicrosoft": "Ku sii wad Microsoft",
+    "continueWithCanvas": "Ku sii wad Canvas LMS",
+    "emailPlaceholder": "adiga@iskuul.edu",
+    "passwordPlaceholder": "Geli eraygaaga sirta ah",
+    "forgotPassword": "Ma illowday eraygaaga sirta ah?",
+    "loginButton": "Soo gal",
+    "signingIn": "Waa la soo galayaa...",
+    "noAccount": "Ma haysatid akoon?",
+    "signUp": "Is diiwaan geli",
+    "welcomeBack": "Ku soo dhawoow!",
+    "loginSuccess": "Waad ku guulaysatay soo galitaanka."
+  },
+  "register": {
+    "title": "Samee akoonkaaga",
+    "subtitle": "Ku biir Authentic Learning Studio",
+    "emailPlaceholder": "adiga@iskuul.edu",
+    "passwordPlaceholder": "Samee eray sir ah",
+    "confirmPasswordPlaceholder": "Xaqiiji eraygaaga sirta ah",
+    "passwordRequirements": "Erayga sirta ah waa inuu ugu yaraan lahaadaa 12 xaraf",
+    "passwordStrength": {
+      "weak": "Daciif",
+      "fair": "Dhexdhexaad",
+      "good": "Wanaagsan",
+      "strong": "Xoog badan"
+    },
+    "createAccount": "Samee akoon",
+    "creating": "Waa la samaynayaa akoon...",
+    "hasAccount": "Horay ma u haysatay akoon?",
+    "logIn": "Soo gal",
+    "successTitle": "Hubi iimaylkaaga",
+    "successMessage": "Hubi iimaylkaaga si aad u xaqiijiso akoonkaaga ka hor intaadan soo galin."
+  },
+  "forgotPassword": {
+    "title": "Dib u deji eraygaaga sirta ah",
+    "requestSubtitle": "Geli iimaylkaaga si aad u hesho link dib u dejinta",
+    "verifySubtitle": "Samee eray sir cusub",
+    "successSubtitle": "Eraygaaga sirta ah waa la cusbooneysiiyay",
+    "sendResetLink": "Dir linkiga dib u dejinta",
+    "sending": "Waa la dirrayaa...",
+    "updatePassword": "Cusboonaysii erayga sirta ah",
+    "updating": "Waa la cusboonaysiinayaa...",
+    "requestNewLink": "Codso link cusub",
+    "backToLogin": "Ku laabo soo galitaanka",
+    "emailSent": "Haddii akoon la leeyahay iimaylkaas, waxaan dirnay link dib u dejinta.",
+    "enterNewPassword": "Geli eraygaaga sirta cusub ee hoose.",
+    "passwordUpdated": "Erayga sirta ah si guul leh ayaa loo cusboonaysiiyay!",
+    "redirecting": "Waxaa laguu waddaa bogga soo galitaanka..."
+  },
+  "errors": {
+    "noAccount": "Ma Jiro Akoon Leh Iimaylkan",
+    "accountLocked": "Akoonkan Waa La Xiray, la xiriir Taageerada",
+    "wrongPassword": "Eray Sir Khaldan",
+    "tooManyDevices": "Waxaad Ka Gashay In Ka Badan 3 Aalad",
+    "networkError": "Lama xiriiri karo. Fadlan hubi xiriirkaaga internetka.",
+    "serverError": "Wax qalad ah ayaa dhacay. Fadlan isku day mar kale.",
+    "popupBlocked": "Daaqadda soo galitaanka waa la xannibay. Fadlan u oggolow daaqadaha soo boodbooda oo isku day mar kale.",
+    "invalidEmail": "Fadlan geli cinwaan iimayl sax ah",
+    "passwordTooShort": "Erayga sirta ah waa inuu ugu yaraan lahaadaa 12 xaraf",
+    "passwordsDoNotMatch": "Erayada sirta ah ma is waafaqsana",
+    "invalidResetLink": "Linkigan ma shaqeynayo ama wuu dhacay. Codso mid cusub.",
+    "emailAlreadyRegistered": "Waxaa horay ugu jira akoon iimaylkan"
+  },
+  "accessibility": {
+    "showPassword": "Muuji erayga sirta ah",
+    "hidePassword": "Qari erayga sirta ah",
+    "languageSelector": "Dooro luqadda"
+  }
+}

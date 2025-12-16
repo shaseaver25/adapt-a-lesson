@@ -1,0 +1,82 @@
+{
+  "common": {
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "newPassword": "Nueva contraseña",
+    "confirmNewPassword": "Confirmar nueva contraseña",
+    "loading": "Cargando...",
+    "or": "o"
+  },
+  "login": {
+    "title": "Authentic Learning Studio",
+    "subtitle": "Inicia sesión para continuar",
+    "continueWithGoogle": "Continuar con Google",
+    "continueWithMicrosoft": "Continuar con Microsoft",
+    "continueWithCanvas": "Continuar con Canvas LMS",
+    "emailPlaceholder": "tu@escuela.edu",
+    "passwordPlaceholder": "Ingresa tu contraseña",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "loginButton": "Iniciar sesión",
+    "signingIn": "Iniciando sesión...",
+    "noAccount": "¿No tienes una cuenta?",
+    "signUp": "Regístrate",
+    "welcomeBack": "¡Bienvenido de nuevo!",
+    "loginSuccess": "Has iniciado sesión correctamente."
+  },
+  "register": {
+    "title": "Crea tu cuenta",
+    "subtitle": "Únete a Authentic Learning Studio",
+    "emailPlaceholder": "tu@escuela.edu",
+    "passwordPlaceholder": "Crea una contraseña",
+    "confirmPasswordPlaceholder": "Confirma tu contraseña",
+    "passwordRequirements": "La contraseña debe tener al menos 12 caracteres",
+    "passwordStrength": {
+      "weak": "Débil",
+      "fair": "Regular",
+      "good": "Buena",
+      "strong": "Fuerte"
+    },
+    "createAccount": "Crear cuenta",
+    "creating": "Creando cuenta...",
+    "hasAccount": "¿Ya tienes una cuenta?",
+    "logIn": "Iniciar sesión",
+    "successTitle": "Revisa tu correo",
+    "successMessage": "Revisa tu correo para verificar tu cuenta antes de iniciar sesión."
+  },
+  "forgotPassword": {
+    "title": "Restablecer tu contraseña",
+    "requestSubtitle": "Ingresa tu correo para recibir un enlace de restablecimiento",
+    "verifySubtitle": "Crea una nueva contraseña",
+    "successSubtitle": "Tu contraseña ha sido actualizada",
+    "sendResetLink": "Enviar enlace",
+    "sending": "Enviando...",
+    "updatePassword": "Actualizar contraseña",
+    "updating": "Actualizando...",
+    "requestNewLink": "Solicitar nuevo enlace",
+    "backToLogin": "Volver al inicio de sesión",
+    "emailSent": "Si existe una cuenta con ese correo, hemos enviado un enlace de restablecimiento.",
+    "enterNewPassword": "Ingresa tu nueva contraseña a continuación.",
+    "passwordUpdated": "¡Contraseña actualizada correctamente!",
+    "redirecting": "Redirigiendo al inicio de sesión..."
+  },
+  "errors": {
+    "noAccount": "No Existe una Cuenta con Este Correo",
+    "accountLocked": "Esta Cuenta Está Bloqueada, contacta a Soporte",
+    "wrongPassword": "Contraseña Incorrecta",
+    "tooManyDevices": "Conectado en Más de 3 Dispositivos",
+    "networkError": "No se puede conectar. Verifica tu conexión a internet.",
+    "serverError": "Algo salió mal. Por favor intenta de nuevo.",
+    "popupBlocked": "La ventana emergente fue bloqueada. Permite las ventanas emergentes e intenta de nuevo.",
+    "invalidEmail": "Por favor ingresa un correo electrónico válido",
+    "passwordTooShort": "La contraseña debe tener al menos 12 caracteres",
+    "passwordsDoNotMatch": "Las contraseñas no coinciden",
+    "invalidResetLink": "Este enlace es inválido o ha expirado. Solicita uno nuevo.",
+    "emailAlreadyRegistered": "Ya existe una cuenta con este correo electrónico"
+  },
+  "accessibility": {
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
+    "languageSelector": "Seleccionar idioma"
+  }
+}

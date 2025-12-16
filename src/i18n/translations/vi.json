@@ -1,0 +1,82 @@
+{
+  "common": {
+    "email": "Địa chỉ email",
+    "password": "Mật khẩu",
+    "confirmPassword": "Xác nhận mật khẩu",
+    "newPassword": "Mật khẩu mới",
+    "confirmNewPassword": "Xác nhận mật khẩu mới",
+    "loading": "Đang tải...",
+    "or": "hoặc"
+  },
+  "login": {
+    "title": "Authentic Learning Studio",
+    "subtitle": "Đăng nhập để tiếp tục",
+    "continueWithGoogle": "Tiếp tục với Google",
+    "continueWithMicrosoft": "Tiếp tục với Microsoft",
+    "continueWithCanvas": "Tiếp tục với Canvas LMS",
+    "emailPlaceholder": "email@truong.edu",
+    "passwordPlaceholder": "Nhập mật khẩu của bạn",
+    "forgotPassword": "Quên mật khẩu?",
+    "loginButton": "Đăng nhập",
+    "signingIn": "Đang đăng nhập...",
+    "noAccount": "Chưa có tài khoản?",
+    "signUp": "Đăng ký",
+    "welcomeBack": "Chào mừng trở lại!",
+    "loginSuccess": "Bạn đã đăng nhập thành công."
+  },
+  "register": {
+    "title": "Tạo tài khoản của bạn",
+    "subtitle": "Tham gia Authentic Learning Studio",
+    "emailPlaceholder": "email@truong.edu",
+    "passwordPlaceholder": "Tạo mật khẩu",
+    "confirmPasswordPlaceholder": "Xác nhận mật khẩu của bạn",
+    "passwordRequirements": "Mật khẩu phải có ít nhất 12 ký tự",
+    "passwordStrength": {
+      "weak": "Yếu",
+      "fair": "Trung bình",
+      "good": "Tốt",
+      "strong": "Mạnh"
+    },
+    "createAccount": "Tạo tài khoản",
+    "creating": "Đang tạo tài khoản...",
+    "hasAccount": "Đã có tài khoản?",
+    "logIn": "Đăng nhập",
+    "successTitle": "Kiểm tra email của bạn",
+    "successMessage": "Kiểm tra email để xác minh tài khoản trước khi đăng nhập."
+  },
+  "forgotPassword": {
+    "title": "Đặt lại mật khẩu",
+    "requestSubtitle": "Nhập email để nhận liên kết đặt lại",
+    "verifySubtitle": "Tạo mật khẩu mới",
+    "successSubtitle": "Mật khẩu của bạn đã được cập nhật",
+    "sendResetLink": "Gửi liên kết đặt lại",
+    "sending": "Đang gửi...",
+    "updatePassword": "Cập nhật mật khẩu",
+    "updating": "Đang cập nhật...",
+    "requestNewLink": "Yêu cầu liên kết mới",
+    "backToLogin": "Quay lại đăng nhập",
+    "emailSent": "Nếu tồn tại tài khoản với email đó, chúng tôi đã gửi liên kết đặt lại.",
+    "enterNewPassword": "Nhập mật khẩu mới của bạn bên dưới.",
+    "passwordUpdated": "Cập nhật mật khẩu thành công!",
+    "redirecting": "Đang chuyển hướng đến trang đăng nhập..."
+  },
+  "errors": {
+    "noAccount": "Không Tồn Tại Tài Khoản Với Email Này",
+    "accountLocked": "Tài Khoản Này Đã Bị Khóa, liên hệ Hỗ trợ",
+    "wrongPassword": "Sai Mật Khẩu",
+    "tooManyDevices": "Đã Đăng Nhập Trên Hơn 3 Thiết Bị",
+    "networkError": "Không thể kết nối. Vui lòng kiểm tra kết nối internet của bạn.",
+    "serverError": "Đã xảy ra lỗi. Vui lòng thử lại.",
+    "popupBlocked": "Cửa sổ đăng nhập đã bị chặn. Vui lòng cho phép cửa sổ bật lên và thử lại.",
+    "invalidEmail": "Vui lòng nhập địa chỉ email hợp lệ",
+    "passwordTooShort": "Mật khẩu phải có ít nhất 12 ký tự",
+    "passwordsDoNotMatch": "Mật khẩu không khớp",
+    "invalidResetLink": "Liên kết này không hợp lệ hoặc đã hết hạn. Yêu cầu liên kết mới.",
+    "emailAlreadyRegistered": "Đã tồn tại tài khoản với email này"
+  },
+  "accessibility": {
+    "showPassword": "Hiện mật khẩu",
+    "hidePassword": "Ẩn mật khẩu",
+    "languageSelector": "Chọn ngôn ngữ"
+  }
+}
