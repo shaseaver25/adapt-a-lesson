@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { StudentGroup } from '@/types/studentGroup';
 import { DifferentiationProgressState, createInitialProgressState } from '@/components/DifferentiationProgressModal';
@@ -43,6 +44,7 @@ export function useDifferentiationGenerator(
   const [lastDifferentiateInput, setLastDifferentiateInput] = useState<DifferentiateInput | null>(null);
   const [differentiateError, setDifferentiateError] = useState<string | null>(null);
   const [isLessonSaved, setIsLessonSaved] = useState(false);
+  const { user } = useAuth();
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -175,24 +177,29 @@ export function useDifferentiationGenerator(
       // Save lesson to database
       let lessonId: string | null = null;
       try {
-        const insertData = {
-          original_content: input.lessonContent,
-          lesson_title: input.lessonName || 'Untitled Lesson',
-          group_ids: input.selectedGroups.map(g => g.id),
-          teacher_guide: lessonData.teacherGuide,
-          student_handouts: JSON.parse(JSON.stringify(lessonData.studentHandouts)),
-          differentiation_options: JSON.parse(JSON.stringify(input.options)),
-        };
-        
-        const { data: savedLesson, error: lessonError } = await supabase
-          .from('generated_lessons')
-          .insert(insertData)
-          .select('id')
-          .single();
+        if (!user?.id) {
+          console.warn('User not authenticated, skipping lesson save');
+        } else {
+          const insertData = {
+            original_content: input.lessonContent,
+            lesson_title: input.lessonName || 'Untitled Lesson',
+            group_ids: input.selectedGroups.map(g => g.id),
+            teacher_guide: lessonData.teacherGuide,
+            student_handouts: JSON.parse(JSON.stringify(lessonData.studentHandouts)),
+            differentiation_options: JSON.parse(JSON.stringify(input.options)),
+            user_id: user.id,
+          };
+          
+          const { data: savedLesson, error: lessonError } = await supabase
+            .from('generated_lessons')
+            .insert(insertData)
+            .select('id')
+            .single();
 
-        if (!lessonError && savedLesson) {
-          lessonId = savedLesson.id;
-          setCurrentLessonId(lessonId);
+          if (!lessonError && savedLesson) {
+            lessonId = savedLesson.id;
+            setCurrentLessonId(lessonId);
+          }
         }
       } catch (saveError) {
         console.error('Error saving lesson:', saveError);

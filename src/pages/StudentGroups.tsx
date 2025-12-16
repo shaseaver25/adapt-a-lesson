@@ -174,9 +174,10 @@ export default function StudentGroups() {
   // Folder mutations
   const createFolderMutation = useMutation({
     mutationFn: async (folder: { folder_name: string; color: string }) => {
+      if (!user?.id) throw new Error('You must be logged in to create a folder');
       const { error } = await supabase
         .from('class_folders')
-        .insert(folder);
+        .insert({ ...folder, user_id: user.id });
       if (error) throw error;
     },
     onSuccess: () => {
