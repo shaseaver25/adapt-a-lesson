@@ -1,223 +1,286 @@
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { DollarSign, Cpu, TrendingUp, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface CostSummary {
-  function_name: string;
-  total_cost: number;
-  total_calls: number;
+  totalCost: number;
+  totalTokens: number;
+  costByFunction: { name: string; cost: number; calls: number }[];
+  costByDay: { date: string; cost: number }[];
+  audioCost: number;
+  audioCharacters: number;
 }
-
-interface RecentCostLog {
-  id: string;
-  function_name: string;
-  model: string;
-  input_tokens: number;
-  output_tokens: number;
-  estimated_cost: number;
-  created_at: string;
-}
-
-const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(142, 76%, 36%)', 'hsl(38, 92%, 50%)', 'hsl(280, 65%, 60%)'];
 
 export function AdminCosts() {
-  const [costSummary, setCostSummary] = useState<CostSummary[]>([]);
-  const [recentLogs, setRecentLogs] = useState<RecentCostLog[]>([]);
-  const [audioStats, setAudioStats] = useState({ totalCost: 0, totalCharacters: 0 });
+  const [summary, setSummary] = useState<CostSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchCosts();
+    fetchCostData();
   }, []);
 
-  async function fetchCosts() {
+  async function fetchCostData() {
+    setLoading(true);
     try {
-      // Fetch AI cost logs
-      const { data: aiLogs } = await supabase
+      const { data } = await supabase
         .from('ai_cost_logs')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(50);
-
-      // Aggregate by function
-      const functionMap = new Map<string, CostSummary>();
-      aiLogs?.forEach(log => {
-        const existing = functionMap.get(log.function_name) || {
-          function_name: log.function_name,
-          total_cost: 0,
-          total_calls: 0,
-        };
-        existing.total_cost += Number(log.estimated_cost);
-        existing.total_calls += 1;
-        functionMap.set(log.function_name, existing);
-      });
-
-      setCostSummary(Array.from(functionMap.values()));
-      setRecentLogs(aiLogs || []);
+        .limit(1000);
 
       // Fetch audio costs
       const { data: audioData } = await supabase
         .from('audio_usage')
         .select('characters_used, estimated_cost');
 
-      const totalAudioCost = audioData?.reduce((sum, row) => sum + Number(row.estimated_cost || 0), 0) || 0;
-      const totalCharacters = audioData?.reduce((sum, row) => sum + (row.characters_used || 0), 0) || 0;
+      const audioCost = audioData?.reduce((sum, row) => sum + Number(row.estimated_cost || 0), 0) || 0;
+      const audioCharacters = audioData?.reduce((sum, row) => sum + (row.characters_used || 0), 0) || 0;
 
-      setAudioStats({ totalCost: totalAudioCost, totalCharacters });
+      if (!data || data.length === 0) {
+        setSummary({
+          totalCost: audioCost,
+          totalTokens: 0,
+          costByFunction: audioCost > 0 ? [{ name: 'Audio (ElevenLabs)', cost: audioCost, calls: audioData?.length || 0 }] : [],
+          costByDay: [],
+          audioCost,
+          audioCharacters
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Calculate totals
+      const totalCost = data.reduce((sum, row) => sum + Number(row.estimated_cost || 0), 0) + audioCost;
+      const totalTokens = data.reduce((sum, row) => 
+        sum + (row.input_tokens || 0) + (row.output_tokens || 0), 0
+      );
+
+      // Group by function
+      const functionMap = new Map<string, { cost: number; calls: number }>();
+      data.forEach(row => {
+        const name = row.function_name || 'Unknown';
+        const existing = functionMap.get(name) || { cost: 0, calls: 0 };
+        functionMap.set(name, {
+          cost: existing.cost + Number(row.estimated_cost || 0),
+          calls: existing.calls + 1
+        });
+      });
+
+      // Add audio as a function
+      if (audioCost > 0) {
+        functionMap.set('Audio (ElevenLabs)', { cost: audioCost, calls: audioData?.length || 0 });
+      }
+
+      const costByFunction = Array.from(functionMap.entries())
+        .map(([name, data]) => ({ name, ...data }))
+        .sort((a, b) => b.cost - a.cost);
+
+      // Group by day
+      const dayMap = new Map<string, number>();
+      data.forEach(row => {
+        const date = new Date(row.created_at).toISOString().split('T')[0];
+        dayMap.set(date, (dayMap.get(date) || 0) + Number(row.estimated_cost || 0));
+      });
+
+      const costByDay = Array.from(dayMap.entries())
+        .map(([date, cost]) => ({ date, cost }))
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(-7);
+
+      setSummary({ totalCost, totalTokens, costByFunction, costByDay, audioCost, audioCharacters });
     } catch (error) {
-      console.error('Error fetching costs:', error);
+      console.error('Error fetching cost data:', error);
     } finally {
       setLoading(false);
     }
   }
 
-  const totalAICost = costSummary.reduce((sum, item) => sum + item.total_cost, 0);
-  const totalCost = totalAICost + audioStats.totalCost;
-
-  const pieData = [
-    ...costSummary.map(item => ({
-      name: item.function_name,
-      value: item.total_cost,
-    })),
-    { name: 'Audio (ElevenLabs)', value: audioStats.totalCost },
-  ].filter(item => item.value > 0);
+  const getAvgCostPerLesson = () => {
+    const diff = summary?.costByFunction.find(f => f.name.includes('differentiate'));
+    if (diff && diff.calls > 0) {
+      return (diff.cost / diff.calls).toFixed(4);
+    }
+    return '0.0000';
+  };
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>AI Costs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="animate-pulse space-y-4">
-            <div className="h-48 bg-muted rounded"></div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="animate-pulse">
+                <div className="h-4 bg-muted rounded w-24"></div>
+                <div className="h-8 bg-muted rounded w-16 mt-2"></div>
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-foreground">AI Cost Tracking</h2>
-        <p className="text-muted-foreground">Monitor AI API spending</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-foreground">AI Cost Tracking</h2>
+          <p className="text-muted-foreground">Monitor AI API spending</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={fetchCostData} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total AI Cost</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalCost.toFixed(4)}</div>
-            <p className="text-xs text-muted-foreground">All-time estimated</p>
+            <div className="text-2xl font-bold">
+              ${(summary?.totalCost || 0).toFixed(4)}
+            </div>
+            <p className="text-xs text-muted-foreground">All time</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Audio Cost</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Tokens</CardTitle>
+            <Cpu className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${audioStats.totalCost.toFixed(4)}</div>
-            <p className="text-xs text-muted-foreground">{audioStats.totalCharacters.toLocaleString()} characters</p>
+            <div className="text-2xl font-bold">
+              {(summary?.totalTokens || 0).toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">Input + Output</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">LLM Cost</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Cost/Lesson</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalAICost.toFixed(4)}</div>
-            <p className="text-xs text-muted-foreground">{costSummary.reduce((sum, item) => sum + item.total_calls, 0)} API calls</p>
+            <div className="text-2xl font-bold">
+              ${getAvgCostPerLesson()}
+            </div>
+            <p className="text-xs text-muted-foreground">Per differentiation</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Cost by Function */}
         <Card>
           <CardHeader>
-            <CardTitle>Cost Distribution</CardTitle>
-            <CardDescription>Breakdown by service</CardDescription>
+            <CardTitle>Cost by Function</CardTitle>
           </CardHeader>
           <CardContent>
-            {pieData.length > 0 ? (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value: number) => [`$${value.toFixed(4)}`, 'Cost']}
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+            {summary?.costByFunction.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">No cost data yet</p>
             ) : (
-              <div className="h-64 flex items-center justify-center text-muted-foreground">
-                No cost data available yet
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Function</TableHead>
+                    <TableHead>Calls</TableHead>
+                    <TableHead>Total Cost</TableHead>
+                    <TableHead>Avg/Call</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {summary?.costByFunction.map((func) => (
+                    <TableRow key={func.name}>
+                      <TableCell>
+                        <Badge variant="outline">{func.name}</Badge>
+                      </TableCell>
+                      <TableCell>{func.calls}</TableCell>
+                      <TableCell className="font-mono">
+                        ${func.cost.toFixed(4)}
+                      </TableCell>
+                      <TableCell className="font-mono">
+                        ${(func.cost / func.calls).toFixed(4)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
 
+        {/* Cost Trend */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent API Calls</CardTitle>
-            <CardDescription>Last 50 logged calls</CardDescription>
+            <CardTitle>Last 7 Days</CardTitle>
           </CardHeader>
           <CardContent>
-            {recentLogs.length > 0 ? (
-              <div className="max-h-64 overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Function</TableHead>
-                      <TableHead>Model</TableHead>
-                      <TableHead>Cost</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentLogs.slice(0, 10).map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell className="font-mono text-sm">{log.function_name}</TableCell>
-                        <TableCell className="text-sm">{log.model}</TableCell>
-                        <TableCell className="text-sm">${Number(log.estimated_cost).toFixed(6)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+            {summary?.costByDay.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">No data yet</p>
             ) : (
-              <div className="h-64 flex items-center justify-center text-muted-foreground">
-                No API calls logged yet
+              <div className="space-y-3">
+                {summary?.costByDay.map((day) => {
+                  const maxCost = Math.max(...(summary?.costByDay.map(d => d.cost) || [1]));
+                  return (
+                    <div key={day.date} className="flex items-center gap-3">
+                      <span className="text-sm w-24 text-muted-foreground">
+                        {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                      <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${(day.cost / maxCost) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-mono w-20 text-right">
+                        ${day.cost.toFixed(4)}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Audio Stats */}
+      {(summary?.audioCost || 0) > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Audio Generation (ElevenLabs)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Cost</p>
+                <p className="text-2xl font-bold">${summary?.audioCost.toFixed(4)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Characters Used</p>
+                <p className="text-2xl font-bold">{summary?.audioCharacters.toLocaleString()}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
