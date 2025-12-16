@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
@@ -14,9 +15,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from '@/i18n';
 import { LanguageSelector } from '@/components/LanguageSelector';
 
-// OAuth provider icons
+// OAuth provider icons with proper sizing for touch targets
 const GoogleIcon = () => (
-  <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+  <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
@@ -25,7 +26,7 @@ const GoogleIcon = () => (
 );
 
 const MicrosoftIcon = () => (
-  <svg className="h-5 w-5" viewBox="0 0 21 21" aria-hidden="true">
+  <svg className="h-5 w-5 shrink-0" viewBox="0 0 21 21" aria-hidden="true">
     <rect x="1" y="1" width="9" height="9" fill="#f25022" />
     <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
     <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
@@ -34,16 +35,43 @@ const MicrosoftIcon = () => (
 );
 
 const CanvasIcon = () => (
-  <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+  <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
     <circle cx="12" cy="12" r="10" fill="#E74C3C" />
     <path fill="white" d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" />
   </svg>
 );
 
+// Loading skeleton for initial session check
+const LoginSkeleton = () => (
+  <div className="min-h-screen gradient-hero flex items-center justify-center p-4">
+    <Card className="w-full max-w-md shadow-lg border-border">
+      <CardHeader className="space-y-4 pb-4">
+        <div className="flex flex-col items-center gap-2">
+          <Skeleton className="h-16 w-16 rounded-xl" />
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-3">
+          <Skeleton className="h-12 w-full rounded-md" />
+          <Skeleton className="h-12 w-full rounded-md" />
+          <Skeleton className="h-12 w-full rounded-md" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-12 w-full rounded-md" />
+          <Skeleton className="h-12 w-full rounded-md" />
+          <Skeleton className="h-12 w-full rounded-md" />
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
+
 export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { signInWithEmail, signInWithOAuth, loading: authLoading } = useAuth();
+  const { user, signInWithEmail, signInWithOAuth, loading: authLoading } = useAuth();
   const { checkSessionLimit, createSession } = useSessionManagement();
   const { t } = useTranslation();
 
@@ -51,8 +79,32 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const checkSession = async () => {
+      // Small delay to allow auth state to settle
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setIsCheckingSession(false);
+    };
+    checkSession();
+  }, []);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/');
+    }
+  }, [user, authLoading, navigate]);
+
+  // Show loading skeleton during initial session check
+  if (isCheckingSession || (authLoading && !isLoading)) {
+    return <LoginSkeleton />;
+  }
 
   const validateForm = (): boolean => {
     const result = signInSchema.safeParse({ email, password });
@@ -116,6 +168,10 @@ export default function Login() {
 
   const handleEmailLogin = async (e: FormEvent) => {
     e.preventDefault();
+    
+    // Prevent double submission
+    if (isLoading) return;
+    
     setFormError(null);
     
     if (!validateForm()) return;
@@ -197,14 +253,17 @@ export default function Login() {
   };
 
   const handleOAuthLogin = async (provider: 'google' | 'azure' | 'canvas') => {
-    setIsLoading(true);
+    // Prevent double submission
+    if (isLoading || oauthLoading) return;
+    
+    setOauthLoading(provider);
     setFormError(null);
     
     try {
       const { error } = await signInWithOAuth(provider);
-      setIsLoading(false);
-
+      
       if (error) {
+        setOauthLoading(null);
         const errorMessage = error.message?.toLowerCase() || '';
         
         if (errorMessage.includes('popup') || errorMessage.includes('blocked') || errorMessage.includes('window')) {
@@ -219,61 +278,122 @@ export default function Login() {
         
         setFormError(t('errors.serverError'));
       }
+      // Note: OAuth redirect will happen, so we don't reset loading state on success
     } catch (error) {
-      setIsLoading(false);
+      setOauthLoading(null);
       console.error('OAuth error:', error);
       setFormError(t('errors.serverError'));
     }
   };
 
-  const isFormLoading = isLoading || authLoading;
+  const isFormDisabled = isLoading || !!oauthLoading;
 
   return (
-    <div className="min-h-screen gradient-hero flex items-center justify-center p-4">
-      {/* Language Selector - Top Right */}
-      <div className="fixed top-4 right-4 z-50">
+    <div className="min-h-screen min-h-[100dvh] gradient-hero flex items-center justify-center p-4 sm:p-6">
+      {/* Language Selector - Top Right with proper touch target */}
+      <div className="fixed top-3 right-3 sm:top-4 sm:right-4 z-50">
         <LanguageSelector />
       </div>
 
-      <Card className="w-full max-w-md shadow-lg border-border">
-        <CardHeader className="space-y-4 pb-4">
+      <Card className="w-full max-w-md shadow-lg border-border animate-fade-in">
+        <CardHeader className="space-y-4 pb-4 px-4 sm:px-6">
           <div className="flex flex-col items-center gap-2">
-            <div className="p-3 rounded-xl bg-primary/10">
-              <svg className="h-10 w-10 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <div className="p-3 rounded-xl bg-primary/10 transition-transform duration-200 hover:scale-105">
+              <svg 
+                className="h-8 w-8 sm:h-10 sm:w-10 text-primary" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                aria-hidden="true"
+              >
                 <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
                 <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
               </svg>
             </div>
             <div className="text-center">
-              <h1 className="font-display font-bold text-2xl text-foreground">{t('login.title')}</h1>
+              <h1 className="font-display font-bold text-xl sm:text-2xl text-foreground">{t('login.title')}</h1>
               <p className="text-sm text-muted-foreground mt-1">{t('login.subtitle')}</p>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-6">
-          {formError && (
-            <Alert variant="destructive" role="alert" aria-live="polite" className="border-destructive/50 bg-destructive/10">
-              <AlertCircle className="h-4 w-4" aria-hidden="true" />
-              <AlertDescription className="font-medium">{formError}</AlertDescription>
-            </Alert>
-          )}
+        <CardContent className="space-y-5 sm:space-y-6 px-4 sm:px-6 pb-6">
+          {/* Error Alert with animation */}
+          <div 
+            className={`transition-all duration-300 ease-out ${
+              formError 
+                ? 'opacity-100 max-h-24 translate-y-0' 
+                : 'opacity-0 max-h-0 -translate-y-2 overflow-hidden'
+            }`}
+            role="alert"
+            aria-live="polite"
+          >
+            {formError && (
+              <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
+                <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <AlertDescription className="font-medium">{formError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
 
-          <div className="space-y-3">
-            <Button type="button" variant="outline" className="w-full h-12 gap-3 text-base font-medium focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" onClick={() => handleOAuthLogin('google')} disabled={isFormLoading} aria-label={t('login.continueWithGoogle')}>
-              <GoogleIcon />
-              {t('login.continueWithGoogle')}
+          {/* OAuth Buttons - Stack vertically on mobile, responsive sizing */}
+          <div className="space-y-2.5 sm:space-y-3">
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full min-h-[48px] h-12 gap-2.5 sm:gap-3 text-sm sm:text-base font-medium transition-all duration-200 hover:bg-muted/80 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60" 
+              onClick={() => handleOAuthLogin('google')} 
+              disabled={isFormDisabled} 
+              aria-label={t('login.continueWithGoogle')}
+              aria-busy={oauthLoading === 'google'}
+            >
+              {oauthLoading === 'google' ? (
+                <Loader2 className="h-5 w-5 animate-spin shrink-0" aria-hidden="true" />
+              ) : (
+                <GoogleIcon />
+              )}
+              <span className="truncate">{t('login.continueWithGoogle')}</span>
             </Button>
-            <Button type="button" variant="outline" className="w-full h-12 gap-3 text-base font-medium focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" onClick={() => handleOAuthLogin('azure')} disabled={isFormLoading} aria-label={t('login.continueWithMicrosoft')}>
-              <MicrosoftIcon />
-              {t('login.continueWithMicrosoft')}
+            
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full min-h-[48px] h-12 gap-2.5 sm:gap-3 text-sm sm:text-base font-medium transition-all duration-200 hover:bg-muted/80 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60" 
+              onClick={() => handleOAuthLogin('azure')} 
+              disabled={isFormDisabled} 
+              aria-label={t('login.continueWithMicrosoft')}
+              aria-busy={oauthLoading === 'azure'}
+            >
+              {oauthLoading === 'azure' ? (
+                <Loader2 className="h-5 w-5 animate-spin shrink-0" aria-hidden="true" />
+              ) : (
+                <MicrosoftIcon />
+              )}
+              <span className="truncate">{t('login.continueWithMicrosoft')}</span>
             </Button>
-            <Button type="button" variant="outline" className="w-full h-12 gap-3 text-base font-medium focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" onClick={() => handleOAuthLogin('canvas')} disabled={isFormLoading} aria-label={t('login.continueWithCanvas')}>
-              <CanvasIcon />
-              {t('login.continueWithCanvas')}
+            
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full min-h-[48px] h-12 gap-2.5 sm:gap-3 text-sm sm:text-base font-medium transition-all duration-200 hover:bg-muted/80 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60" 
+              onClick={() => handleOAuthLogin('canvas')} 
+              disabled={isFormDisabled} 
+              aria-label={t('login.continueWithCanvas')}
+              aria-busy={oauthLoading === 'canvas'}
+            >
+              {oauthLoading === 'canvas' ? (
+                <Loader2 className="h-5 w-5 animate-spin shrink-0" aria-hidden="true" />
+              ) : (
+                <CanvasIcon />
+              )}
+              <span className="truncate">{t('login.continueWithCanvas')}</span>
             </Button>
           </div>
 
+          {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-border" />
@@ -283,50 +403,145 @@ export default function Login() {
             </div>
           </div>
 
-          <form onSubmit={handleEmailLogin} className="space-y-4">
+          {/* Email/Password Form */}
+          <form onSubmit={handleEmailLogin} className="space-y-4" noValidate>
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium text-foreground">{t('common.email')}</Label>
+              <Label 
+                htmlFor="email" 
+                className="text-sm font-medium text-foreground"
+              >
+                {t('common.email')}
+              </Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" aria-hidden="true" />
-                <Input id="email" type="email" placeholder={t('login.emailPlaceholder')} value={email} onChange={(e) => setEmail(e.target.value)} className={`pl-10 h-12 text-base focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${errors.email ? 'border-destructive' : ''}`} disabled={isFormLoading} autoComplete="email" aria-invalid={!!errors.email} aria-describedby={errors.email ? 'email-error' : undefined} />
+                <Mail 
+                  className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" 
+                  aria-hidden="true" 
+                />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  inputMode="email"
+                  placeholder={t('login.emailPlaceholder')} 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  className={`pl-10 min-h-[48px] h-12 text-base transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
+                  disabled={isFormDisabled} 
+                  autoComplete="email" 
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
+                  aria-invalid={!!errors.email} 
+                  aria-describedby={errors.email ? 'email-error' : undefined} 
+                />
               </div>
-              {errors.email && <p id="email-error" className="text-sm text-destructive" role="alert">{errors.email}</p>}
+              <div 
+                className={`transition-all duration-200 ${errors.email ? 'opacity-100 max-h-8' : 'opacity-0 max-h-0 overflow-hidden'}`}
+              >
+                {errors.email && (
+                  <p id="email-error" className="text-sm text-destructive" role="alert">
+                    {errors.email}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium text-foreground">{t('common.password')}</Label>
+              <Label 
+                htmlFor="password" 
+                className="text-sm font-medium text-foreground"
+              >
+                {t('common.password')}
+              </Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" aria-hidden="true" />
-                <Input id="password" type={showPassword ? 'text' : 'password'} placeholder={t('login.passwordPlaceholder')} value={password} onChange={(e) => setPassword(e.target.value)} className={`pl-10 pr-12 h-12 text-base focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${errors.password ? 'border-destructive' : ''}`} disabled={isFormLoading} autoComplete="current-password" aria-invalid={!!errors.password} aria-describedby={errors.password ? 'password-error' : undefined} />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" aria-label={showPassword ? t('accessibility.hidePassword') : t('accessibility.showPassword')} tabIndex={0}>
-                  {showPassword ? <EyeOff className="h-5 w-5" aria-hidden="true" /> : <Eye className="h-5 w-5" aria-hidden="true" />}
+                <Lock 
+                  className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" 
+                  aria-hidden="true" 
+                />
+                <Input 
+                  id="password" 
+                  type={showPassword ? 'text' : 'password'} 
+                  placeholder={t('login.passwordPlaceholder')} 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  className={`pl-10 pr-12 min-h-[48px] h-12 text-base transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
+                  disabled={isFormDisabled} 
+                  autoComplete="current-password" 
+                  aria-invalid={!!errors.password} 
+                  aria-describedby={errors.password ? 'password-error' : undefined} 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)} 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-95" 
+                  aria-label={showPassword ? t('accessibility.hidePassword') : t('accessibility.showPassword')} 
+                  aria-pressed={showPassword}
+                  tabIndex={0}
+                >
+                  <span className="sr-only">{showPassword ? t('accessibility.hidePassword') : t('accessibility.showPassword')}</span>
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5 transition-transform duration-200" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-5 w-5 transition-transform duration-200" aria-hidden="true" />
+                  )}
                 </button>
               </div>
-              {errors.password && <p id="password-error" className="text-sm text-destructive" role="alert">{errors.password}</p>}
+              <div 
+                className={`transition-all duration-200 ${errors.password ? 'opacity-100 max-h-8' : 'opacity-0 max-h-0 overflow-hidden'}`}
+              >
+                {errors.password && (
+                  <p id="password-error" className="text-sm text-destructive" role="alert">
+                    {errors.password}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="flex justify-end">
-              <Link to="/forgot-password" className="text-sm text-primary hover:text-primary/80 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">{t('login.forgotPassword')}</Link>
+              <Link 
+                to="/forgot-password" 
+                className="text-sm text-primary hover:text-primary/80 font-medium py-1 px-1 -mx-1 rounded-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              >
+                {t('login.forgotPassword')}
+              </Link>
             </div>
 
-            <Button type="submit" className="w-full h-12 text-base font-semibold focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" disabled={isFormLoading}>
-              {isFormLoading ? (
+            <Button 
+              type="submit" 
+              className="w-full min-h-[48px] h-12 text-base font-semibold transition-all duration-200 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60" 
+              disabled={isFormDisabled}
+              aria-busy={isLoading}
+            >
+              {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" />
-                  {t('login.signingIn')}
+                  <span>{t('login.signingIn')}</span>
                 </>
-              ) : t('login.loginButton')}
+              ) : (
+                t('login.loginButton')
+              )}
             </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
             {t('login.noAccount')}{' '}
-            <Link to="/register" className="text-primary hover:text-primary/80 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm">{t('login.signUp')}</Link>
+            <Link 
+              to="/register" 
+              className="text-primary hover:text-primary/80 font-medium py-1 px-1 -mx-1 rounded-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              {t('login.signUp')}
+            </Link>
           </p>
         </CardContent>
       </Card>
 
-      <div id="form-error" className="sr-only" aria-live="assertive">{formError}</div>
+      {/* Screen reader announcements */}
+      <div className="sr-only" aria-live="assertive" aria-atomic="true">
+        {formError}
+      </div>
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {isLoading && t('login.signingIn')}
+        {oauthLoading && `${t('common.loading')}`}
+      </div>
     </div>
   );
 }
