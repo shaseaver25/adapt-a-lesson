@@ -974,11 +974,14 @@ export async function exportStudentHandoutsDocx(
         properties: {
           page: {
             size: {
+              // LANDSCAPE: width > height (11" x 8.5")
               orientation: PageOrientation.LANDSCAPE,
+              width: convertInchesToTwip(11),
+              height: convertInchesToTwip(8.5),
             },
             margin: {
-              top: convertInchesToTwip(0.75),
-              bottom: convertInchesToTwip(0.5),
+              top: convertInchesToTwip(1.0),
+              bottom: convertInchesToTwip(0.75),
               left: convertInchesToTwip(0.5),
               right: convertInchesToTwip(0.5),
             },
@@ -1588,7 +1591,55 @@ export interface BilingualDocumentConfig {
 }
 
 /**
- * Create a side-by-side bilingual table for DOCX
+ * Border helper functions for bilingual table styling
+ */
+function noBorders() {
+  return {
+    top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  };
+}
+
+function leftColumnBorders() {
+  return {
+    top: { style: BorderStyle.SINGLE, size: 4, color: 'E5E7EB' },
+    bottom: { style: BorderStyle.SINGLE, size: 4, color: 'E5E7EB' },
+    left: { style: BorderStyle.SINGLE, size: 8, color: 'D97706' },
+    right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  };
+}
+
+function rightColumnBorders() {
+  return {
+    top: { style: BorderStyle.SINGLE, size: 4, color: 'E5E7EB' },
+    bottom: { style: BorderStyle.SINGLE, size: 4, color: 'E5E7EB' },
+    left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    right: { style: BorderStyle.SINGLE, size: 8, color: '1E40AF' },
+  };
+}
+
+function gutterBorders() {
+  return {
+    top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    left: { style: BorderStyle.DASHED, size: 4, color: 'D1D5DB' },
+    right: { style: BorderStyle.DASHED, size: 4, color: 'D1D5DB' },
+  };
+}
+
+function cellMargins() {
+  return {
+    top: convertInchesToTwip(0.1),
+    bottom: convertInchesToTwip(0.1),
+    left: convertInchesToTwip(0.15),
+    right: convertInchesToTwip(0.15),
+  };
+}
+
+/**
+ * Create a side-by-side bilingual table for DOCX with 3-column layout (home language LEFT, gutter, English RIGHT)
  */
 async function createBilingualContentTable(
   englishContent: string,
@@ -1601,11 +1652,12 @@ async function createBilingualContentTable(
   
   const rows: TableRow[] = [];
   
-  // Header row with language labels
+  // Header row with language labels - HOME LANGUAGE LEFT, ENGLISH RIGHT
   rows.push(
     new TableRow({
       tableHeader: true,
       children: [
+        // LEFT COLUMN: Home Language
         new TableCell({
           children: [
             new Paragraph({
@@ -1615,15 +1667,24 @@ async function createBilingualContentTable(
                   bold: true,
                   size: 24,
                   font: 'Arial',
+                  color: 'FFFFFF',
                 }),
               ],
               alignment: AlignmentType.CENTER,
             }),
           ],
           width: { size: 48, type: WidthType.PERCENTAGE },
-          shading: { fill: 'E8F4FD' },
-          margins: { top: 100, bottom: 100, left: 100, right: 100 },
+          shading: { fill: 'D97706' }, // Amber background
+          margins: cellMargins(),
         }),
+        // GUTTER (thin middle column)
+        new TableCell({
+          children: [new Paragraph({ text: '' })],
+          width: { size: 4, type: WidthType.PERCENTAGE },
+          borders: noBorders(),
+          shading: { fill: 'F3F4F6' },
+        }),
+        // RIGHT COLUMN: English
         new TableCell({
           children: [
             new Paragraph({
@@ -1633,20 +1694,21 @@ async function createBilingualContentTable(
                   bold: true,
                   size: 24,
                   font: 'Arial',
+                  color: 'FFFFFF',
                 }),
               ],
               alignment: AlignmentType.CENTER,
             }),
           ],
           width: { size: 48, type: WidthType.PERCENTAGE },
-          shading: { fill: 'F5F5F5' },
-          margins: { top: 100, bottom: 100, left: 100, right: 100 },
+          shading: { fill: '1E40AF' }, // Blue background
+          margins: cellMargins(),
         }),
       ],
     })
   );
   
-  // Content rows - aligned line by line
+  // Content rows - aligned line by line with gutter
   for (let i = 0; i < maxLines; i++) {
     const homeText = homeLanguageLines[i] || '';
     const engText = englishLines[i] || '';
@@ -1654,6 +1716,7 @@ async function createBilingualContentTable(
     rows.push(
       new TableRow({
         children: [
+          // LEFT: Home Language content
           new TableCell({
             children: [
               new Paragraph({
@@ -1667,8 +1730,18 @@ async function createBilingualContentTable(
               }),
             ],
             width: { size: 48, type: WidthType.PERCENTAGE },
-            margins: { top: 80, bottom: 80, left: 100, right: 100 },
+            borders: leftColumnBorders(),
+            margins: cellMargins(),
+            shading: { fill: 'FFFBEB' }, // Light amber tint
           }),
+          // GUTTER
+          new TableCell({
+            children: [new Paragraph({ text: '' })],
+            width: { size: 4, type: WidthType.PERCENTAGE },
+            borders: gutterBorders(),
+            shading: { fill: 'F3F4F6' },
+          }),
+          // RIGHT: English content
           new TableCell({
             children: [
               new Paragraph({
@@ -1682,7 +1755,9 @@ async function createBilingualContentTable(
               }),
             ],
             width: { size: 48, type: WidthType.PERCENTAGE },
-            margins: { top: 80, bottom: 80, left: 100, right: 100 },
+            borders: rightColumnBorders(),
+            margins: cellMargins(),
+            shading: { fill: 'EFF6FF' }, // Light blue tint
           }),
         ],
       })
@@ -1692,14 +1767,6 @@ async function createBilingualContentTable(
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     rows,
-    borders: {
-      top: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
-      bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
-      left: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
-      right: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
-      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'E5E5E5' },
-      insideVertical: { style: BorderStyle.SINGLE, size: 2, color: 'CCCCCC' },
-    },
   });
 }
 
@@ -1903,7 +1970,8 @@ async function createBilingualQRHeader(
 }
 
 /**
- * Export bilingual student handout as landscape DOCX with side-by-side layout
+ * Export bilingual student handout as LANDSCAPE DOCX with side-by-side 3-column layout
+ * Home language on LEFT (amber), gutter in middle, English on RIGHT (blue)
  */
 export async function exportBilingualHandoutDocx(
   sections: BilingualSection[],
@@ -1912,7 +1980,7 @@ export async function exportBilingualHandoutDocx(
 ): Promise<void> {
   const children: (Paragraph | Table)[] = [];
   
-  // Title
+  // Title with reading level
   children.push(
     new Paragraph({
       children: [
@@ -1922,26 +1990,17 @@ export async function exportBilingualHandoutDocx(
           size: 36,
           font: 'Arial',
         }),
+        ...(config.readingLevel ? [
+          new TextRun({
+            text: `  •  ${config.readingLevel} Edition`,
+            size: 28,
+            font: 'Arial',
+            color: 'D97706',
+          }),
+        ] : []),
       ],
       alignment: AlignmentType.CENTER,
-      spacing: { after: 100 },
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: `${config.groupName}`,
-          size: 24,
-          font: 'Arial',
-        }),
-        config.readingLevel ? new TextRun({
-          text: ` • ${config.readingLevel}`,
-          size: 22,
-          font: 'Arial',
-          italics: true,
-        }) : new TextRun({ text: '' }),
-      ],
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 200 },
+      spacing: { after: 150 },
     }),
     new Paragraph({
       children: [
@@ -1953,13 +2012,26 @@ export async function exportBilingualHandoutDocx(
         }),
       ],
       alignment: AlignmentType.CENTER,
-      spacing: { after: 300 },
+      spacing: { after: 250 },
     })
   );
   
   // Add QR codes header at TOP
   const qrHeader = await createBilingualQRHeader(sections, config.homeLanguage);
   children.push(...qrHeader);
+  
+  // Divider line after QR codes
+  children.push(
+    new Paragraph({
+      border: {
+        bottom: { style: BorderStyle.SINGLE, size: 12, color: 'D97706' },
+      },
+      spacing: { after: 250 },
+    })
+  );
+  
+  // Student info row (Name, Date, Period)
+  children.push(generateStudentInfoRow());
   
   // Add each section with side-by-side layout
   for (const section of sections) {
@@ -1981,7 +2053,7 @@ export async function exportBilingualHandoutDocx(
       })
     );
     
-    // Side-by-side content table
+    // Side-by-side content table with 3 columns (home lang LEFT, gutter, English RIGHT)
     const contentTable = await createBilingualContentTable(
       section.englishContent,
       section.homeLanguageContent,
@@ -1999,11 +2071,14 @@ export async function exportBilingualHandoutDocx(
         properties: {
           page: {
             size: {
+              // LANDSCAPE: width > height (11" x 8.5")
               orientation: PageOrientation.LANDSCAPE,
+              width: convertInchesToTwip(11),
+              height: convertInchesToTwip(8.5),
             },
             margin: {
-              top: convertInchesToTwip(0.75),
-              bottom: convertInchesToTwip(0.5),
+              top: convertInchesToTwip(1.0),   // Extra space for QR header
+              bottom: convertInchesToTwip(0.75),
               left: convertInchesToTwip(0.5),
               right: convertInchesToTwip(0.5),
             },
@@ -2030,54 +2105,6 @@ export interface AlignedRow {
   english: { text: string; lineCount: number };
   alignedLineCount: number;
   drawingHeight?: number;
-}
-
-/**
- * Border helper functions for enhanced styling
- */
-function noBorders() {
-  return {
-    top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-    bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-    left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-    right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-  };
-}
-
-function leftColumnBorders() {
-  return {
-    top: { style: BorderStyle.SINGLE, size: 4, color: 'E5E7EB' },
-    bottom: { style: BorderStyle.SINGLE, size: 4, color: 'E5E7EB' },
-    left: { style: BorderStyle.SINGLE, size: 8, color: 'D97706' },
-    right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-  };
-}
-
-function rightColumnBorders() {
-  return {
-    top: { style: BorderStyle.SINGLE, size: 4, color: 'E5E7EB' },
-    bottom: { style: BorderStyle.SINGLE, size: 4, color: 'E5E7EB' },
-    left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-    right: { style: BorderStyle.SINGLE, size: 8, color: '1E40AF' },
-  };
-}
-
-function gutterBorders() {
-  return {
-    top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-    bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-    left: { style: BorderStyle.DASHED, size: 4, color: 'D1D5DB' },
-    right: { style: BorderStyle.DASHED, size: 4, color: 'D1D5DB' },
-  };
-}
-
-function cellMargins() {
-  return {
-    top: convertInchesToTwip(0.1),
-    bottom: convertInchesToTwip(0.1),
-    left: convertInchesToTwip(0.15),
-    right: convertInchesToTwip(0.15),
-  };
 }
 
 /**
@@ -2679,7 +2706,7 @@ export async function exportBilingualAssignmentDocx(
 }
 
 /**
- * Create aligned bilingual table from pre-aligned content (legacy support)
+ * Create aligned bilingual table from pre-aligned content with 3-column layout (home lang LEFT, gutter, English RIGHT)
  */
 async function createAlignedBilingualTable(
   rows: AlignedRow[],
@@ -2687,11 +2714,12 @@ async function createAlignedBilingualTable(
 ): Promise<Table> {
   const tableRows: TableRow[] = [];
 
-  // Header row
+  // Header row with color-coded columns - HOME LANGUAGE LEFT, ENGLISH RIGHT
   tableRows.push(
     new TableRow({
       tableHeader: true,
       children: [
+        // LEFT: Home Language
         new TableCell({
           children: [
             new Paragraph({
@@ -2701,15 +2729,24 @@ async function createAlignedBilingualTable(
                   bold: true,
                   size: 24,
                   font: 'Arial',
+                  color: 'FFFFFF',
                 }),
               ],
               alignment: AlignmentType.CENTER,
             }),
           ],
           width: { size: 48, type: WidthType.PERCENTAGE },
-          shading: { fill: 'E8F4FD' },
-          margins: { top: 100, bottom: 100, left: 100, right: 100 },
+          shading: { fill: 'D97706' }, // Amber
+          margins: cellMargins(),
         }),
+        // GUTTER
+        new TableCell({
+          children: [new Paragraph({ text: '' })],
+          width: { size: 4, type: WidthType.PERCENTAGE },
+          borders: noBorders(),
+          shading: { fill: 'F3F4F6' },
+        }),
+        // RIGHT: English
         new TableCell({
           children: [
             new Paragraph({
@@ -2719,14 +2756,15 @@ async function createAlignedBilingualTable(
                   bold: true,
                   size: 24,
                   font: 'Arial',
+                  color: 'FFFFFF',
                 }),
               ],
               alignment: AlignmentType.CENTER,
             }),
           ],
           width: { size: 48, type: WidthType.PERCENTAGE },
-          shading: { fill: 'F5F5F5' },
-          margins: { top: 100, bottom: 100, left: 100, right: 100 },
+          shading: { fill: '1E40AF' }, // Blue
+          margins: cellMargins(),
         }),
       ],
     })
@@ -2742,6 +2780,7 @@ async function createAlignedBilingualTable(
     tableRows.push(
       new TableRow({
         children: [
+          // LEFT: Home Language column
           new TableCell({
             children: [
               new Paragraph({
@@ -2756,12 +2795,18 @@ async function createAlignedBilingualTable(
               }),
             ],
             width: { size: 48, type: WidthType.PERCENTAGE },
-            margins: { top: 80, bottom: 80, left: 100, right: 100 },
-            shading: isAnswerSpace ? { fill: 'FAFAFA' } : undefined,
-            borders: isAnswerSpace
-              ? { bottom: { style: BorderStyle.DASHED, size: 1, color: '999999' } }
-              : undefined,
+            borders: leftColumnBorders(),
+            margins: cellMargins(),
+            shading: isAnswerSpace ? { fill: 'FAFAFA' } : { fill: 'FFFBEB' },
           }),
+          // GUTTER
+          new TableCell({
+            children: [new Paragraph({ text: '' })],
+            width: { size: 4, type: WidthType.PERCENTAGE },
+            borders: gutterBorders(),
+            shading: { fill: 'F3F4F6' },
+          }),
+          // RIGHT: English column
           new TableCell({
             children: [
               new Paragraph({
@@ -2776,11 +2821,9 @@ async function createAlignedBilingualTable(
               }),
             ],
             width: { size: 48, type: WidthType.PERCENTAGE },
-            margins: { top: 80, bottom: 80, left: 100, right: 100 },
-            shading: isAnswerSpace ? { fill: 'FAFAFA' } : undefined,
-            borders: isAnswerSpace
-              ? { bottom: { style: BorderStyle.DASHED, size: 1, color: '999999' } }
-              : undefined,
+            borders: rightColumnBorders(),
+            margins: cellMargins(),
+            shading: isAnswerSpace ? { fill: 'FAFAFA' } : { fill: 'EFF6FF' },
           }),
         ],
         height: { value: minHeight, rule: 'atLeast' as any },
@@ -2791,14 +2834,6 @@ async function createAlignedBilingualTable(
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     rows: tableRows,
-    borders: {
-      top: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
-      bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
-      left: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
-      right: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
-      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'E5E5E5' },
-      insideVertical: { style: BorderStyle.SINGLE, size: 2, color: 'CCCCCC' },
-    },
   });
 }
 
@@ -2873,11 +2908,14 @@ export async function exportAlignedBilingualDocx(
         properties: {
           page: {
             size: {
+              // LANDSCAPE: width > height (11" x 8.5")
               orientation: PageOrientation.LANDSCAPE,
+              width: convertInchesToTwip(11),
+              height: convertInchesToTwip(8.5),
             },
             margin: {
-              top: convertInchesToTwip(0.75),
-              bottom: convertInchesToTwip(0.5),
+              top: convertInchesToTwip(1.0),
+              bottom: convertInchesToTwip(0.75),
               left: convertInchesToTwip(0.5),
               right: convertInchesToTwip(0.5),
             },
