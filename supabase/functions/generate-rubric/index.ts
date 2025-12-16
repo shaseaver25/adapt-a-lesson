@@ -259,11 +259,25 @@ Format as a markdown table with clear descriptions for each cell.${hasAutoVerifi
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
-    const data = await response.json();
+    // Handle potentially empty or malformed response
+    let data;
+    try {
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        throw new Error("Empty response from AI gateway");
+      }
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', parseError);
+      const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown parse error';
+      throw new Error(`Failed to parse AI response: ${errorMsg}`);
+    }
+
     let rubric = data.choices?.[0]?.message?.content;
 
     if (!rubric) {
-      throw new Error("No rubric generated");
+      console.error('AI response structure:', JSON.stringify(data).substring(0, 500));
+      throw new Error("No rubric generated from AI");
     }
 
     // Append the Authenticity Verification Guide for teacher use

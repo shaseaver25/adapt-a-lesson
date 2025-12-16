@@ -115,7 +115,19 @@ serve(async (req) => {
       throw new Error(`Image generation failed: ${response.status}`);
     }
 
-    const data = await response.json();
+    // Handle potentially empty or malformed response
+    let data;
+    try {
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        throw new Error("Empty response from image API");
+      }
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse image API response:', parseError);
+      const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown parse error';
+      throw new Error(`Failed to parse image API response: ${errorMsg}`);
+    }
     console.log("Nano Banana response received");
 
     // Extract the image from the response
