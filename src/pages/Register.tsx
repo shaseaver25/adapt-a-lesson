@@ -95,7 +95,10 @@ export default function Register() {
 
     setIsLoading(true);
 
-    const { error } = await signUpWithEmail(email, password);
+    // Normalize email to lowercase for case-insensitive login
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    const { error } = await signUpWithEmail(normalizedEmail, password);
 
     setIsLoading(false);
 
