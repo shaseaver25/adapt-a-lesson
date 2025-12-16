@@ -23,7 +23,7 @@ export const LANGUAGES: LanguageOption[] = [
   { code: 'so', name: 'Somali', nativeName: 'Soomaali' },
 ];
 
-const translations: Record<Language, typeof en> = {
+const translations: Record<Language, Record<string, unknown>> = {
   en,
   es,
   zh,
@@ -36,7 +36,7 @@ const STORAGE_KEY = 'preferred-language';
 interface I18nContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: string) => string;
+  t: (key: string, params?: Record<string, string>) => string;
 }
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
@@ -98,8 +98,14 @@ export function I18nProvider({ children }: I18nProviderProps) {
     document.documentElement.lang = language;
   }, [language]);
 
-  const t = useCallback((key: string): string => {
-    return getNestedValue(translations[language] as unknown as Record<string, unknown>, key);
+  const t = useCallback((key: string, params?: Record<string, string>): string => {
+    let result = getNestedValue(translations[language] as unknown as Record<string, unknown>, key);
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        result = result.replace(new RegExp(`{{${k}}}`, 'g'), v);
+      });
+    }
+    return result;
   }, [language]);
 
   return (

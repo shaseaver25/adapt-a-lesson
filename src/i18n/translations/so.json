@@ -6,7 +6,9 @@
     "newPassword": "Eray sir cusub",
     "confirmNewPassword": "Xaqiiji erayga sirta cusub",
     "loading": "Waa la soo rarayaa...",
-    "or": "ama"
+    "or": "ama",
+    "error": "Khalad",
+    "back": "Dib u noqo"
   },
   "login": {
     "title": "Authentic Learning Studio",
@@ -78,5 +80,27 @@
     "showPassword": "Muuji erayga sirta ah",
     "hidePassword": "Qari erayga sirta ah",
     "languageSelector": "Dooro luqadda"
+  },
+  "sessions": {
+    "title": "Kulannada Firfircoon",
+    "description": "Maamul aaladaha aad ka gasho. Waxaad ka saari kartaa aaladaha kale.",
+    "currentSession": "Kulanka Hadda",
+    "currentSessionDesc": "Tani waa aaladda aad hadda isticmaalayso",
+    "thisDevice": "Aaladdan",
+    "otherSessions": "Kulannada Kale",
+    "otherSessionsCount": "{{count}} kulan kale oo firfircoon",
+    "noOtherSessions": "Ma jiraan kulamo kale oo firfircoon",
+    "onlyThisDevice": "Aaladdan keliya ayaad ka gashay",
+    "unknownDevice": "Aalad aan la aqoon",
+    "lastActive": "Markii ugu dambeysay ee firfircoonayd",
+    "logOutAll": "Ka bax dhammaan",
+    "removeSession": "Ka saar kulanka",
+    "sessionRemoved": "Kulanka waa la saaray",
+    "sessionRemovedDesc": "Aaladda waa la ka saaray",
+    "removeError": "Lama saari karo kulanka",
+    "allSessionsRemoved": "Dhammaan kulannada waa la saaray",
+    "allSessionsRemovedDesc": "Dhammaan aaladaha kale waa la ka saaray",
+    "removeAllError": "Lama saari karo kulannada",
+    "signOut": "Ka bax aaladdan"
   }
 }

@@ -6,7 +6,9 @@
     "newPassword": "新密码",
     "confirmNewPassword": "确认新密码",
     "loading": "加载中...",
-    "or": "或"
+    "or": "或",
+    "error": "错误",
+    "back": "返回"
   },
   "login": {
     "title": "Authentic Learning Studio",
@@ -78,5 +80,27 @@
     "showPassword": "显示密码",
     "hidePassword": "隐藏密码",
     "languageSelector": "选择语言"
+  },
+  "sessions": {
+    "title": "活跃会话",
+    "description": "管理您已登录的设备。您可以远程注销其他设备。",
+    "currentSession": "当前会话",
+    "currentSessionDesc": "这是您正在使用的设备",
+    "thisDevice": "此设备",
+    "otherSessions": "其他会话",
+    "otherSessionsCount": "{{count}} 个其他活跃会话",
+    "noOtherSessions": "没有其他活跃会话",
+    "onlyThisDevice": "您只在此设备上登录",
+    "unknownDevice": "未知设备",
+    "lastActive": "最后活跃",
+    "logOutAll": "全部注销",
+    "removeSession": "移除会话",
+    "sessionRemoved": "会话已移除",
+    "sessionRemovedDesc": "该设备已被注销",
+    "removeError": "移除会话失败",
+    "allSessionsRemoved": "所有会话已移除",
+    "allSessionsRemovedDesc": "所有其他设备已被注销",
+    "removeAllError": "移除会话失败",
+    "signOut": "注销此设备"
   }
 }

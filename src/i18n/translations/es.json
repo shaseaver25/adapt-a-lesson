@@ -6,7 +6,9 @@
     "newPassword": "Nueva contraseña",
     "confirmNewPassword": "Confirmar nueva contraseña",
     "loading": "Cargando...",
-    "or": "o"
+    "or": "o",
+    "error": "Error",
+    "back": "Volver"
   },
   "login": {
     "title": "Authentic Learning Studio",
@@ -78,5 +80,27 @@
     "showPassword": "Mostrar contraseña",
     "hidePassword": "Ocultar contraseña",
     "languageSelector": "Seleccionar idioma"
+  },
+  "sessions": {
+    "title": "Sesiones Activas",
+    "description": "Administra los dispositivos donde has iniciado sesión. Puedes cerrar sesión en otros dispositivos de forma remota.",
+    "currentSession": "Sesión Actual",
+    "currentSessionDesc": "Este es el dispositivo que estás usando ahora",
+    "thisDevice": "Este dispositivo",
+    "otherSessions": "Otras Sesiones",
+    "otherSessionsCount": "{{count}} otra(s) sesión(es) activa(s)",
+    "noOtherSessions": "No hay otras sesiones activas",
+    "onlyThisDevice": "Solo has iniciado sesión en este dispositivo",
+    "unknownDevice": "Dispositivo desconocido",
+    "lastActive": "Última actividad",
+    "logOutAll": "Cerrar todas",
+    "removeSession": "Eliminar sesión",
+    "sessionRemoved": "Sesión eliminada",
+    "sessionRemovedDesc": "El dispositivo ha sido desconectado",
+    "removeError": "Error al eliminar la sesión",
+    "allSessionsRemoved": "Todas las sesiones eliminadas",
+    "allSessionsRemovedDesc": "Todos los otros dispositivos han sido desconectados",
+    "removeAllError": "Error al eliminar las sesiones",
+    "signOut": "Cerrar sesión en este dispositivo"
   }
 }
