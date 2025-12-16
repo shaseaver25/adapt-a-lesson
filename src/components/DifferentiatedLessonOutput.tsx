@@ -135,9 +135,17 @@ export function DifferentiatedLessonOutput({
   // Auto-generate images when content has visuals and no images exist yet
   // Reset when lesson content changes
   useEffect(() => {
+    console.log('Image auto-gen check:', {
+      contentHasVisuals,
+      imageMapSize: imageMap.size,
+      isGeneratingImages,
+      lessonContentId,
+      attempted: autoGenerationAttempted.current,
+    });
+    
     if (contentHasVisuals && imageMap.size === 0 && !isGeneratingImages && autoGenerationAttempted.current !== lessonContentId) {
       autoGenerationAttempted.current = lessonContentId;
-      console.log('Auto-generating diagrams for lesson content...', lessonContentId);
+      console.log('Starting auto-generation for:', lessonContentId);
       handleGenerateDiagrams();
     }
   }, [contentHasVisuals, imageMap.size, isGeneratingImages, handleGenerateDiagrams, lessonContentId]);
@@ -290,6 +298,7 @@ export function DifferentiatedLessonOutput({
                 getGroupContent={getGroupContent}
                 getGroupEnglishContent={getGroupEnglishContent}
                 imageMap={imageMap}
+                isGeneratingImages={isGeneratingImages}
               />
             </div>
           </div>

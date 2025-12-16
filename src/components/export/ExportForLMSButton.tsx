@@ -8,10 +8,11 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { Download, FileCode, FolderArchive, ChevronDown, Loader2, Languages } from 'lucide-react';
+import { Download, FileCode, FolderArchive, ChevronDown, Loader2, Languages, AlertTriangle } from 'lucide-react';
 import { downloadGroupHTML, downloadAllAsZip } from '@/lib/export/htmlExporter';
 import { useToast } from '@/hooks/use-toast';
 import type { StudentGroup } from '@/types/studentGroup';
+import { extractVisualDescriptions } from '@/lib/imageGeneration';
 
 interface ExportForLMSButtonProps {
   groups: (StudentGroup & { id: string })[];
@@ -19,6 +20,7 @@ interface ExportForLMSButtonProps {
   getGroupContent: (groupName: string) => string;
   getGroupEnglishContent?: (groupName: string) => string;
   imageMap?: Map<string, string>;
+  isGeneratingImages?: boolean;
 }
 
 export function ExportForLMSButton({
@@ -26,7 +28,8 @@ export function ExportForLMSButton({
   lessonTitle,
   getGroupContent,
   getGroupEnglishContent,
-  imageMap
+  imageMap,
+  isGeneratingImages = false
 }: ExportForLMSButtonProps) {
   const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
@@ -39,13 +42,39 @@ export function ExportForLMSButton({
     'Advanced': 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400'
   };
 
+  // Check if content has visuals but no images generated
+  const checkForMissingImages = () => {
+    const allContent = groups.map(g => getGroupContent(g.groupName)).join('\n');
+    const visualDescriptions = extractVisualDescriptions(allContent);
+    const hasVisuals = visualDescriptions.length > 0;
+    const hasImages = imageMap && imageMap.size > 0;
+    return hasVisuals && !hasImages;
+  };
+
   const handleExportSingle = (group: StudentGroup & { id: string }) => {
+    if (isGeneratingImages) {
+      toast({
+        title: 'Please wait',
+        description: 'Images are still being generated. Wait for completion before exporting.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const hasMissingImages = checkForMissingImages();
+    if (hasMissingImages) {
+      toast({
+        title: 'Images not ready',
+        description: 'Diagrams are still generating. Export will show placeholders instead of images.',
+      });
+    }
+
     try {
       const content = getGroupContent(group.groupName);
       const englishContent = getGroupEnglishContent?.(group.groupName);
       const isBilingual = group.homeLanguage !== 'English' && englishContent;
       
-      console.log('Export - Group:', group.groupName, 'Content length:', content?.length, 'English length:', englishContent?.length);
+      console.log('Export - Group:', group.groupName, 'Content length:', content?.length, 'English length:', englishContent?.length, 'Images:', imageMap?.size || 0);
       
       if (!content || content.trim().length === 0) {
         toast({
@@ -75,6 +104,23 @@ export function ExportForLMSButton({
   };
 
   const handleExportAll = async () => {
+    if (isGeneratingImages) {
+      toast({
+        title: 'Please wait',
+        description: 'Images are still being generated. Wait for completion before exporting.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const hasMissingImages = checkForMissingImages();
+    if (hasMissingImages) {
+      toast({
+        title: 'Images not ready',
+        description: 'Diagrams are still generating. Export will show placeholders instead of images.',
+      });
+    }
+
     setExporting(true);
     try {
       const groupContents = groups.map(group => ({
