@@ -1,12 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { QrCode, Volume2, ChevronDown, ChevronUp } from 'lucide-react';
-import { BilingualAudioPlayer, type SectionAudio } from '@/components/BilingualAudioPlayer';
-import { MultipleAudioQRHeaders } from '@/components/AudioQRHeaderDisplay';
+import { Volume2, ChevronDown, ChevronUp } from 'lucide-react';
 import { getStudentFriendlyIcon } from '@/lib/readingLevelNames';
-import { generateAudioQRHeaderFromRecords, type AudioQRHeader } from '@/lib/audioQRHeader';
 import type { StudentGroup } from '@/types/studentGroup';
 
 interface AudioData {
@@ -27,7 +24,6 @@ interface BilingualSideBySideLayoutProps {
   homeLanguage: string;
   sections: BilingualContent[];
   audioData?: AudioData[];
-  showQRCodes?: boolean;
 }
 
 const LANGUAGE_FLAGS: Record<string, string> = {
@@ -57,35 +53,8 @@ export function BilingualSideBySideLayout({
   homeLanguage,
   sections,
   audioData = [],
-  showQRCodes = true,
 }: BilingualSideBySideLayoutProps) {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
-  const [showAllQR, setShowAllQR] = useState(false);
-  const [qrHeaders, setQrHeaders] = useState<AudioQRHeader[]>([]);
-
-  // Generate QR headers when audio data changes
-  useEffect(() => {
-    async function generateHeaders() {
-      const hasReadAloud = group.accommodations?.includes('Read Aloud') || false;
-      const headers = await Promise.all(
-        audioData.map(audio => 
-          generateAudioQRHeaderFromRecords(
-            audio.sectionType,
-            group.groupName,
-            audio.englishAudioUrl,
-            audio.homeLanguageAudioUrl,
-            homeLanguage,
-            hasReadAloud
-          )
-        )
-      );
-      setQrHeaders(headers);
-    }
-    
-    if (audioData.length > 0) {
-      generateHeaders();
-    }
-  }, [audioData, group.groupName, group.accommodations, homeLanguage]);
 
   const toggleSection = (sectionType: string) => {
     setExpandedSections(prev => ({
@@ -114,45 +83,15 @@ export function BilingualSideBySideLayout({
               {getFlag(homeLanguage)} {homeLanguage} / {getFlag('English')} English
             </p>
           </div>
-          {showQRCodes && audioData.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAllQR(!showAllQR)}
-              className="gap-2"
-            >
-              <QrCode className="h-4 w-4" />
-              {showAllQR ? 'Hide' : 'Show'} Audio QR Codes
-            </Button>
-          )}
         </div>
       </CardHeader>
 
       <CardContent className="p-0">
-        {/* Audio QR Codes Header - At TOP of assignment */}
-        {showAllQR && qrHeaders.length > 0 && (
-          <div className="p-4 border-b">
-            <MultipleAudioQRHeaders 
-              headers={qrHeaders}
-              title={`Audio for ${group.groupName}`}
-            />
-          </div>
-        )}
-
         {/* Bilingual Content Sections */}
         <div className="divide-y divide-border">
           {sections.map((section) => {
             const audio = getAudioForSection(section.sectionType);
             const isExpanded = expandedSections[section.sectionType] ?? true;
-            
-            const bilingualAudio: SectionAudio | null = audio ? {
-              english: audio.englishAudioUrl ? { url: audio.englishAudioUrl, duration: null } : null,
-              homeLanguage: audio.homeLanguageAudioUrl ? {
-                language: homeLanguage,
-                url: audio.homeLanguageAudioUrl,
-                duration: null,
-              } : null,
-            } : null;
 
             return (
               <div key={section.sectionType} className="relative">

@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -30,13 +29,10 @@ import {
   FileText, 
   Trash2, 
   Loader2,
-  Plus,
-  FileUp,
-  Download
+  FileUp
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { downloadAssessmentTemplate } from '@/lib/documentExport';
 
 interface SavedAssessment {
   id: string;
@@ -341,18 +337,6 @@ export function SavedAssessmentSelector({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Download Template Button */}
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        className="gap-2 text-muted-foreground hover:text-foreground" 
-        onClick={downloadAssessmentTemplate}
-        disabled={disabled}
-      >
-        <Download className="h-4 w-4" />
-        Get Template
-      </Button>
     </div>
   );
 }
