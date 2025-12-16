@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.translate-content]
 verify_jwt = false
+
+[functions.generate-graphic-organizer]
+verify_jwt = false
