@@ -85,7 +85,25 @@ Guidelines:
       );
     }
 
-    const data = await response.json();
+    // Handle potentially empty or malformed response
+    let data;
+    try {
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === '') {
+        console.error("Empty response from translation API");
+        return new Response(
+          JSON.stringify({ translatedText: text }), // Return original as fallback
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse translation response:', parseError);
+      return new Response(
+        JSON.stringify({ translatedText: text }), // Return original as fallback
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     const translatedText = data.choices?.[0]?.message?.content || text;
 
     console.log(`Translated ${text.length} chars from English to ${targetLanguage}`);
