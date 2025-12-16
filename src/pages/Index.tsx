@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { DifferentiateForm, DifferentiateInput } from '@/components/DifferentiateForm';
 import { DifferentiatedLessonOutput } from '@/components/DifferentiatedLessonOutput';
 import { AssessmentMethodSelector } from '@/components/assessment/AssessmentMethodSelector';
@@ -8,17 +8,20 @@ import { RubricForm } from '@/components/RubricForm';
 import { RubricOutput } from '@/components/RubricOutput';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2 } from 'lucide-react';
+import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, LogIn, LogOut } from 'lucide-react';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
 import { DifferentiationProgressModal, createInitialProgressState } from '@/components/DifferentiationProgressModal';
 import { useLessonAudio } from '@/hooks/useLessonAudio';
 import { useDifferentiationGenerator } from '@/hooks/useDifferentiationGenerator';
 import { useAssessmentGenerator } from '@/hooks/useAssessmentGenerator';
 import { useRubricGenerator } from '@/hooks/useRubricGenerator';
+import { useAuth } from '@/hooks/useAuth';
 
 const Index = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { setCachedLessonContent, clearSelection } = useDifferentiation();
+  const { user, signOut } = useAuth();
   
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
@@ -142,6 +145,25 @@ const Index = () => {
               >
                 ← Start Over
               </button>
+            )}
+            
+            {/* Auth buttons */}
+            {user ? (
+              <Button 
+                onClick={signOut}
+                size="sm" 
+                className="gap-2 bg-[#166534] hover:bg-[#14532d] text-white font-semibold"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Log Out</span>
+              </Button>
+            ) : (
+              <Link to="/login">
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <LogIn className="h-4 w-4" />
+                  <span className="hidden sm:inline">Log In</span>
+                </Button>
+              </Link>
             )}
           </div>
         </div>
