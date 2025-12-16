@@ -106,41 +106,30 @@ export function DifferentiatedLessonOutput({
     
     const allLines = content.split('\n');
     
-    // STEP 1: Find STUDENT HANDOUTS section (skip teacher guide entirely)
-    let studentSectionStart = -1;
-    const studentMarkers = [
-      'STUDENT HANDOUTS',
-      'Student Handouts',
-      'PRINT FROM HERE',
-      'Print from here'
-    ];
-    
+    // STEP 1: Find STUDENT HANDOUTS section
+    let studentSectionStart = 0;
     for (let i = 0; i < allLines.length; i++) {
       const line = allLines[i].toUpperCase();
-      if (studentMarkers.some(marker => line.includes(marker.toUpperCase()))) {
+      if (line.includes('STUDENT HANDOUT') || line.includes('PRINT FROM HERE')) {
         studentSectionStart = i;
         console.log(`Found STUDENT HANDOUTS section at line ${i}`);
         break;
       }
     }
     
-    // Use only the student section
-    const lines = studentSectionStart > 0 
-      ? allLines.slice(studentSectionStart)
-      : allLines;
+    const lines = allLines.slice(studentSectionStart);
     
-    // STEP 2: Normalize group name for matching
-    const normalizedGroupName = groupName
-      .toLowerCase()
+    // STEP 2: Normalize group name - keep it simple
+    const normalizedGroupName = groupName.toLowerCase()
       .replace(/\s*\(.*?\)\s*/g, '')
-      .replace(/readers?$/i, 'reader')
-      .replace(/[-_]/g, ' ')
+      .replace(/readers$/i, 'reader')
       .trim();
     
     console.log(`Looking for group: "${groupName}" (normalized: "${normalizedGroupName}")`);
     
-    // STEP 3: Find ALL candidate headers for this group
-    const candidates: { index: number; level: number; line: string; isStudentHeader?: boolean; isTeacherHeader?: boolean }[] = [];
+    // STEP 3: Find candidate headers containing group name
+    type Candidate = { index: number; level: number; line: string; score: number };
+    const candidates: Candidate[] = [];
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -148,92 +137,75 @@ export function DifferentiatedLessonOutput({
       if (!headerMatch) continue;
       
       const headerLevel = headerMatch[1].length;
-      const headerText = headerMatch[2];
+      const headerText = headerMatch[2].toLowerCase();
       
-      const normalizedHeader = headerText
-        .toLowerCase()
-        .replace(/[🔥✨📚🎯⭐💫🌟]/g, '')
-        .replace(/\s*\(.*?\)\s*/g, '')
-        .replace(/readers?/gi, 'reader')
-        .replace(/[-_]/g, ' ')
-        .replace(/edition|edición/gi, '')
-        .trim();
+      // Check if header contains group name (flexible matching)
+      const headerWords = headerText.replace(/[🔥✨📚🎯⭐💫🌟]/g, '').replace(/readers/gi, 'reader');
+      const nameWords = normalizedGroupName.split(' ');
+      const matchCount = nameWords.filter(w => headerWords.includes(w)).length;
       
-      const isMatch = normalizedHeader.includes(normalizedGroupName) || 
-                      normalizedGroupName.includes(normalizedHeader.split(/\s+/).slice(0, 2).join(' '));
-      
-      if (isMatch) {
-        // Check if header itself indicates student vs teacher content
-        const headerLower = headerText.toLowerCase();
-        const isStudentHeader = headerLower.includes('handout') || 
-                                headerLower.includes('edition') ||
-                                headerLower.includes('worksheet');
-        const isTeacherHeader = headerLower.includes('(english') || 
-                                headerLower.includes('(somali') ||
-                                headerLower.includes('(arabic') ||
-                                headerLower.includes('(spanish') ||
-                                headerLower.includes('iep)') ||
-                                headerLower.includes('504)');
+      if (matchCount >= Math.ceil(nameWords.length / 2)) {
+        // Score: higher = better student content indicator
+        let score = 0;
+        if (headerText.includes('handout')) score += 100;
+        if (headerText.includes('edition')) score += 80;
+        if (headerText.includes('worksheet')) score += 80;
+        // Penalize teacher-style headers
+        if (headerText.includes('(english')) score -= 50;
+        if (headerText.includes('(somali') || headerText.includes('(arabic') || headerText.includes('(spanish')) score -= 50;
+        if (headerText.includes('iep)') || headerText.includes('504)')) score -= 30;
         
-        candidates.push({ 
-          index: i, 
-          level: headerLevel, 
-          line,
-          isStudentHeader,
-          isTeacherHeader
-        });
+        candidates.push({ index: i, level: headerLevel, line, score });
+        console.log(`Candidate at line ${i + studentSectionStart}: score=${score}, "${line.substring(0, 70)}"`);
       }
     }
     
-    // STEP 4: Find the candidate that is a STUDENT HANDOUT, not teacher scaffolding
-    // Priority: 1) Has "Handout"/"Edition" in header, 2) No teacher keywords in content
-    const teacherKeywords = ['scaffolding strategies', 'pacing adjustment', 'what to say', 'vocabulary support:', 'chunk content', 'differentiation'];
-    const studentKeywords = ['name:', '**name:**', 'learning target', '🎯', '✏️', 'practice', 'reflection', 'date:'];
-    
-    let bestCandidate: { index: number; level: number; line: string; isStudentHeader?: boolean; isTeacherHeader?: boolean } | null = null;
-    
-    for (const candidate of candidates) {
-      // FIRST: Prioritize headers that explicitly say "Handout" or "Edition"
-      if (candidate.isStudentHeader && !candidate.isTeacherHeader) {
-        bestCandidate = candidate;
-        console.log(`Selected STUDENT section (by header keyword) at line ${candidate.index + studentSectionStart}: "${candidate.line.substring(0, 60)}"`);
-        break;
-      }
-    }
-    
-    // FALLBACK: Check content if no explicit student header found
-    if (!bestCandidate) {
-      for (const candidate of candidates) {
-        if (candidate.isTeacherHeader) continue; // Skip teacher-specific headers
-        
-        const nextLines = lines.slice(candidate.index + 1, candidate.index + 15).join('\n').toLowerCase();
-        const hasTeacherContent = teacherKeywords.some(kw => nextLines.includes(kw));
-        const hasStudentContent = studentKeywords.some(kw => nextLines.includes(kw));
-        
-        console.log(`Candidate at line ${candidate.index + studentSectionStart}: teacher=${hasTeacherContent}, student=${hasStudentContent}, "${candidate.line.substring(0, 60)}"`);
-        
-        if (hasStudentContent && !hasTeacherContent) {
-          bestCandidate = candidate;
-          console.log(`Selected STUDENT section (by content) at line ${candidate.index + studentSectionStart}`);
-          break;
-        } else if (!bestCandidate && !hasTeacherContent) {
-          bestCandidate = candidate;
-        }
-      }
-    }
-    
-    if (!bestCandidate) {
-      console.warn(`Could not find student section for group: ${groupName}`);
+    if (candidates.length === 0) {
+      console.warn(`No candidate headers found for group: ${groupName}`);
       return '';
     }
     
-    // STEP 5: Find the end of this section (next same-level or higher header)
+    // STEP 4: Sort by score and verify content
+    candidates.sort((a, b) => b.score - a.score);
+    
+    const teacherKeywords = ['scaffolding', 'pacing adjustment', 'what to say', 'chunk content'];
+    const studentKeywords = ['name:', '**name:**', 'learning target', '🎯', 'practice', 'reflection'];
+    
+    let bestCandidate: Candidate | null = null;
+    
+    for (const candidate of candidates) {
+      const nextLines = lines.slice(candidate.index + 1, candidate.index + 20).join('\n').toLowerCase();
+      const hasTeacher = teacherKeywords.some(kw => nextLines.includes(kw));
+      const hasStudent = studentKeywords.some(kw => nextLines.includes(kw));
+      
+      console.log(`  Checking content: teacher=${hasTeacher}, student=${hasStudent}`);
+      
+      // Accept if: has student content, OR high score with no teacher content
+      if (hasStudent && !hasTeacher) {
+        bestCandidate = candidate;
+        console.log(`Selected (student content) at line ${candidate.index + studentSectionStart}`);
+        break;
+      } else if (!hasTeacher && candidate.score >= 50) {
+        bestCandidate = candidate;
+        console.log(`Selected (high score, no teacher) at line ${candidate.index + studentSectionStart}`);
+        break;
+      } else if (!bestCandidate && !hasTeacher) {
+        bestCandidate = candidate;
+      }
+    }
+    
+    // Last resort: take highest score
+    if (!bestCandidate) {
+      bestCandidate = candidates[0];
+      console.log(`Fallback to highest score at line ${bestCandidate.index + studentSectionStart}`);
+    }
+    
+    // STEP 5: Find end of section
     let endIndex = lines.length;
     for (let i = bestCandidate.index + 1; i < lines.length; i++) {
       const headerMatch = lines[i].match(/^(#{1,4})\s+/);
       if (headerMatch && headerMatch[1].length <= bestCandidate.level) {
         endIndex = i;
-        console.log(`Found end at line ${i + studentSectionStart}: ${lines[i].substring(0, 50)}`);
         break;
       }
     }
