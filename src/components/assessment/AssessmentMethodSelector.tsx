@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,13 @@ import {
 } from '@/types/assessmentMethods';
 import { SUBJECTS, GRADE_LEVELS } from '@/types/assessment';
 
+const STORAGE_KEYS = {
+  LESSON_CONTEXT: 'assessment_lesson_context',
+  LOCAL_CONTEXT: 'assessment_local_context',
+  SELECTED_CATEGORY: 'assessment_selected_category',
+  SELECTED_METHOD: 'assessment_selected_method',
+};
+
 interface AssessmentMethodSelectorProps {
   onGenerate: (data: {
     lessonContext: LessonContext;
@@ -30,23 +37,57 @@ interface AssessmentMethodSelectorProps {
   isLoading?: boolean;
 }
 
-export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMethodSelectorProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
-  
-  const [lessonContext, setLessonContext] = useState<LessonContext>({
-    title: '',
-    subject: '',
-    gradeLevel: '',
-    objectives: [''],
-  });
+const getStoredValue = <T,>(key: string, defaultValue: T): T => {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+};
 
-  const [localContext, setLocalContext] = useState<LocalContext>({
-    schoolName: '',
-    city: '',
-    state: '',
-    details: '',
-  });
+export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMethodSelectorProps) {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(() => 
+    getStoredValue(STORAGE_KEYS.SELECTED_CATEGORY, null)
+  );
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(() => 
+    getStoredValue(STORAGE_KEYS.SELECTED_METHOD, null)
+  );
+  
+  const [lessonContext, setLessonContext] = useState<LessonContext>(() => 
+    getStoredValue(STORAGE_KEYS.LESSON_CONTEXT, {
+      title: '',
+      subject: '',
+      gradeLevel: '',
+      objectives: [''],
+    })
+  );
+
+  const [localContext, setLocalContext] = useState<LocalContext>(() => 
+    getStoredValue(STORAGE_KEYS.LOCAL_CONTEXT, {
+      schoolName: '',
+      city: '',
+      state: '',
+      details: '',
+    })
+  );
+
+  // Persist state to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.LESSON_CONTEXT, JSON.stringify(lessonContext));
+  }, [lessonContext]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.LOCAL_CONTEXT, JSON.stringify(localContext));
+  }, [localContext]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SELECTED_CATEGORY, JSON.stringify(selectedCategory));
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SELECTED_METHOD, JSON.stringify(selectedMethod));
+  }, [selectedMethod]);
 
   const categories = Object.values(ASSESSMENT_METHODS);
   const selectedCategoryData = selectedCategory ? ASSESSMENT_METHODS[selectedCategory] : null;
