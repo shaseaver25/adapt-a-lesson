@@ -179,25 +179,34 @@ export function BilingualSideBySideLayout({
 
                 {isExpanded && (
                   <div className="px-4 pb-4 space-y-3">
-                    {/* Inline Audio Player */}
-                    {bilingualAudio && (
-                      <BilingualAudioPlayer
-                        audio={bilingualAudio}
-                        sectionType={section.sectionType}
-                        compact
-                      />
-                    )}
                     
-                    {/* Side-by-Side Content - English LEFT, Home Language RIGHT */}
+                    {/* Side-by-Side Content - Translated LEFT, English RIGHT */}
                     <div className="grid grid-cols-2 gap-0 border rounded-lg overflow-hidden">
-                      {/* English (LEFT) - Blue tint */}
-                      <div className="bg-blue-50/50 dark:bg-blue-950/20 p-4 border-r-2 border-border/50">
-                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-blue-200 dark:border-blue-800">
-                          <span className="text-lg">{getFlag('English')}</span>
-                          <span className="font-medium text-sm text-blue-700 dark:text-blue-300">English</span>
+                      {/* Home Language (LEFT) - Amber tint */}
+                      <div className="bg-amber-50/50 dark:bg-amber-950/20 p-4 border-r-2 border-border/50">
+                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-amber-200 dark:border-amber-800">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{getFlag(homeLanguage)}</span>
+                            <span className="font-medium text-sm text-amber-700 dark:text-amber-300">{homeLanguage}</span>
+                          </div>
+                          {audio?.homeLanguageAudioUrl && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const audioEl = new Audio(audio.homeLanguageAudioUrl);
+                                audioEl.play();
+                              }}
+                            >
+                              <Volume2 className="h-4 w-4 mr-1" />
+                              Listen
+                            </Button>
+                          )}
                         </div>
                         <div className="prose prose-sm dark:prose-invert max-w-none">
-                          {section.englishContent.split('\n').filter(line => line.trim()).map((line, i) => (
+                          {section.homeLanguageContent.split('\n').filter(line => line.trim()).map((line, i) => (
                             <p key={i} className="mb-2 leading-relaxed text-sm">
                               {line}
                             </p>
@@ -205,14 +214,31 @@ export function BilingualSideBySideLayout({
                         </div>
                       </div>
 
-                      {/* Home Language (RIGHT) - Amber tint */}
-                      <div className="bg-amber-50/50 dark:bg-amber-950/20 p-4">
-                        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-amber-200 dark:border-amber-800">
-                          <span className="text-lg">{getFlag(homeLanguage)}</span>
-                          <span className="font-medium text-sm text-amber-700 dark:text-amber-300">{homeLanguage}</span>
+                      {/* English (RIGHT) - Blue tint */}
+                      <div className="bg-blue-50/50 dark:bg-blue-950/20 p-4">
+                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-blue-200 dark:border-blue-800">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{getFlag('English')}</span>
+                            <span className="font-medium text-sm text-blue-700 dark:text-blue-300">English</span>
+                          </div>
+                          {audio?.englishAudioUrl && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const audioEl = new Audio(audio.englishAudioUrl);
+                                audioEl.play();
+                              }}
+                            >
+                              <Volume2 className="h-4 w-4 mr-1" />
+                              Listen
+                            </Button>
+                          )}
                         </div>
                         <div className="prose prose-sm dark:prose-invert max-w-none">
-                          {section.homeLanguageContent.split('\n').filter(line => line.trim()).map((line, i) => (
+                          {section.englishContent.split('\n').filter(line => line.trim()).map((line, i) => (
                             <p key={i} className="mb-2 leading-relaxed text-sm">
                               {line}
                             </p>
