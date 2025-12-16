@@ -210,6 +210,18 @@ export function useAuth(): AuthState & AuthActions {
   const signOut = useCallback(async () => {
     setError(null);
     
+    // Remove session record before signing out
+    if (user?.id) {
+      const sessionId = localStorage.getItem('device_session_id');
+      if (sessionId) {
+        await supabase
+          .from('user_sessions')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('session_id', sessionId);
+      }
+    }
+    
     const { error: signOutError } = await supabase.auth.signOut();
     
     if (signOutError) {
@@ -221,7 +233,7 @@ export function useAuth(): AuthState & AuthActions {
     setSession(null);
     
     return { error: null };
-  }, []);
+  }, [user]);
 
   // Reset password
   const resetPassword = useCallback(async (email: string) => {

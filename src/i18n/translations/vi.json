@@ -6,7 +6,9 @@
     "newPassword": "Mật khẩu mới",
     "confirmNewPassword": "Xác nhận mật khẩu mới",
     "loading": "Đang tải...",
-    "or": "hoặc"
+    "or": "hoặc",
+    "error": "Lỗi",
+    "back": "Quay lại"
   },
   "login": {
     "title": "Authentic Learning Studio",
@@ -78,5 +80,27 @@
     "showPassword": "Hiện mật khẩu",
     "hidePassword": "Ẩn mật khẩu",
     "languageSelector": "Chọn ngôn ngữ"
+  },
+  "sessions": {
+    "title": "Phiên Hoạt Động",
+    "description": "Quản lý các thiết bị bạn đã đăng nhập. Bạn có thể đăng xuất khỏi các thiết bị khác từ xa.",
+    "currentSession": "Phiên Hiện Tại",
+    "currentSessionDesc": "Đây là thiết bị bạn đang sử dụng",
+    "thisDevice": "Thiết bị này",
+    "otherSessions": "Phiên Khác",
+    "otherSessionsCount": "{{count}} phiên hoạt động khác",
+    "noOtherSessions": "Không có phiên hoạt động khác",
+    "onlyThisDevice": "Bạn chỉ đăng nhập trên thiết bị này",
+    "unknownDevice": "Thiết bị không xác định",
+    "lastActive": "Hoạt động lần cuối",
+    "logOutAll": "Đăng xuất tất cả",
+    "removeSession": "Xóa phiên",
+    "sessionRemoved": "Đã xóa phiên",
+    "sessionRemovedDesc": "Thiết bị đã được đăng xuất",
+    "removeError": "Không thể xóa phiên",
+    "allSessionsRemoved": "Đã xóa tất cả phiên",
+    "allSessionsRemovedDesc": "Tất cả thiết bị khác đã được đăng xuất",
+    "removeAllError": "Không thể xóa các phiên",
+    "signOut": "Đăng xuất khỏi thiết bị này"
   }
 }

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { signInSchema } from '@/lib/authValidation';
 import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from '@/i18n';
@@ -43,6 +44,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { signInWithEmail, signInWithOAuth, loading: authLoading } = useAuth();
+  const { checkSessionLimit, createSession } = useSessionManagement();
   const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
@@ -168,6 +170,16 @@ export default function Login() {
       }
 
       if (data?.user?.id) {
+        // Check session limit before allowing login
+        const { allowed } = await checkSessionLimit(data.user.id);
+        if (!allowed) {
+          setIsLoading(false);
+          clearPasswordAndSetError('errors.tooManyDevices');
+          return;
+        }
+
+        // Create session and reset failed attempts
+        await createSession(data.user.id);
         await resetFailedAttempts(data.user.id);
       }
 

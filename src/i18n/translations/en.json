@@ -6,7 +6,9 @@
     "newPassword": "New password",
     "confirmNewPassword": "Confirm new password",
     "loading": "Loading...",
-    "or": "or"
+    "or": "or",
+    "error": "Error",
+    "back": "Back"
   },
   "login": {
     "title": "Authentic Learning Studio",
@@ -78,5 +80,27 @@
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "languageSelector": "Select language"
+  },
+  "sessions": {
+    "title": "Active Sessions",
+    "description": "Manage devices where you're logged in. You can log out from other devices remotely.",
+    "currentSession": "Current Session",
+    "currentSessionDesc": "This is the device you're using right now",
+    "thisDevice": "This device",
+    "otherSessions": "Other Sessions",
+    "otherSessionsCount": "{{count}} other active session(s)",
+    "noOtherSessions": "No other active sessions",
+    "onlyThisDevice": "You're only logged in on this device",
+    "unknownDevice": "Unknown device",
+    "lastActive": "Last active",
+    "logOutAll": "Log out all",
+    "removeSession": "Remove session",
+    "sessionRemoved": "Session removed",
+    "sessionRemovedDesc": "The device has been logged out",
+    "removeError": "Failed to remove session",
+    "allSessionsRemoved": "All sessions removed",
+    "allSessionsRemovedDesc": "All other devices have been logged out",
+    "removeAllError": "Failed to remove sessions",
+    "signOut": "Sign out of this device"
   }
 }
