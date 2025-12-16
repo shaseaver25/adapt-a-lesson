@@ -85,15 +85,19 @@ DO NOT create a generic diagram. Match the description EXACTLY.`;
     }
 
     const data = await response.json();
-    console.log("Nano Banana response received");
+    console.log("Nano Banana response received, keys:", Object.keys(data));
+    console.log("Response structure:", JSON.stringify(data).substring(0, 1000));
 
     // Extract the image from the response
     const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     
     if (!imageData) {
-      console.error("No image in response:", JSON.stringify(data).substring(0, 500));
+      console.error("No image in response. Full structure:", JSON.stringify(data, null, 2).substring(0, 2000));
+      console.error("Choices:", JSON.stringify(data.choices?.[0], null, 2).substring(0, 1000));
       throw new Error("No image generated in response");
     }
+    
+    console.log("Image data received, length:", imageData.length);
 
     // If we have a lessonId, save to Supabase Storage
     let storedUrl = imageData;
