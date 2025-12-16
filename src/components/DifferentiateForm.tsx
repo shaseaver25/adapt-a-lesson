@@ -24,7 +24,8 @@ import {
 import { Users, BookOpen, Settings2, ExternalLink, CheckSquare, XSquare, HelpCircle, Sparkles, FolderOpen, RefreshCw, AlertCircle, Clock, XCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useDifferentiation, type GraphicOrganizerType } from '@/contexts/DifferentiationContext';
-import { READING_LEVEL_DESCRIPTIONS, ELL_STATUS_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
+import { READING_LEVEL_DESCRIPTIONS, ELL_STATUS_DESCRIPTIONS, SECTION_DESCRIPTIONS, DIFFERENTIATION_OPTION_DESCRIPTIONS, FIELD_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
+import { HelpTooltip } from '@/components/ui/help-tooltip';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentGroup } from '@/types/studentGroup';
 
@@ -183,6 +184,7 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
           <div className="flex items-center gap-2 text-foreground">
             <Users className="h-5 w-5 text-primary" />
             <h3 className="font-display font-bold text-lg">Select Student Groups</h3>
+            <HelpTooltip content={SECTION_DESCRIPTIONS['Select Student Groups']} />
           </div>
           <Link to="/student-groups" className="text-sm text-primary hover:underline flex items-center gap-1">
             Manage Groups <ExternalLink className="h-3 w-3" />
@@ -319,6 +321,7 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
           <div className="flex items-center gap-2 text-foreground">
             <BookOpen className="h-5 w-5 text-primary" />
             <h3 className="font-display font-bold text-lg">Lesson Details</h3>
+            <HelpTooltip content={SECTION_DESCRIPTIONS['Lesson Details']} />
           </div>
           <div className="flex items-center gap-3">
             {showCacheNotice && cachedLessonContent && (
@@ -366,6 +369,7 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
         <div className="flex items-center gap-2 text-foreground">
           <Settings2 className="h-5 w-5 text-primary" />
           <h3 className="font-display font-bold text-lg">Differentiation Options</h3>
+          <HelpTooltip content={SECTION_DESCRIPTIONS['Differentiation Options']} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -375,8 +379,11 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
               onCheckedChange={(checked) => setOptions({ includeVocabularyScaffolding: !!checked })}
               className="mt-0.5"
             />
-            <div>
-              <span className="text-sm font-medium text-foreground">📚 Vocabulary Scaffolding</span>
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">📚 Vocabulary Scaffolding</span>
+                <HelpTooltip content={DIFFERENTIATION_OPTION_DESCRIPTIONS['Vocabulary Scaffolding']} side="right" />
+              </div>
               <p className="text-xs text-muted-foreground mt-0.5">Bilingual glossaries and key term definitions</p>
             </div>
           </label>
@@ -387,8 +394,11 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
               onCheckedChange={(checked) => setOptions({ generateComprehensionQuestions: !!checked })}
               className="mt-0.5"
             />
-            <div>
-              <span className="text-sm font-medium text-foreground">❓ Comprehension Questions</span>
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">❓ Comprehension Questions</span>
+                <HelpTooltip content={DIFFERENTIATION_OPTION_DESCRIPTIONS['Comprehension Questions']} side="right" />
+              </div>
               <p className="text-xs text-muted-foreground mt-0.5">Level-appropriate check-for-understanding questions</p>
             </div>
           </label>
@@ -399,8 +409,11 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
               onCheckedChange={(checked) => setOptions({ includeVisualPlaceholders: !!checked })}
               className="mt-0.5"
             />
-            <div>
-              <span className="text-sm font-medium text-foreground">🖼️ Visual Placeholders</span>
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">🖼️ Visual Placeholders</span>
+                <HelpTooltip content={DIFFERENTIATION_OPTION_DESCRIPTIONS['Visual Placeholders']} side="right" />
+              </div>
               <p className="text-xs text-muted-foreground mt-0.5">Add [VISUAL: description] markers for images</p>
             </div>
           </label>
@@ -412,8 +425,11 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
                 onCheckedChange={(checked) => setOptions({ includeGraphicOrganizers: !!checked })}
                 className="mt-0.5"
               />
-              <div>
-                <span className="text-sm font-medium text-foreground">📊 Graphic Organizers</span>
+              <div className="flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-medium text-foreground">📊 Graphic Organizers</span>
+                  <HelpTooltip content={DIFFERENTIATION_OPTION_DESCRIPTIONS['Graphic Organizers']} side="right" />
+                </div>
                 <p className="text-xs text-muted-foreground mt-0.5">Generate printable organizers for visual learners</p>
               </div>
             </label>
