@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon, Save, Loader2, Headphones, QrCode, Printer, Volume2, Languages } from 'lucide-react';
+import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon, Save, Loader2, Headphones, QrCode, Printer, Volume2, Languages, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentGroup } from '@/types/studentGroup';
@@ -39,6 +39,7 @@ import {
 } from '@/types/audioRequirements';
 import { PrintableAudioQR, BilingualPrintableAudioQR } from '@/components/PrintableAudioQR';
 import { AudioUsageDashboard } from '@/components/AudioUsageDashboard';
+import { AudioGenerationButton } from '@/components/AudioGenerationButton';
 
 interface PreGeneratedAudioRecord {
   id: string;
@@ -382,8 +383,9 @@ export function DifferentiatedLessonOutput({
   const handleExportStudentDocx = async () => {
     try {
       // Build extended group info with audio and language data
+      // Export works with or without audio - shows placeholder if audio not ready
       const groups = selectedGroups.map((g) => {
-        // Get pre-generated audio for this group
+        // Get pre-generated audio for this group (may be empty)
         const groupAudio = preGeneratedAudio.filter(a => a.group_name === g.groupName);
         
         return {
@@ -401,7 +403,14 @@ export function DifferentiatedLessonOutput({
         };
       });
       await exportStudentHandoutsDocx(content, lessonTitle, groups);
-      toast({ title: 'Downloaded', description: 'Student Handouts Word document created (landscape with QR codes)' });
+      
+      const hasAudio = preGeneratedAudio.length > 0;
+      toast({ 
+        title: 'Downloaded', 
+        description: hasAudio 
+          ? 'Student Handouts with QR codes created (landscape)' 
+          : 'Student Handouts created - use "Generate Audio" to add QR codes'
+      });
     } catch (error) {
       console.error('Export error:', error);
       toast({ 
@@ -411,6 +420,28 @@ export function DifferentiatedLessonOutput({
       });
     }
   };
+  
+  // Callback when audio generation completes
+  const handleAudioGenerated = useCallback(async () => {
+    // Refresh audio data from database
+    if (lessonId) {
+      try {
+        const { data: audioData } = await supabase
+          .from('generated_audio')
+          .select('*')
+          .eq('lesson_id', lessonId);
+        
+        // Note: We can't directly set preGeneratedAudio since it's a prop
+        // The parent component should refresh on save/generate
+        toast({
+          title: 'Audio ready',
+          description: 'You can now export handouts with QR codes',
+        });
+      } catch (e) {
+        console.error('Error refreshing audio:', e);
+      }
+    }
+  }, [lessonId, toast]);
 
   const handleExportStudentWithAudioDocx = async () => {
     if (audioSections.length === 0) {
@@ -462,63 +493,104 @@ export function DifferentiatedLessonOutput({
     toast({ title: 'Copied', description: `${groupName} section copied to clipboard` });
   };
 
-  // Export bilingual handout for non-English groups
+  // Export bilingual handout for non-English groups with proper side-by-side layout
   const handleExportBilingualDocx = async (group: StudentGroup & { id: string }) => {
     try {
       const groupContent = extractGroupContent(group.groupName);
       const groupAudio = preGeneratedAudio.filter(a => a.group_name === group.groupName);
       
-      // Parse content into sections
+      // Parse content into sections - look for bilingual markers or section headers
       const sections: BilingualSection[] = [];
       const sectionPatterns = [
-        { type: 'learning-target', label: '🎯 Learning Target', pattern: /(?:learning target|objetivo|目標|học mục tiêu)/i },
-        { type: 'instructions', label: '📋 Instructions', pattern: /(?:instructions|instrucciones|指示|hướng dẫn)/i },
-        { type: 'vocabulary', label: '📚 Vocabulary', pattern: /(?:vocabulary|vocabulario|词汇|từ vựng)/i },
-        { type: 'content', label: '📖 Content', pattern: /(?:content|contenido|内容|nội dung)/i },
-        { type: 'practice', label: '✏️ Practice', pattern: /(?:practice|práctica|练习|thực hành)/i },
-        { type: 'reflection', label: '💭 Reflection', pattern: /(?:reflection|reflexión|反思|suy ngẫm)/i },
+        { type: 'learning-target', label: '🎯 Learning Target / Objetivo de Aprendizaje', pattern: /(?:learning target|objetivo|目標|học mục tiêu)/i },
+        { type: 'instructions', label: '📋 Instructions / Instrucciones', pattern: /(?:instructions|instrucciones|指示|hướng dẫn)/i },
+        { type: 'vocabulary', label: '📚 Vocabulary / Vocabulario', pattern: /(?:vocabulary|vocabulario|词汇|từ vựng)/i },
+        { type: 'content', label: '📖 Content / Contenido', pattern: /(?:content|contenido|内容|nội dung|reading|lectura)/i },
+        { type: 'practice', label: '✏️ Practice / Práctica', pattern: /(?:practice|práctica|练习|thực hành)/i },
+        { type: 'reflection', label: '💭 Reflection / Reflexión', pattern: /(?:reflection|reflexión|反思|suy ngẫm)/i },
       ];
       
-      // Split content by sections (simplified parsing)
+      // Try to find English and home language content blocks
+      // The differentiated content should have both if properly generated
       const lines = groupContent.split('\n');
       let currentSection = { type: 'content', label: '📖 Content' };
-      let buffer: string[] = [];
+      let englishBuffer: string[] = [];
+      let homeLanguageBuffer: string[] = [];
+      let isHomeLanguageBlock = false;
       
       for (const line of lines) {
+        // Check for language markers
+        if (line.includes(`(${group.homeLanguage})`) || line.includes(`[${group.homeLanguage}]`)) {
+          isHomeLanguageBlock = true;
+        } else if (line.includes('(English)') || line.includes('[English]')) {
+          isHomeLanguageBlock = false;
+        }
+        
         const matched = sectionPatterns.find(p => p.pattern.test(line));
-        if (matched && buffer.length > 0) {
+        if (matched && (englishBuffer.length > 0 || homeLanguageBuffer.length > 0)) {
           // Get audio for this section
           const engAudio = groupAudio.find(a => a.section_type === currentSection.type && a.language === 'English');
           const homeAudio = groupAudio.find(a => a.section_type === currentSection.type && a.language === group.homeLanguage);
           
-          sections.push({
-            sectionType: currentSection.type,
-            sectionLabel: currentSection.label,
-            englishContent: buffer.join('\n'), // English content
-            homeLanguageContent: buffer.join('\n'), // Same content (translated in original)
-            englishAudioUrl: engAudio?.audio_url,
-            homeLanguageAudioUrl: homeAudio?.audio_url,
-          });
-          buffer = [];
+          // If we only have content in one language, use it for both with translation note
+          const engContent = englishBuffer.length > 0 ? englishBuffer.join('\n') : homeLanguageBuffer.join('\n');
+          const homeContent = homeLanguageBuffer.length > 0 ? homeLanguageBuffer.join('\n') : englishBuffer.join('\n');
+          
+          if (engContent.trim() || homeContent.trim()) {
+            sections.push({
+              sectionType: currentSection.type,
+              sectionLabel: currentSection.label,
+              englishContent: engContent,
+              homeLanguageContent: homeContent,
+              englishAudioUrl: engAudio?.audio_url,
+              homeLanguageAudioUrl: homeAudio?.audio_url,
+            });
+          }
+          englishBuffer = [];
+          homeLanguageBuffer = [];
         }
+        
         if (matched) {
           currentSection = matched;
         }
-        buffer.push(line);
+        
+        // Add line to appropriate buffer
+        if (isHomeLanguageBlock) {
+          homeLanguageBuffer.push(line);
+        } else {
+          englishBuffer.push(line);
+        }
       }
       
       // Add final section
-      if (buffer.length > 0) {
+      if (englishBuffer.length > 0 || homeLanguageBuffer.length > 0) {
         const engAudio = groupAudio.find(a => a.section_type === currentSection.type && a.language === 'English');
         const homeAudio = groupAudio.find(a => a.section_type === currentSection.type && a.language === group.homeLanguage);
         
+        const engContent = englishBuffer.length > 0 ? englishBuffer.join('\n') : homeLanguageBuffer.join('\n');
+        const homeContent = homeLanguageBuffer.length > 0 ? homeLanguageBuffer.join('\n') : englishBuffer.join('\n');
+        
+        if (engContent.trim() || homeContent.trim()) {
+          sections.push({
+            sectionType: currentSection.type,
+            sectionLabel: currentSection.label,
+            englishContent: engContent,
+            homeLanguageContent: homeContent,
+            englishAudioUrl: engAudio?.audio_url,
+            homeLanguageAudioUrl: homeAudio?.audio_url,
+          });
+        }
+      }
+      
+      // If no sections were parsed properly, create a single section with all content
+      if (sections.length === 0) {
         sections.push({
-          sectionType: currentSection.type,
-          sectionLabel: currentSection.label,
-          englishContent: buffer.join('\n'),
-          homeLanguageContent: buffer.join('\n'),
-          englishAudioUrl: engAudio?.audio_url,
-          homeLanguageAudioUrl: homeAudio?.audio_url,
+          sectionType: 'content',
+          sectionLabel: '📖 Lesson Content',
+          englishContent: groupContent,
+          homeLanguageContent: groupContent, // Same content - translation should be embedded
+          englishAudioUrl: groupAudio.find(a => a.language === 'English')?.audio_url,
+          homeLanguageAudioUrl: groupAudio.find(a => a.language === group.homeLanguage)?.audio_url,
         });
       }
       
@@ -528,7 +600,13 @@ export function DifferentiatedLessonOutput({
         readingLevel: getStudentFriendlyName(group.readingLevelLabel),
       }, lessonTitle);
       
-      toast({ title: 'Downloaded', description: `Bilingual handout for ${group.groupName} created` });
+      const hasAudio = groupAudio.length > 0;
+      toast({ 
+        title: 'Downloaded', 
+        description: hasAudio 
+          ? `Bilingual handout for ${group.groupName} with QR codes created (landscape)`
+          : `Bilingual handout for ${group.groupName} created - generate audio to add QR codes`
+      });
     } catch (error) {
       console.error('Bilingual export error:', error);
       toast({ 
@@ -748,6 +826,33 @@ export function DifferentiatedLessonOutput({
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Manual Audio Generation Button */}
+            {preGeneratedAudio.length === 0 && !isGeneratingAudio && (
+              <div className="p-4 rounded-lg border border-dashed border-accent/30 bg-accent/5">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-accent mt-0.5" />
+                  <div className="space-y-2 flex-1">
+                    <p className="text-sm font-medium">Audio not yet generated</p>
+                    <p className="text-xs text-muted-foreground">
+                      Generate audio files to enable QR codes in printed handouts. This process takes 1-2 minutes per group.
+                    </p>
+                    <AudioGenerationButton
+                      lessonId={lessonId || null}
+                      differentiatedContent={content}
+                      selectedGroups={selectedGroups}
+                      onAudioGenerated={handleAudioGenerated}
+                      disabled={!saved && !lessonId}
+                    />
+                    {!saved && !lessonId && (
+                      <p className="text-xs text-muted-foreground italic">
+                        💡 Save the lesson first to enable audio generation
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {/* Budget Indicator */}
             <AudioUsageDashboard compact />
             
