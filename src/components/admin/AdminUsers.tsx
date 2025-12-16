@@ -23,7 +23,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, Shield, User, RefreshCw, UserPlus, Pencil } from 'lucide-react';
+import { Search, Shield, User, RefreshCw, UserPlus, Pencil, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useAdmin } from '@/hooks/useAdmin';
 import { toast } from 'sonner';
 
@@ -61,6 +71,11 @@ export function AdminUsers() {
   const [editUserAvatar, setEditUserAvatar] = useState('');
   const [editUserRole, setEditUserRole] = useState('user');
   const [isSavingUser, setIsSavingUser] = useState(false);
+
+  // Delete user state
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -251,6 +266,43 @@ export function AdminUsers() {
       toast.error('Failed to update user');
     } finally {
       setIsSavingUser(false);
+    }
+  }
+
+  async function handleDeleteUser() {
+    if (!userToDelete || !isSuperAdmin) return;
+
+    setIsDeletingUser(true);
+    try {
+      // Delete user's role first
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userToDelete.id);
+
+      // Delete user's sessions
+      await supabase
+        .from('user_sessions')
+        .delete()
+        .eq('user_id', userToDelete.id);
+
+      // Delete user profile (this will cascade to related data)
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userToDelete.id);
+
+      if (error) throw error;
+
+      toast.success(`User ${userToDelete.email || userToDelete.full_name || 'deleted'} has been removed`);
+      setIsDeleteDialogOpen(false);
+      setUserToDelete(null);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('Failed to delete user');
+    } finally {
+      setIsDeletingUser(false);
     }
   }
 
@@ -506,6 +558,17 @@ export function AdminUsers() {
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setUserToDelete(user);
+                                  setIsDeleteDialogOpen(true);
+                                }}
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                               <Select
                                 value={user.role}
                                 onValueChange={(value) => updateUserRole(user.id, value)}
@@ -532,6 +595,29 @@ export function AdminUsers() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{userToDelete?.email || userToDelete?.full_name}</strong>? 
+              This will remove their profile, roles, and sessions. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingUser}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={isDeletingUser}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingUser ? 'Deleting...' : 'Delete User'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
