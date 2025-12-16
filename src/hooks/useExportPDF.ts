@@ -36,16 +36,20 @@ export function useExportPDF() {
       styleElement.textContent = styles;
       document.head.appendChild(styleElement);
       
-      // Create container div in main document (positioned off-screen but still rendered)
+      // Create container div in main document (visible for html2canvas to capture)
       container = document.createElement('div');
       container.id = 'pdf-export-container';
       container.className = 'pdf-export-root';
-      container.style.position = 'absolute';
-      container.style.left = '-9999px';
+      container.style.position = 'fixed';
+      container.style.left = '0';
       container.style.top = '0';
       container.style.width = '8.5in';
       container.style.background = 'white';
+      container.style.zIndex = '9999';
+      container.style.overflow = 'auto';
+      container.style.maxHeight = '100vh';
       container.innerHTML = content;
+      document.body.style.overflow = 'hidden';
       document.body.appendChild(container);
       
       // Wait for fonts to render
@@ -88,13 +92,14 @@ export function useExportPDF() {
         variant: 'destructive'
       });
     } finally {
-      // Clean up container and styles
+      // Clean up container, styles, and body overflow
       if (container && container.parentNode) {
         container.parentNode.removeChild(container);
       }
       if (styleElement && styleElement.parentNode) {
         styleElement.parentNode.removeChild(styleElement);
       }
+      document.body.style.overflow = '';
       setExporting(false);
     }
   };
