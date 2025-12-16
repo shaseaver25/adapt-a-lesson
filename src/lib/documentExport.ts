@@ -997,6 +997,53 @@ export async function exportStudentHandoutsDocx(
 }
 
 /**
+ * Create placeholder QR header when audio is not yet generated
+ */
+function createPlaceholderAudioHeader(
+  groupName: string,
+  homeLanguage: string,
+  hasReadAloud?: boolean
+): (Paragraph | Table)[] {
+  const elements: (Paragraph | Table)[] = [];
+  
+  elements.push(
+    new Paragraph({
+      children: [
+        new TextRun({ text: '🔊 ', size: 28 }),
+        new TextRun({
+          text: 'AUDIO SUPPORT',
+          bold: true,
+          size: 24,
+          font: 'Arial',
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 100, after: 100 },
+      shading: { type: ShadingType.SOLID, color: 'FFF8E7' },
+    })
+  );
+  
+  elements.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: '⏳ Audio not yet generated - Use "Generate Audio" button then re-export',
+          size: 20,
+          font: 'Arial',
+          italics: true,
+          color: '9CA3AF',
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 },
+      shading: { type: ShadingType.SOLID, color: 'FFF8E7' },
+    })
+  );
+  
+  return elements;
+}
+
+/**
  * Create QR code header block for a student group's audio
  */
 async function createGroupAudioQRHeader(
@@ -1005,6 +1052,11 @@ async function createGroupAudioQRHeader(
   audioRecords: Array<{ section_type: string; section_id: string; audio_url: string; language: string }>,
   hasReadAloud?: boolean
 ): Promise<(Paragraph | Table)[]> {
+  // If no audio records, return placeholder
+  if (!audioRecords || audioRecords.length === 0) {
+    return createPlaceholderAudioHeader(groupName, homeLanguage, hasReadAloud);
+  }
+  
   const elements: (Paragraph | Table)[] = [];
   
   // Header
@@ -1653,6 +1705,7 @@ async function createBilingualContentTable(
 
 /**
  * Create QR codes header block for bilingual document
+ * Shows placeholder message if no audio is available
  */
 async function createBilingualQRHeader(
   sections: BilingualSection[],
@@ -1660,14 +1713,22 @@ async function createBilingualQRHeader(
 ): Promise<(Paragraph | Table)[]> {
   const elements: (Paragraph | Table)[] = [];
   
+  // Check if any sections have audio
+  const hasAnyAudio = sections.some(s => s.englishAudioUrl || s.homeLanguageAudioUrl);
+  
   // Header
   elements.push(
     new Paragraph({
       children: [
         new TextRun({ text: '🔊 ', size: 28 }),
         new TextRun({
-          text: 'AUDIO SUPPORT - Scan QR codes to listen',
+          text: 'AUDIO SUPPORT',
           bold: true,
+          size: 24,
+          font: 'Arial',
+        }),
+        new TextRun({
+          text: hasAnyAudio ? ' - Scan QR codes to listen' : '',
           size: 24,
           font: 'Arial',
         }),
@@ -1677,6 +1738,41 @@ async function createBilingualQRHeader(
       shading: { type: ShadingType.SOLID, color: 'FFF8E7' },
     })
   );
+  
+  // Show placeholder if no audio
+  if (!hasAnyAudio) {
+    elements.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: '⏳ Audio not yet generated',
+            size: 20,
+            font: 'Arial',
+            italics: true,
+            color: '9CA3AF',
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 100 },
+        shading: { type: ShadingType.SOLID, color: 'FFF8E7' },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'Use "Generate Audio" button then re-export to add QR codes',
+            size: 18,
+            font: 'Arial',
+            italics: true,
+            color: '9CA3AF',
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 },
+        shading: { type: ShadingType.SOLID, color: 'FFF8E7' },
+      })
+    );
+    return elements;
+  }
   
   // Create QR code cells for each section with audio
   const qrCells: TableCell[] = [];
