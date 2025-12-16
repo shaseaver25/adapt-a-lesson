@@ -37,10 +37,10 @@ import {
   Loader2,
   FolderOpen,
   Pencil,
-  Download
+  Download,
+  Loader2 as DownloadLoader
 } from 'lucide-react';
-import html2pdf from 'html2pdf.js';
-import { buildLessonHTML, isArabicContent } from '@/lib/pdf/htmlBuilder';
+import { useExportPDF } from '@/hooks/useExportPDF';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
 import { format } from 'date-fns';
@@ -63,6 +63,7 @@ export default function SavedLessons() {
   const [lessonToEdit, setLessonToEdit] = useState<SavedLesson | null>(null);
   const [editName, setEditName] = useState('');
   const { toast } = useToast();
+  const { exportToPDF, exporting: pdfExporting } = useExportPDF();
   const queryClient = useQueryClient();
 
   const { data: lessons = [], isLoading } = useQuery({
@@ -162,8 +163,8 @@ export default function SavedLessons() {
     return content || lesson.original_content;
   };
 
-  // Download lesson as PDF using html2pdf.js
-  const handleDownloadPdf = async (lesson: SavedLesson) => {
+  // Download lesson as PDF using the hook
+  const handleDownloadPdf = (lesson: SavedLesson) => {
     // Build the full content
     let fullContent = '';
     
@@ -188,62 +189,10 @@ export default function SavedLessons() {
       fullContent = lesson.original_content;
     }
     
-    // Detect if content is RTL (Arabic, etc.)
-    const isRTL = isArabicContent(fullContent);
-    
-    // Build styled HTML
-    const html = buildLessonHTML(fullContent, {
+    exportToPDF(fullContent, {
       title: lesson.lesson_title || 'Lesson',
       createdAt: format(new Date(lesson.created_at), 'MMMM d, yyyy'),
-      isRTL,
     });
-    
-    // Create a temporary container
-    const container = document.createElement('div');
-    container.innerHTML = html;
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    document.body.appendChild(container);
-    
-    // Generate PDF
-    const filename = `${(lesson.lesson_title || 'lesson').replace(/[^a-z0-9]/gi, '_')}.pdf`;
-    
-    try {
-      await html2pdf()
-        .set({
-          margin: [0.5, 0.75, 0.5, 0.75],
-          filename,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { 
-            scale: 2,
-            useCORS: true,
-            letterRendering: true,
-          },
-          jsPDF: { 
-            unit: 'in', 
-            format: 'letter', 
-            orientation: 'portrait' 
-          },
-          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-        })
-        .from(container)
-        .save();
-      
-      toast({ 
-        title: 'PDF Downloaded', 
-        description: `${lesson.lesson_title || 'Lesson'} has been saved as PDF.` 
-      });
-    } catch (error) {
-      console.error('PDF generation error:', error);
-      toast({ 
-        title: 'Export Failed', 
-        description: 'Could not generate PDF. Please try again.',
-        variant: 'destructive'
-      });
-    } finally {
-      // Clean up
-      document.body.removeChild(container);
-    }
   };
 
   return (
@@ -359,9 +308,14 @@ export default function SavedLessons() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDownloadPdf(lesson)}
+                      disabled={pdfExporting}
                       title="Download as PDF"
                     >
-                      <Download className="h-4 w-4" />
+                      {pdfExporting ? (
+                        <DownloadLoader className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
                     </Button>
                     <Button
                       variant="outline"
