@@ -83,6 +83,31 @@ const LANGUAGE_FLAGS: Record<string, string> = {
 
 const getFlag = (language: string): string => LANGUAGE_FLAGS[language] || '🌐';
 
+// Find image URL with fuzzy matching (handles translated descriptions)
+const findImageUrl = (description: string, imageMap: Map<string, string>): string | undefined => {
+  const trimmedDesc = description.trim();
+  
+  // Try exact match first
+  if (imageMap.has(trimmedDesc)) {
+    return imageMap.get(trimmedDesc);
+  }
+  
+  // Try fuzzy match - check if any key contains this description or vice versa
+  for (const [key, url] of imageMap.entries()) {
+    // Check if the key contains the description (for Chinese descriptions)
+    if (key.includes(trimmedDesc) || trimmedDesc.includes(key)) {
+      return url;
+    }
+    // Check for partial match with English in parentheses
+    const englishMatch = key.match(/\(([^)]+)\)$/);
+    if (englishMatch && trimmedDesc.toLowerCase().includes(englishMatch[1].toLowerCase().substring(0, 30))) {
+      return url;
+    }
+  }
+  
+  return undefined;
+};
+
 // Process content to replace [VISUAL:] and [NANOBANANA:] tags with actual images
 const processContentWithImages = (content: string, imageMap: Map<string, string>): string => {
   if (!content || imageMap.size === 0) return content;
@@ -92,7 +117,7 @@ const processContentWithImages = (content: string, imageMap: Map<string, string>
   // Replace [VISUAL: description] with markdown image
   processed = processed.replace(/\[VISUAL:\s*(.+?)\]/gi, (match, description) => {
     const desc = description.trim();
-    const imageUrl = imageMap.get(desc);
+    const imageUrl = findImageUrl(desc, imageMap);
     if (imageUrl) {
       return `\n\n![${desc}](${imageUrl})\n\n*${desc}*\n\n`;
     }
@@ -102,7 +127,7 @@ const processContentWithImages = (content: string, imageMap: Map<string, string>
   // Also handle [NANOBANANA: "..."] format
   processed = processed.replace(/\[NANOBANANA:\s*"(.+?)"\]/gi, (match, description) => {
     const desc = description.trim();
-    const imageUrl = imageMap.get(desc);
+    const imageUrl = findImageUrl(desc, imageMap);
     if (imageUrl) {
       return `\n\n![${desc}](${imageUrl})\n\n*${desc}*\n\n`;
     }

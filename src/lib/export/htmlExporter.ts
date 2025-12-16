@@ -88,8 +88,35 @@ export function generateStudentHTML(data: LessonExportData): string {
   const processMarkdown = (md: string): string => {
     let processed = md;
     
+    // Find image URL with fuzzy matching (handles translated descriptions)
+    const findImageUrl = (description: string): string | undefined => {
+      const trimmedDesc = description.trim();
+      
+      // Try exact match first
+      if (imageMap?.has(trimmedDesc)) {
+        return imageMap.get(trimmedDesc);
+      }
+      
+      // Try fuzzy match - check if any key contains this description or vice versa
+      if (imageMap) {
+        for (const [key, url] of imageMap.entries()) {
+          // Check if the key contains the description (for Chinese descriptions)
+          if (key.includes(trimmedDesc) || trimmedDesc.includes(key)) {
+            return url;
+          }
+          // Check for partial match with English in parentheses
+          const englishMatch = key.match(/\(([^)]+)\)$/);
+          if (englishMatch && trimmedDesc.toLowerCase().includes(englishMatch[1].toLowerCase().substring(0, 30))) {
+            return url;
+          }
+        }
+      }
+      
+      return undefined;
+    };
+    
     const replaceVisual = (match: string, description: string) => {
-      const imageUrl = imageMap?.get(description.trim());
+      const imageUrl = findImageUrl(description);
       
       if (imageUrl) {
         return `<figure class="lesson-figure">
