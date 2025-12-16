@@ -114,23 +114,33 @@ export function DifferentiatedLessonOutput({
     return extractVisualDescriptions(allContent).length > 0;
   }, [studentHandouts]);
 
-  // Track if auto-generation has been attempted
-  const autoGenerationAttempted = useRef(false);
+  // Track if auto-generation has been attempted for THIS lesson
+  const autoGenerationAttempted = useRef<string | null>(null);
 
   // Handle diagram generation
   const handleGenerateDiagrams = useCallback(async () => {
     const allContent = studentHandouts.map(h => h.content).join('\n');
+    console.log('Starting diagram generation, content length:', allContent.length);
+    const visuals = extractVisualDescriptions(allContent);
+    console.log('Found visual descriptions:', visuals.length, visuals);
     await generateImages(allContent, lessonId || undefined, undefined, lessonTitle);
   }, [studentHandouts, generateImages, lessonId, lessonTitle]);
 
+  // Create a unique identifier for this lesson content
+  const lessonContentId = useMemo(() => {
+    const content = studentHandouts.map(h => h.content).join('').slice(0, 500);
+    return `${lessonId || 'new'}-${content.length}-${content.slice(0, 50)}`;
+  }, [lessonId, studentHandouts]);
+
   // Auto-generate images when content has visuals and no images exist yet
+  // Reset when lesson content changes
   useEffect(() => {
-    if (contentHasVisuals && imageMap.size === 0 && !isGeneratingImages && !autoGenerationAttempted.current) {
-      autoGenerationAttempted.current = true;
-      console.log('Auto-generating diagrams for lesson content...');
+    if (contentHasVisuals && imageMap.size === 0 && !isGeneratingImages && autoGenerationAttempted.current !== lessonContentId) {
+      autoGenerationAttempted.current = lessonContentId;
+      console.log('Auto-generating diagrams for lesson content...', lessonContentId);
       handleGenerateDiagrams();
     }
-  }, [contentHasVisuals, imageMap.size, isGeneratingImages, handleGenerateDiagrams]);
+  }, [contentHasVisuals, imageMap.size, isGeneratingImages, handleGenerateDiagrams, lessonContentId]);
 
   // Get content for a specific group - now using structured data directly
   const getGroupContent = useCallback((groupName: string): string => {
@@ -385,7 +395,7 @@ export function DifferentiatedLessonOutput({
               </div>
               <Button
                 onClick={() => {
-                  autoGenerationAttempted.current = false;
+                  autoGenerationAttempted.current = null;
                   handleGenerateDiagrams();
                 }}
                 size="sm"
