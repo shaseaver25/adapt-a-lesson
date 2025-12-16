@@ -16,7 +16,7 @@ export interface AuthState {
 }
 
 export interface AuthActions {
-  signInWithEmail: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signInWithEmail: (email: string, password: string) => Promise<{ error: AuthError | null; data?: { user: User | null } }>;
   signUpWithEmail: (email: string, password: string, fullName?: string) => Promise<{ error: AuthError | null }>;
   signInWithOAuth: (provider: 'google' | 'azure' | 'canvas') => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<{ error: AuthError | null }>;
@@ -115,7 +115,7 @@ export function useAuth(): AuthState & AuthActions {
       await updateLoginStats(data.user.id);
     }
 
-    return { error: null };
+    return { error: null, data: { user: data.user } };
   }, [trackLoginAttempt, updateLoginStats]);
 
   // Sign up with email/password
