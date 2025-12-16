@@ -3,7 +3,7 @@
  * Converts markdown lesson content to styled HTML for PDF export
  */
 
-interface PDFOptions {
+export interface PDFOptions {
   title: string;
   subject?: string;
   grade?: string;
@@ -16,6 +16,199 @@ interface PDFOptions {
  * Convert lesson markdown to styled HTML for PDF generation
  */
 export function buildLessonHTML(markdown: string, options: PDFOptions): string {
+  const content = getDocumentContent(markdown, options);
+  const styles = getDocumentStyles(options);
+  return wrapInHtmlDocument(content, styles, options);
+}
+
+/**
+ * Get the CSS styles for PDF document (can be injected separately)
+ */
+export function getDocumentStyles(options: PDFOptions): string {
+  const direction = options.isRTL ? 'rtl' : 'ltr';
+  const fontFamily = options.isRTL 
+    ? "'Noto Sans Arabic', 'Segoe UI', Arial, sans-serif"
+    : "'Nunito', 'Segoe UI', Arial, sans-serif";
+
+  return `
+    .pdf-export-root * {
+      box-sizing: border-box;
+    }
+    
+    .pdf-export-root {
+      font-family: ${fontFamily};
+      font-size: 11pt;
+      line-height: 1.6;
+      color: #1f2937;
+      direction: ${direction};
+      margin: 0;
+      padding: 20px;
+      background: white;
+    }
+    
+    .pdf-export-root h1, 
+    .pdf-export-root h2, 
+    .pdf-export-root h3, 
+    .pdf-export-root h4, 
+    .pdf-export-root h5, 
+    .pdf-export-root h6 {
+      font-family: 'Noto Color Emoji', ${fontFamily};
+    }
+    
+    .pdf-export-root h1 {
+      font-size: 20pt;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin: 0 0 8pt 0;
+      padding-bottom: 6pt;
+      border-bottom: 2px solid #f97316;
+    }
+    
+    .pdf-export-root h2 {
+      font-size: 15pt;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin: 16pt 0 8pt 0;
+      padding-bottom: 4pt;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .pdf-export-root h3 {
+      font-size: 12pt;
+      font-weight: 600;
+      color: #374151;
+      margin: 12pt 0 6pt 0;
+    }
+    
+    .pdf-export-root h4 {
+      font-size: 11pt;
+      font-weight: 600;
+      color: #4b5563;
+      margin: 10pt 0 4pt 0;
+    }
+    
+    .pdf-export-root p {
+      margin: 0 0 8pt 0;
+    }
+    
+    .pdf-export-root ul, 
+    .pdf-export-root ol {
+      margin: 0 0 10pt 0;
+      padding-${options.isRTL ? 'right' : 'left'}: 20pt;
+    }
+    
+    .pdf-export-root li {
+      margin-bottom: 4pt;
+    }
+    
+    .pdf-export-root .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12pt 0;
+      font-size: 10pt;
+    }
+    
+    .pdf-export-root .data-table th,
+    .pdf-export-root .data-table td {
+      border: 1px solid #d1d5db;
+      padding: 6pt 8pt;
+      text-align: ${options.isRTL ? 'right' : 'left'};
+      vertical-align: top;
+    }
+    
+    .pdf-export-root .data-table th {
+      background-color: #f3f4f6;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    
+    .pdf-export-root .data-table tr:nth-child(even) td {
+      background-color: #f9fafb;
+    }
+    
+    .pdf-export-root .visual-placeholder {
+      border: 2px dashed #9ca3af;
+      border-radius: 8pt;
+      padding: 16pt;
+      margin: 12pt 0;
+      background-color: #f9fafb;
+      text-align: center;
+    }
+    
+    .pdf-export-root .visual-icon {
+      font-size: 24pt;
+      margin-bottom: 6pt;
+    }
+    
+    .pdf-export-root .visual-text {
+      font-style: italic;
+      color: #6b7280;
+      font-size: 10pt;
+    }
+    
+    .pdf-export-root hr {
+      border: none;
+      border-top: 1px solid #e5e7eb;
+      margin: 16pt 0;
+    }
+    
+    .pdf-export-root code {
+      background-color: #f3f4f6;
+      padding: 2pt 4pt;
+      border-radius: 3pt;
+      font-family: monospace;
+      font-size: 10pt;
+    }
+    
+    .pdf-export-root .document-header {
+      margin-bottom: 16pt;
+    }
+    
+    .pdf-export-root .document-title {
+      font-size: 20pt;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin: 0 0 4pt 0;
+    }
+    
+    .pdf-export-root .document-meta {
+      font-size: 10pt;
+      color: #6b7280;
+    }
+    
+    .pdf-export-root .group-badge {
+      display: inline-block;
+      padding: 2pt 8pt;
+      border-radius: 4pt;
+      font-size: 9pt;
+      font-weight: 600;
+      background-color: #fff7ed;
+      color: #ea580c;
+      border: 1px solid #fed7aa;
+      margin-${options.isRTL ? 'left' : 'right'}: 8pt;
+    }
+    
+    .pdf-export-root .page-break {
+      page-break-after: always;
+    }
+    
+    @media print {
+      .pdf-export-root {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      
+      .pdf-export-root .page-break {
+        page-break-after: always;
+      }
+    }
+  `;
+}
+
+/**
+ * Get the HTML content (without document wrapper)
+ */
+export function getDocumentContent(markdown: string, options: PDFOptions): string {
   let processedContent = markdown;
   
   // 1. Convert ASCII tables to HTML tables
@@ -27,8 +220,22 @@ export function buildLessonHTML(markdown: string, options: PDFOptions): string {
   // 3. Convert markdown to HTML
   const contentHtml = convertMarkdownToHtml(processedContent);
   
-  // 4. Wrap in full HTML document with fonts & styles
-  return wrapInHtmlDocument(contentHtml, options);
+  // 4. Build the content structure
+  return `
+    <div class="document-header">
+      <div class="document-title">${escapeHtml(options.title)}</div>
+      <div class="document-meta">
+        ${options.createdAt ? `Created: ${options.createdAt}` : ''}
+        ${options.grade ? ` • ${escapeHtml(options.grade)}` : ''}
+        ${options.subject ? ` • ${escapeHtml(options.subject)}` : ''}
+        ${options.groupName ? `<span class="group-badge">${escapeHtml(options.groupName)}</span>` : ''}
+      </div>
+    </div>
+    
+    <div class="document-content">
+      ${contentHtml}
+    </div>
+  `;
 }
 
 /**
@@ -182,199 +389,18 @@ function escapeHtml(text: string): string {
 /**
  * Wrap content in full HTML document with proper fonts and styling
  */
-function wrapInHtmlDocument(content: string, options: PDFOptions): string {
+function wrapInHtmlDocument(content: string, styles: string, options: PDFOptions): string {
   const direction = options.isRTL ? 'rtl' : 'ltr';
-  const fontFamily = options.isRTL 
-    ? "'Noto Sans Arabic', 'Segoe UI', Arial, sans-serif"
-    : "'Nunito', 'Segoe UI', Arial, sans-serif";
 
   return `<!DOCTYPE html>
 <html lang="${options.isRTL ? 'ar' : 'en'}" dir="${direction}">
 <head>
   <meta charset="UTF-8">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Noto+Sans+Arabic:wght@400;600;700&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: ${fontFamily};
-      font-size: 11pt;
-      line-height: 1.6;
-      color: #1f2937;
-      direction: ${direction};
-      margin: 0;
-      padding: 20px;
-      background: white;
-    }
-    
-    h1, h2, h3, h4, h5, h6 {
-      font-family: 'Noto Color Emoji', ${fontFamily};
-    }
-    
-    h1 {
-      font-size: 20pt;
-      font-weight: 700;
-      color: #1e3a5f;
-      margin: 0 0 8pt 0;
-      padding-bottom: 6pt;
-      border-bottom: 2px solid #f97316;
-    }
-    
-    h2 {
-      font-size: 15pt;
-      font-weight: 700;
-      color: #1e3a5f;
-      margin: 16pt 0 8pt 0;
-      padding-bottom: 4pt;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    
-    h3 {
-      font-size: 12pt;
-      font-weight: 600;
-      color: #374151;
-      margin: 12pt 0 6pt 0;
-    }
-    
-    h4 {
-      font-size: 11pt;
-      font-weight: 600;
-      color: #4b5563;
-      margin: 10pt 0 4pt 0;
-    }
-    
-    p {
-      margin: 0 0 8pt 0;
-    }
-    
-    ul, ol {
-      margin: 0 0 10pt 0;
-      padding-${options.isRTL ? 'right' : 'left'}: 20pt;
-    }
-    
-    li {
-      margin-bottom: 4pt;
-    }
-    
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 12pt 0;
-      font-size: 10pt;
-    }
-    
-    .data-table th,
-    .data-table td {
-      border: 1px solid #d1d5db;
-      padding: 6pt 8pt;
-      text-align: ${options.isRTL ? 'right' : 'left'};
-      vertical-align: top;
-    }
-    
-    .data-table th {
-      background-color: #f3f4f6;
-      font-weight: 600;
-      color: #1f2937;
-    }
-    
-    .data-table tr:nth-child(even) td {
-      background-color: #f9fafb;
-    }
-    
-    .visual-placeholder {
-      border: 2px dashed #9ca3af;
-      border-radius: 8pt;
-      padding: 16pt;
-      margin: 12pt 0;
-      background-color: #f9fafb;
-      text-align: center;
-    }
-    
-    .visual-icon {
-      font-size: 24pt;
-      margin-bottom: 6pt;
-    }
-    
-    .visual-text {
-      font-style: italic;
-      color: #6b7280;
-      font-size: 10pt;
-    }
-    
-    hr {
-      border: none;
-      border-top: 1px solid #e5e7eb;
-      margin: 16pt 0;
-    }
-    
-    code {
-      background-color: #f3f4f6;
-      padding: 2pt 4pt;
-      border-radius: 3pt;
-      font-family: monospace;
-      font-size: 10pt;
-    }
-    
-    .document-header {
-      margin-bottom: 16pt;
-    }
-    
-    .document-title {
-      font-size: 20pt;
-      font-weight: 700;
-      color: #1e3a5f;
-      margin: 0 0 4pt 0;
-    }
-    
-    .document-meta {
-      font-size: 10pt;
-      color: #6b7280;
-    }
-    
-    .group-badge {
-      display: inline-block;
-      padding: 2pt 8pt;
-      border-radius: 4pt;
-      font-size: 9pt;
-      font-weight: 600;
-      background-color: #fff7ed;
-      color: #ea580c;
-      border: 1px solid #fed7aa;
-      margin-${options.isRTL ? 'left' : 'right'}: 8pt;
-    }
-    
-    .page-break {
-      page-break-after: always;
-    }
-    
-    @media print {
-      body {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      
-      .page-break {
-        page-break-after: always;
-      }
-    }
-  </style>
+  <style>${styles}</style>
 </head>
-<body>
-  <div class="document-header">
-    <div class="document-title">${escapeHtml(options.title)}</div>
-    <div class="document-meta">
-      ${options.createdAt ? `Created: ${options.createdAt}` : ''}
-      ${options.grade ? ` • ${escapeHtml(options.grade)}` : ''}
-      ${options.subject ? ` • ${escapeHtml(options.subject)}` : ''}
-      ${options.groupName ? `<span class="group-badge">${escapeHtml(options.groupName)}</span>` : ''}
-    </div>
-  </div>
-  
-  <div class="document-content">
-    ${content}
-  </div>
+<body class="pdf-export-root">
+  ${content}
 </body>
 </html>`;
 }

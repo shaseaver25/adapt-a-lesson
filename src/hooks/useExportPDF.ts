@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import html2pdf from 'html2pdf.js';
-import { buildLessonHTML, isArabicContent } from '@/lib/pdf/htmlBuilder';
+import { getDocumentStyles, getDocumentContent, isArabicContent } from '@/lib/pdf/htmlBuilder';
 import { useToast } from '@/hooks/use-toast';
 
 interface ExportOptions {
@@ -18,45 +18,43 @@ export function useExportPDF() {
   const exportToPDF = async (markdown: string, options: ExportOptions) => {
     setExporting(true);
     
-    let iframe: HTMLIFrameElement | null = null;
+    let container: HTMLDivElement | null = null;
+    let styleElement: HTMLStyleElement | null = null;
     
     try {
       // Detect if Arabic/RTL content
       const isRTL = isArabicContent(markdown);
+      const pdfOptions = { ...options, isRTL };
       
-      // Build HTML from markdown
-      const html = buildLessonHTML(markdown, {
-        ...options,
-        isRTL
-      });
+      // Get styles and content separately
+      const styles = getDocumentStyles(pdfOptions);
+      const content = getDocumentContent(markdown, pdfOptions);
       
-      // Create hidden iframe for proper HTML document rendering
-      iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.left = '-10000px';
-      iframe.style.top = '-10000px';
-      iframe.style.width = '8.5in';
-      iframe.style.height = '11in';
-      iframe.style.border = 'none';
-      document.body.appendChild(iframe);
+      // Create style element and add to head
+      styleElement = document.createElement('style');
+      styleElement.id = 'pdf-export-styles';
+      styleElement.textContent = styles;
+      document.head.appendChild(styleElement);
       
-      // Write full HTML document to iframe
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (!iframeDoc) throw new Error('Could not access iframe document');
+      // Create container div in main document (positioned off-screen but still rendered)
+      container = document.createElement('div');
+      container.id = 'pdf-export-container';
+      container.className = 'pdf-export-root';
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = '8.5in';
+      container.style.background = 'white';
+      container.innerHTML = content;
+      document.body.appendChild(container);
       
-      iframeDoc.open();
-      iframeDoc.write(html);
-      iframeDoc.close();
-      
-      // Wait for fonts and content to load
-      await new Promise(resolve => setTimeout(resolve, 800));
-      if (iframeDoc.fonts) {
-        await iframeDoc.fonts.ready;
-      }
+      // Wait for fonts to render
+      await document.fonts.ready;
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       const filename = `${(options.title || 'document').replace(/[^a-z0-9]/gi, '_')}.pdf`;
       
-      // Generate PDF from iframe body
+      // Generate PDF from container
       await html2pdf()
         .set({
           margin: [0.5, 0.75, 0.5, 0.75],
@@ -74,7 +72,7 @@ export function useExportPDF() {
           },
           pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         })
-        .from(iframeDoc.body)
+        .from(container)
         .save();
       
       toast({
@@ -90,9 +88,12 @@ export function useExportPDF() {
         variant: 'destructive'
       });
     } finally {
-      // Clean up iframe
-      if (iframe && iframe.parentNode) {
-        iframe.parentNode.removeChild(iframe);
+      // Clean up container and styles
+      if (container && container.parentNode) {
+        container.parentNode.removeChild(container);
+      }
+      if (styleElement && styleElement.parentNode) {
+        styleElement.parentNode.removeChild(styleElement);
       }
       setExporting(false);
     }
