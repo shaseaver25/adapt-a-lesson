@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_cost_logs: {
+        Row: {
+          created_at: string | null
+          estimated_cost: number | null
+          function_name: string
+          id: string
+          input_tokens: number | null
+          model: string
+          output_tokens: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          estimated_cost?: number | null
+          function_name: string
+          id?: string
+          input_tokens?: number | null
+          model: string
+          output_tokens?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          estimated_cost?: number | null
+          function_name?: string
+          id?: string
+          input_tokens?: number | null
+          model?: string
+          output_tokens?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       audio_cache: {
         Row: {
           audio_url: string
@@ -131,6 +164,69 @@ export type Database = {
           organization_id?: string | null
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      error_logs: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          error_type: string
+          id: string
+          metadata: Json | null
+          page_url: string | null
+          stack_trace: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          error_type: string
+          id?: string
+          metadata?: Json | null
+          page_url?: string | null
+          stack_trace?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          error_type?: string
+          id?: string
+          metadata?: Json | null
+          page_url?: string | null
+          stack_trace?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      feature_flags: {
+        Row: {
+          description: string | null
+          flag_name: string
+          id: string
+          is_enabled: boolean | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          description?: string | null
+          flag_name: string
+          id?: string
+          is_enabled?: boolean | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          description?: string | null
+          flag_name?: string
+          id?: string
+          is_enabled?: boolean | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -569,6 +665,57 @@ export type Database = {
           },
         ]
       }
+      usage_analytics: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          metadata: Json | null
+          metric_name: string
+          metric_value: number
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          metadata?: Json | null
+          metric_name: string
+          metric_value: number
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          metadata?: Json | null
+          metric_name?: string
+          metric_value?: number
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_sessions: {
         Row: {
           created_at: string
@@ -686,6 +833,13 @@ export type Database = {
         Returns: undefined
       }
       count_active_sessions: { Args: { p_user_id: string }; Returns: number }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       increment_failed_login: {
         Args: { p_email: string }
         Returns: {
@@ -693,11 +847,12 @@ export type Database = {
           is_locked: boolean
         }[]
       }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       reset_failed_login: { Args: { p_user_id: string }; Returns: undefined }
       update_login_stats: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "super_admin" | "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -824,6 +979,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["super_admin", "admin", "moderator", "user"],
+    },
   },
 } as const

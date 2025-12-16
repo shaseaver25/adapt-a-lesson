@@ -16,6 +16,7 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import SessionManagement from "./pages/SessionManagement";
 import Terms from "./pages/Terms";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
                 <Route path="/saved-rubrics" element={<SavedRubrics />} />
                 <Route path="/audio-usage" element={<AudioUsage />} />
                 <Route path="/terms" element={<Terms />} />
+                <Route path="/admin" element={<Admin />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
