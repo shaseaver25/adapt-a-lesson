@@ -8,7 +8,8 @@ import { RubricForm } from '@/components/RubricForm';
 import { RubricOutput } from '@/components/RubricOutput';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, LogIn, LogOut } from 'lucide-react';
+import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, LogIn, LogOut, Settings } from 'lucide-react';
+import { useAdmin } from '@/hooks/useAdmin';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
 import { DifferentiationProgressModal, createInitialProgressState } from '@/components/DifferentiationProgressModal';
 import { useLessonAudio } from '@/hooks/useLessonAudio';
@@ -22,6 +23,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { setCachedLessonContent, clearSelection } = useDifferentiation();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
   
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
@@ -145,6 +147,16 @@ const Index = () => {
               >
                 ← Start Over
               </button>
+            )}
+            
+            {/* Admin link - only visible to admins */}
+            {isAdmin && (
+              <Link to="/admin">
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <Settings className="h-4 w-4" />
+                  <span className="hidden sm:inline">Admin</span>
+                </Button>
+              </Link>
             )}
             
             {/* Auth buttons */}
