@@ -10,12 +10,8 @@ export const emailSchema = z
 // Password validation schema
 export const passwordSchema = z
   .string()
-  .min(8, 'Password must be at least 8 characters')
-  .max(72, 'Password must be less than 72 characters')
-  .regex(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-    'Password must contain at least one uppercase letter, one lowercase letter, and one number'
-  );
+  .min(12, 'Password must be at least 12 characters')
+  .max(72, 'Password must be less than 72 characters');
 
 // Full name validation schema
 export const fullNameSchema = z
