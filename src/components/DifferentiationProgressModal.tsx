@@ -16,15 +16,12 @@ export interface DifferentiationProgressState {
   groupsProcessed: number;
   totalGroups: number;
   
-  // Audio generation
+  // Audio generation (optional - only if groups need audio)
   audioStatus: 'pending' | 'generating' | 'complete' | 'partial' | 'skipped';
   audioSectionsComplete: number;
   audioSectionsTotal: number;
   audioSectionsFailed: number;
   audioLanguages: string[];
-  
-  // Document preparation
-  documentsStatus: 'pending' | 'generating' | 'complete';
   
   // Overall state
   isComplete: boolean;
@@ -181,12 +178,6 @@ export const DifferentiationProgressModal: React.FC<DifferentiationProgressModal
             </ProgressStep>
           )}
 
-          {/* Document Preparation */}
-          <ProgressStep
-            status={progress.documentsStatus}
-            title="Preparing downloadable documents"
-            detail="With embedded audio links"
-          />
         </div>
 
         {/* Completion Message */}
@@ -251,7 +242,6 @@ export const createInitialProgressState = (): DifferentiationProgressState => ({
   audioSectionsTotal: 0,
   audioSectionsFailed: 0,
   audioLanguages: [],
-  documentsStatus: 'pending',
   isComplete: false,
 });
 
