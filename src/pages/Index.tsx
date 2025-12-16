@@ -169,7 +169,7 @@ const Index = () => {
               <TabsList className="grid w-full grid-cols-3 mb-6">
                 <TabsTrigger value="differentiate" className="flex items-center gap-2">
                   <BookOpenCheck className="h-4 w-4" />
-                  <span className="hidden sm:inline">Differentiate</span>
+                  <span className="hidden sm:inline">Lesson Plan Creator</span>
                 </TabsTrigger>
                 <TabsTrigger value="assessment" className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4" />
@@ -248,7 +248,7 @@ const Index = () => {
               </div>
               <div>
                 <h2 className="font-display font-bold text-xl text-foreground">
-                  AI-Resistant Assessment Ready
+                  Authentic Assessment Ready
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   Generated materials ready for classroom use
