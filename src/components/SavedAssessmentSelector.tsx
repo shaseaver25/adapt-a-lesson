@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,7 +28,7 @@ import {
   FolderOpen, 
   ChevronDown, 
   FileText, 
-  Trash2, 
+  Trash2,
   Loader2,
   FileUp
 } from 'lucide-react';
@@ -61,6 +62,7 @@ export function SavedAssessmentSelector({
   const [gradeLevel, setGradeLevel] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: savedAssessments = [], isLoading } = useQuery({
     queryKey: ['saved-assessments'],
@@ -77,11 +79,13 @@ export function SavedAssessmentSelector({
 
   const saveMutation = useMutation({
     mutationFn: async (data: { title: string; description: string; subject?: string; gradeLevel?: string }) => {
+      if (!user?.id) throw new Error('You must be logged in to save assessments');
       const { error } = await supabase.from('saved_assessments').insert({
         title: data.title,
         assessment_description: data.description,
         subject: data.subject || null,
         grade_level: data.gradeLevel || null,
+        user_id: user.id,
       });
       if (error) throw error;
     },

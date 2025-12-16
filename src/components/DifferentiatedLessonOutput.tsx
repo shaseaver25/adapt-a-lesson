@@ -12,6 +12,7 @@ import { HelpTooltip } from '@/components/ui/help-tooltip';
 import type { StudentGroup } from '@/types/studentGroup';
 import type { DifferentiatedLessonData, StudentHandout } from '@/types/differentiatedLesson';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
 import { anyGroupNeedsAudio } from '@/types/audioRequirements';
 import { AudioGenerationButton } from '@/components/AudioGenerationButton';
@@ -98,6 +99,7 @@ export function DifferentiatedLessonOutput({
   const [saved, setSaved] = useState(false);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
   const { options } = useDifferentiation();
   const { imageMap, isGenerating: isGeneratingImages, progress: imageProgress, generateImages, hasVisuals } = useLessonImages();
 
@@ -160,6 +162,7 @@ export function DifferentiatedLessonOutput({
     
     setSaving(true);
     try {
+      if (!user?.id) throw new Error('You must be logged in to save lessons');
       const insertData = {
         original_content: originalContent || teacherGuide,
         lesson_title: lessonTitle,
@@ -167,6 +170,7 @@ export function DifferentiatedLessonOutput({
         teacher_guide: teacherGuide,
         student_handouts: JSON.parse(JSON.stringify(studentHandouts)),
         differentiation_options: JSON.parse(JSON.stringify(options)),
+        user_id: user.id,
       };
       
       const { error } = await supabase

@@ -21,6 +21,7 @@ import { toast } from '@/hooks/use-toast';
 import { RubricExportOptions, RubricInput, AIProofSettings, VerificationCheckpoints } from '@/types/rubric';
 import { AIVulnerabilityAnalysis } from '@/types/vulnerabilityAnalysis';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface RubricOutputProps {
   content: string;
@@ -51,6 +52,7 @@ export function RubricOutput({
     processDocumentationTemplate: false,
     qaQuestionBank: false,
   });
+  const { user } = useAuth();
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(content);
@@ -137,6 +139,15 @@ export function RubricOutput({
       return;
     }
 
+    if (!user?.id) {
+      toast({
+        title: 'Cannot save',
+        description: 'You must be logged in to save rubrics',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -168,6 +179,7 @@ export function RubricOutput({
         ai_proof_settings: rubricInput.aiProofSettings ? JSON.parse(JSON.stringify(rubricInput.aiProofSettings)) : null,
         auto_verification_added: autoVerificationAdded || false,
         auto_verification_count: autoVerificationCount || 0,
+        user_id: user.id,
       }]);
 
       if (error) throw error;
