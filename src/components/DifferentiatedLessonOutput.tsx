@@ -10,6 +10,7 @@ import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } 
 import { OUTPUT_SECTION_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
 import { HelpTooltip } from '@/components/ui/help-tooltip';
 import type { StudentGroup } from '@/types/studentGroup';
+import type { DifferentiatedLessonData, StudentHandout } from '@/types/differentiatedLesson';
 import { supabase } from '@/integrations/supabase/client';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
 import { anyGroupNeedsAudio } from '@/types/audioRequirements';
@@ -49,7 +50,7 @@ interface PreGeneratedVocabularyAudioRecord {
 }
 
 interface DifferentiatedLessonOutputProps {
-  content: string;
+  lessonData: DifferentiatedLessonData;
   selectedGroups: (StudentGroup & { id: string })[];
   lessonTitle?: string;
   originalContent?: string;
@@ -80,7 +81,7 @@ const LANGUAGE_FLAGS: Record<string, string> = {
 const getFlag = (language: string): string => LANGUAGE_FLAGS[language] || '🌐';
 
 export function DifferentiatedLessonOutput({ 
-  content, 
+  lessonData,
   selectedGroups, 
   lessonTitle = 'Lesson',
   originalContent = '',
@@ -97,124 +98,18 @@ export function DifferentiatedLessonOutput({
   const { toast } = useToast();
   const { options } = useDifferentiation();
 
+  const { teacherGuide, studentHandouts } = lessonData;
+
   // Check if audio already exists for this lesson
   const hasExistingAudio = preGeneratedAudio.length > 0;
 
-  // Extract content for a specific group from the full content (STUDENT HANDOUTS only)
-  const extractGroupContent = useCallback((groupName: string): string => {
-    if (!content) return '';
-    
-    const allLines = content.split('\n');
-    
-    // STEP 1: Find STUDENT HANDOUTS section
-    let studentSectionStart = 0;
-    for (let i = 0; i < allLines.length; i++) {
-      const line = allLines[i].toUpperCase();
-      if (line.includes('STUDENT HANDOUT') || line.includes('PRINT FROM HERE')) {
-        studentSectionStart = i;
-        console.log(`Found STUDENT HANDOUTS section at line ${i}`);
-        break;
-      }
-    }
-    
-    const lines = allLines.slice(studentSectionStart);
-    
-    // STEP 2: Normalize group name - keep it simple
-    const normalizedGroupName = groupName.toLowerCase()
-      .replace(/\s*\(.*?\)\s*/g, '')
-      .replace(/readers$/i, 'reader')
-      .trim();
-    
-    console.log(`Looking for group: "${groupName}" (normalized: "${normalizedGroupName}")`);
-    
-    // STEP 3: Find candidate headers containing group name
-    type Candidate = { index: number; level: number; line: string; score: number };
-    const candidates: Candidate[] = [];
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const headerMatch = line.match(/^(#{1,4})\s+(.+)$/);
-      if (!headerMatch) continue;
-      
-      const headerLevel = headerMatch[1].length;
-      const headerText = headerMatch[2].toLowerCase();
-      
-      // Check if header contains group name (flexible matching)
-      const headerWords = headerText.replace(/[🔥✨📚🎯⭐💫🌟]/g, '').replace(/readers/gi, 'reader');
-      const nameWords = normalizedGroupName.split(' ');
-      const matchCount = nameWords.filter(w => headerWords.includes(w)).length;
-      
-      if (matchCount >= Math.ceil(nameWords.length / 2)) {
-        // Score: higher = better student content indicator
-        let score = 0;
-        if (headerText.includes('handout')) score += 100;
-        if (headerText.includes('edition')) score += 80;
-        if (headerText.includes('worksheet')) score += 80;
-        // Penalize teacher-style headers
-        if (headerText.includes('(english')) score -= 50;
-        if (headerText.includes('(somali') || headerText.includes('(arabic') || headerText.includes('(spanish')) score -= 50;
-        if (headerText.includes('iep)') || headerText.includes('504)')) score -= 30;
-        
-        candidates.push({ index: i, level: headerLevel, line, score });
-        console.log(`Candidate at line ${i + studentSectionStart}: score=${score}, "${line.substring(0, 70)}"`);
-      }
-    }
-    
-    if (candidates.length === 0) {
-      console.warn(`No candidate headers found for group: ${groupName}`);
-      return '';
-    }
-    
-    // STEP 4: Sort by score and verify content
-    candidates.sort((a, b) => b.score - a.score);
-    
-    const teacherKeywords = ['scaffolding', 'pacing adjustment', 'what to say', 'chunk content'];
-    const studentKeywords = ['name:', '**name:**', 'learning target', '🎯', 'practice', 'reflection'];
-    
-    let bestCandidate: Candidate | null = null;
-    
-    for (const candidate of candidates) {
-      const nextLines = lines.slice(candidate.index + 1, candidate.index + 20).join('\n').toLowerCase();
-      const hasTeacher = teacherKeywords.some(kw => nextLines.includes(kw));
-      const hasStudent = studentKeywords.some(kw => nextLines.includes(kw));
-      
-      console.log(`  Checking content: teacher=${hasTeacher}, student=${hasStudent}`);
-      
-      // Accept if: has student content, OR high score with no teacher content
-      if (hasStudent && !hasTeacher) {
-        bestCandidate = candidate;
-        console.log(`Selected (student content) at line ${candidate.index + studentSectionStart}`);
-        break;
-      } else if (!hasTeacher && candidate.score >= 50) {
-        bestCandidate = candidate;
-        console.log(`Selected (high score, no teacher) at line ${candidate.index + studentSectionStart}`);
-        break;
-      } else if (!bestCandidate && !hasTeacher) {
-        bestCandidate = candidate;
-      }
-    }
-    
-    // Last resort: take highest score
-    if (!bestCandidate) {
-      bestCandidate = candidates[0];
-      console.log(`Fallback to highest score at line ${bestCandidate.index + studentSectionStart}`);
-    }
-    
-    // STEP 5: Find end of section
-    let endIndex = lines.length;
-    for (let i = bestCandidate.index + 1; i < lines.length; i++) {
-      const headerMatch = lines[i].match(/^(#{1,4})\s+/);
-      if (headerMatch && headerMatch[1].length <= bestCandidate.level) {
-        endIndex = i;
-        break;
-      }
-    }
-    
-    const extracted = lines.slice(bestCandidate.index, endIndex).join('\n').trim();
-    console.log(`Extracted ${endIndex - bestCandidate.index} lines (${extracted.length} chars) for ${groupName}`);
-    
-    return extracted;
-  }, [content]);
+  // Get content for a specific group - now using structured data directly
+  const getGroupContent = useCallback((groupName: string): string => {
+    const handout = studentHandouts.find(
+      h => h.groupName.toLowerCase() === groupName.toLowerCase()
+    );
+    return handout?.content || '';
+  }, [studentHandouts]);
 
   // Get audio for a specific group and language
   const getAudioUrl = useCallback((groupName: string, language: string): string | null => {
@@ -242,24 +137,18 @@ export function DifferentiatedLessonOutput({
     
     setSaving(true);
     try {
-      const teacherGuide = extractSection('TEACHER GUIDE', 'STUDENT HANDOUTS');
-      const studentHandouts = selectedGroups.map((group) => ({
-        groupId: group.id,
-        groupName: group.groupName,
-        readingLevel: group.readingLevelLabel,
-        content: extractGroupContent(group.groupName),
-      }));
-
+      const insertData = {
+        original_content: originalContent || teacherGuide,
+        lesson_title: lessonTitle,
+        group_ids: selectedGroups.map((g) => g.id),
+        teacher_guide: teacherGuide,
+        student_handouts: JSON.parse(JSON.stringify(studentHandouts)),
+        differentiation_options: JSON.parse(JSON.stringify(options)),
+      };
+      
       const { error } = await supabase
         .from('generated_lessons')
-        .insert({
-          original_content: originalContent || content,
-          lesson_title: lessonTitle,
-          group_ids: selectedGroups.map((g) => g.id),
-          teacher_guide: teacherGuide,
-          student_handouts: studentHandouts as unknown as Record<string, unknown>,
-          differentiation_options: options as unknown as Record<string, unknown>,
-        } as any);
+        .insert(insertData);
 
       if (error) throw error;
 
@@ -283,28 +172,16 @@ export function DifferentiatedLessonOutput({
     }
   };
 
-  const extractSection = (sectionMarker: string, endMarker?: string): string => {
-    const lines = content.split('\n');
-    let inSection = false;
-    let sectionContent: string[] = [];
-    
-    for (const line of lines) {
-      if (line.includes(sectionMarker)) {
-        inSection = true;
-        sectionContent.push(line);
-      } else if (inSection) {
-        if (endMarker && line.includes(endMarker)) {
-          break;
-        }
-        sectionContent.push(line);
-      }
-    }
-    
-    return sectionContent.join('\n');
-  };
+  // Combine all content for copy
+  const fullContent = useMemo(() => {
+    const handoutContents = studentHandouts.map(h => 
+      `## ${h.groupName} (${h.level})\n\n${h.content}`
+    ).join('\n\n---\n\n');
+    return `# TEACHER GUIDE\n\n${teacherGuide}\n\n---\n\n# STUDENT HANDOUTS\n\n${handoutContents}`;
+  }, [teacherGuide, studentHandouts]);
 
   const handleCopyAll = async () => {
-    await navigator.clipboard.writeText(content);
+    await navigator.clipboard.writeText(fullContent);
     setCopied(true);
     toast({ title: 'Copied to clipboard', description: 'Full lesson plan copied' });
     setTimeout(() => setCopied(false), 2000);
@@ -318,27 +195,6 @@ export function DifferentiatedLessonOutput({
       });
     }
   }, [lessonId, toast]);
-
-  // Get teacher guide content
-  const teacherGuide = useMemo(() => {
-    const lines = content.split('\n');
-    let inTeacherGuide = false;
-    const guideLines: string[] = [];
-    
-    for (const line of lines) {
-      if (line.includes('TEACHER GUIDE') || line.includes('Teacher Guide')) {
-        inTeacherGuide = true;
-        guideLines.push(line);
-      } else if (inTeacherGuide) {
-        if (line.includes('STUDENT HANDOUTS') || line.includes('Student Handouts')) {
-          break;
-        }
-        guideLines.push(line);
-      }
-    }
-    
-    return guideLines.join('\n');
-  }, [content]);
 
   // Check if we have bilingual groups
   const hasBilingualGroups = selectedGroups.some(g => g.homeLanguage && g.homeLanguage !== 'English');
@@ -382,7 +238,7 @@ export function DifferentiatedLessonOutput({
               <ExportForLMSButton
                 groups={selectedGroups}
                 lessonTitle={lessonTitle}
-                getGroupContent={extractGroupContent}
+                getGroupContent={getGroupContent}
               />
             </div>
           </div>
@@ -420,7 +276,7 @@ export function DifferentiatedLessonOutput({
                 </div>
                 <AudioGenerationButton
                   lessonId={lessonId || null}
-                  differentiatedContent={content}
+                  differentiatedContent={fullContent}
                   selectedGroups={selectedGroups}
                   onAudioGenerated={handleAudioGenerated}
                   disabled={!saved && !lessonId}
@@ -444,254 +300,71 @@ export function DifferentiatedLessonOutput({
       {/* Content Display */}
       <Card className="overflow-hidden">
         <CardContent className="p-0">
-          {hasBilingualGroups ? (
-            <Tabs defaultValue="bilingual" className="w-full">
-              <div className="border-b px-4 py-2 bg-muted/30">
-                <TabsList className="grid w-full max-w-md grid-cols-2">
-                  <TabsTrigger value="bilingual" className="gap-2">
-                    <LayoutTemplate className="h-4 w-4" />
-                    Side-by-Side View
-                  </TabsTrigger>
-                  <TabsTrigger value="raw" className="gap-2">
-                    <FileText className="h-4 w-4" />
-                    Full Content
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-              
-              <TabsContent value="bilingual" className="mt-0 p-4 space-y-6">
-                {/* Teacher Guide Section */}
-                {teacherGuide.trim() && (
-                  <div className="space-y-4">
-                    <h2 className="text-xl font-display font-bold flex items-center gap-2 pb-3 border-b">
-                      <GraduationCap className="h-5 w-5 text-primary" />
-                      Teacher Guide
-                      <HelpTooltip content={OUTPUT_SECTION_DESCRIPTIONS['Teacher Guide']} />
-                    </h2>
-                    <article className="prose prose-sm dark:prose-invert max-w-none">
-                      <ReactMarkdown>{teacherGuide}</ReactMarkdown>
-                    </article>
+          <Tabs defaultValue="handouts" className="w-full">
+            <div className="border-b px-4 py-2 bg-muted/30">
+              <TabsList className="grid w-full max-w-md grid-cols-2">
+                <TabsTrigger value="handouts" className="gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  Student Handouts
+                </TabsTrigger>
+                <TabsTrigger value="teacher" className="gap-2">
+                  <GraduationCap className="h-4 w-4" />
+                  Teacher Guide
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            
+            {/* Student Handouts - Now using structured data */}
+            <TabsContent value="handouts" className="mt-0 p-4 space-y-6">
+              {studentHandouts.length > 0 ? (
+                <Tabs defaultValue={studentHandouts[0]?.groupId || ''} className="w-full">
+                  {/* Group tabs */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <TabsList className="h-auto flex-wrap">
+                      {studentHandouts.map((handout) => {
+                        const group = selectedGroups.find(g => g.id === handout.groupId || g.groupName === handout.groupName);
+                        return (
+                          <TabsTrigger
+                            key={handout.groupId}
+                            value={handout.groupId}
+                            className="gap-2"
+                          >
+                            <span>{getStudentFriendlyIcon(group?.readingLevelLabel || handout.level)}</span>
+                            {handout.groupName}
+                            {handout.language !== 'English' && (
+                              <span className="text-xs">{getFlag(handout.language)}</span>
+                            )}
+                          </TabsTrigger>
+                        );
+                      })}
+                    </TabsList>
                   </div>
-                )}
-                
-                {/* Bilingual Student Handouts */}
-                <div className="space-y-6">
-                  <h2 className="text-xl font-display font-bold flex items-center gap-2 pb-3 border-b">
-                    <Languages className="h-5 w-5 text-primary" />
-                    Student Handouts (Bilingual)
-                    <HelpTooltip content={OUTPUT_SECTION_DESCRIPTIONS['Student Handouts']} />
-                  </h2>
                   
-                  {selectedGroups
-                    .filter(g => g.homeLanguage && g.homeLanguage !== 'English')
-                    .map(group => {
-                      const groupContent = extractGroupContent(group.groupName);
-                      const englishAudioUrl = getAudioUrl(group.groupName, 'English');
-                      const homeAudioUrl = getAudioUrl(group.groupName, group.homeLanguage);
-                      
-                      return (
-                        <BilingualLessonCard
-                          key={group.id}
-                          group={group}
-                          content={groupContent}
-                          englishAudioUrl={englishAudioUrl}
-                          homeLanguageAudioUrl={homeAudioUrl}
-                          playingAudio={playingAudio}
-                          onPlayAudio={handlePlayAudio}
-                        />
-                      );
-                    })}
-                  
-                  {/* English-only groups */}
-                  {selectedGroups
-                    .filter(g => !g.homeLanguage || g.homeLanguage === 'English')
-                    .map(group => {
-                      const groupContent = extractGroupContent(group.groupName);
-                      const audioUrl = getAudioUrl(group.groupName, 'English');
-                      
-                      return (
-                        <Card key={group.id} className="border-accent/20">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 text-lg">
-                                <span>{getStudentFriendlyIcon(group.readingLevelLabel)}</span>
-                                {group.groupName}
-                                <Badge variant="outline" className="ml-2 text-xs">
-                                  {getStudentFriendlyName(group.readingLevelLabel)}
-                                </Badge>
-                              </div>
-                              {audioUrl && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handlePlayAudio(audioUrl, `${group.groupName}-english`)}
-                                  className="gap-2"
-                                >
-                                  <Volume2 className={`h-4 w-4 ${playingAudio === `${group.groupName}-english` ? 'animate-pulse text-primary' : ''}`} />
-                                  Listen
-                                </Button>
-                              )}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <article className="prose prose-sm dark:prose-invert max-w-none">
-                              <ReactMarkdown>{groupContent}</ReactMarkdown>
-                            </article>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
+                  {/* Handout content */}
+                  {studentHandouts.map((handout) => (
+                    <TabsContent key={handout.groupId} value={handout.groupId} className="mt-0">
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <ReactMarkdown>{handout.content}</ReactMarkdown>
+                      </div>
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No student handouts generated</p>
                 </div>
-              </TabsContent>
-              
-              <TabsContent value="raw" className="mt-0">
-                <RawContentView content={content} />
-              </TabsContent>
-            </Tabs>
-          ) : (
-            <RawContentView content={content} />
-          )}
+              )}
+            </TabsContent>
+            
+            {/* Teacher Guide */}
+            <TabsContent value="teacher" className="mt-0 p-4">
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown>{teacherGuide}</ReactMarkdown>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
   );
 }
-
-// Bilingual lesson card with two-column layout
-interface BilingualLessonCardProps {
-  group: StudentGroup & { id: string };
-  content: string;
-  englishAudioUrl: string | null;
-  homeLanguageAudioUrl: string | null;
-  playingAudio: string | null;
-  onPlayAudio: (url: string, label: string) => void;
-}
-
-function BilingualLessonCard({
-  group,
-  content,
-  englishAudioUrl,
-  homeLanguageAudioUrl,
-  playingAudio,
-  onPlayAudio,
-}: BilingualLessonCardProps) {
-  // Split content by language markers if present, otherwise use same content for both
-  const { englishContent, homeLanguageContent } = useMemo(() => {
-    // Try to find language-specific sections
-    const lines = content.split('\n');
-    let englishLines: string[] = [];
-    let homeLines: string[] = [];
-    let currentLang: 'english' | 'home' | null = null;
-    
-    for (const line of lines) {
-      if (line.includes('(English)') || line.includes('[English]')) {
-        currentLang = 'english';
-        continue;
-      }
-      if (line.includes(`(${group.homeLanguage})`) || line.includes(`[${group.homeLanguage}]`)) {
-        currentLang = 'home';
-        continue;
-      }
-      
-      if (currentLang === 'english') {
-        englishLines.push(line);
-      } else if (currentLang === 'home') {
-        homeLines.push(line);
-      } else {
-        // If no language marker, add to both
-        englishLines.push(line);
-        homeLines.push(line);
-      }
-    }
-    
-    return {
-      englishContent: englishLines.length > 0 ? englishLines.join('\n') : content,
-      homeLanguageContent: homeLines.length > 0 ? homeLines.join('\n') : content,
-    };
-  }, [content, group.homeLanguage]);
-
-  return (
-    <Card className="border-accent/20 overflow-hidden">
-      <CardHeader className="bg-gradient-to-r from-accent/10 to-transparent pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <span>{getStudentFriendlyIcon(group.readingLevelLabel)}</span>
-          {group.groupName}
-          <Badge variant="outline" className="ml-2 text-xs">
-            Bilingual: {group.homeLanguage} / English
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        {/* Two-column bilingual layout */}
-        <div className="grid grid-cols-2 min-h-[300px]">
-          {/* LEFT: Translated Content */}
-          <div className="bg-amber-50/50 dark:bg-amber-950/20 p-4 border-r border-border">
-            <div className="flex items-center justify-between mb-4 pb-2 border-b border-amber-200 dark:border-amber-800">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{getFlag(group.homeLanguage)}</span>
-                <span className="font-medium text-amber-700 dark:text-amber-300">{group.homeLanguage}</span>
-              </div>
-              {homeLanguageAudioUrl && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onPlayAudio(homeLanguageAudioUrl, `${group.groupName}-home`)}
-                  className="h-8 px-2 text-amber-700 hover:text-amber-900 hover:bg-amber-100 dark:hover:bg-amber-900"
-                >
-                  <Volume2 className={`h-4 w-4 mr-1 ${playingAudio === `${group.groupName}-home` ? 'animate-pulse' : ''}`} />
-                  Listen
-                </Button>
-              )}
-            </div>
-            <article className="prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown>{homeLanguageContent}</ReactMarkdown>
-            </article>
-          </div>
-          
-          {/* RIGHT: English Content */}
-          <div className="bg-blue-50/50 dark:bg-blue-950/20 p-4">
-            <div className="flex items-center justify-between mb-4 pb-2 border-b border-blue-200 dark:border-blue-800">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{getFlag('English')}</span>
-                <span className="font-medium text-blue-700 dark:text-blue-300">English</span>
-              </div>
-              {englishAudioUrl && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onPlayAudio(englishAudioUrl, `${group.groupName}-english`)}
-                  className="h-8 px-2 text-blue-700 hover:text-blue-900 hover:bg-blue-100 dark:hover:bg-blue-900"
-                >
-                  <Volume2 className={`h-4 w-4 mr-1 ${playingAudio === `${group.groupName}-english` ? 'animate-pulse' : ''}`} />
-                  Listen
-                </Button>
-              )}
-            </div>
-            <article className="prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown>{englishContent}</ReactMarkdown>
-            </article>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// Raw markdown content view
-function RawContentView({ content }: { content: string }) {
-  return (
-    <article className="prose prose-base dark:prose-invert max-w-none p-6
-      prose-headings:font-display prose-headings:font-bold
-      prose-h1:text-2xl prose-h1:border-b prose-h1:pb-3 prose-h1:mb-4
-      prose-h2:text-xl prose-h2:mt-8 prose-h2:mb-4
-      prose-h3:text-lg prose-h3:text-primary
-      prose-table:border prose-table:rounded-lg
-      prose-th:bg-muted prose-th:p-3
-      prose-td:p-3 prose-td:border-t
-    ">
-      <ReactMarkdown>{content}</ReactMarkdown>
-    </article>
-  );
-}
-
-export default DifferentiatedLessonOutput;

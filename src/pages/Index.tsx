@@ -229,7 +229,7 @@ const Index = () => {
             </div>
 
             <DifferentiatedLessonOutput 
-              content={differentiatedLesson} 
+              lessonData={differentiatedLesson} 
               selectedGroups={selectedGroups}
               lessonTitle="Differentiated Lesson"
               originalContent={originalLessonContent}
@@ -298,8 +298,10 @@ const Index = () => {
           setProgressStatus(createInitialProgressState());
         }}
         onRetryFailed={() => {
-          if (currentLessonId && lastDifferentiateInput) {
-            generateAudio(currentLessonId, differentiatedLesson || '', lastDifferentiateInput.selectedGroups);
+          if (currentLessonId && lastDifferentiateInput && differentiatedLesson) {
+            const fullContent = differentiatedLesson.teacherGuide + '\n\n' + 
+              differentiatedLesson.studentHandouts.map(h => h.content).join('\n\n');
+            generateAudio(currentLessonId, fullContent, lastDifferentiateInput.selectedGroups);
           }
         }}
         onClose={() => {
