@@ -134,7 +134,6 @@ const Index = () => {
       audioSectionsTotal: groupsNeedingAudio.length * 5, // Estimate ~5 sections per group
       audioSectionsFailed: 0,
       audioLanguages,
-      documentsStatus: 'pending',
       isComplete: false,
     };
     setProgressStatus(initialProgress);
@@ -189,7 +188,6 @@ const Index = () => {
         ...prev,
         contentStatus: 'complete',
         groupsProcessed: prev.totalGroups,
-        documentsStatus: 'generating',
       }));
 
       // Check if groups need audio
@@ -250,7 +248,6 @@ const Index = () => {
       // Update final progress
       setProgressStatus(prev => ({
         ...prev,
-        documentsStatus: 'complete',
         isComplete: true,
         audioStatus: needsAudio ? prev.audioStatus : 'skipped',
       }));
