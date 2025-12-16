@@ -406,6 +406,13 @@ export default function Register() {
               {t('register.logIn')}
             </Link>
           </p>
+
+          {/* Legal Text */}
+          <p className="text-center text-xs text-muted-foreground mt-4">
+            {t('login.legalText')}{' '}
+            <a href="/terms" className="text-primary hover:underline">{t('login.terms')}</a> {t('common.and')}{' '}
+            <a href="/privacy" className="text-primary hover:underline">{t('login.privacy')}</a>.
+          </p>
         </CardContent>
       </Card>
 
