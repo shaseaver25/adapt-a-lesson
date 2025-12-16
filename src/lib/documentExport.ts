@@ -20,15 +20,11 @@ import {
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
 import { generateQRCode } from './audioQRCode';
-
-// Document styling constants
-const DOC_STYLES = {
-  title: { size: 32, bold: true, font: 'Arial' },
-  heading1: { size: 28, bold: true, font: 'Arial' },
-  heading2: { size: 24, bold: true, font: 'Arial' },
-  body: { size: 24, font: 'Arial' }, // 12pt = size 24 in docx
-  caption: { size: 20, italics: true, font: 'Arial' },
-};
+import { 
+  markdownToDocxChildren, 
+  markdownToParagraphs as convertMarkdownToParagraphs,
+  DOC_STYLES 
+} from './docx/markdownToDocx';
 
 interface StudentGroupInfo {
   id: string;
@@ -447,149 +443,14 @@ function parseMarkdownContent(content: string): {
   return { teacherGuide, studentHandouts: handouts };
 }
 
-// Convert markdown text to docx paragraphs
+// Convert markdown text to docx paragraphs - uses the new robust converter
 function markdownToParagraphs(text: string): Paragraph[] {
-  const paragraphs: Paragraph[] = [];
-  const lines = text.split('\n');
+  return convertMarkdownToParagraphs(text);
+}
 
-  for (const line of lines) {
-    const trimmedLine = line.trim();
-    
-    if (!trimmedLine) {
-      paragraphs.push(new Paragraph({ text: '' }));
-      continue;
-    }
-
-    // Handle headers
-    if (trimmedLine.startsWith('###')) {
-      paragraphs.push(
-        new Paragraph({
-          text: trimmedLine.replace(/^###\s*/, ''),
-          heading: HeadingLevel.HEADING_3,
-          spacing: { before: 200, after: 100 },
-        })
-      );
-    } else if (trimmedLine.startsWith('##')) {
-      paragraphs.push(
-        new Paragraph({
-          text: trimmedLine.replace(/^##\s*/, ''),
-          heading: HeadingLevel.HEADING_2,
-          spacing: { before: 300, after: 150 },
-        })
-      );
-    } else if (trimmedLine.startsWith('#')) {
-      paragraphs.push(
-        new Paragraph({
-          text: trimmedLine.replace(/^#\s*/, ''),
-          heading: HeadingLevel.HEADING_1,
-          spacing: { before: 400, after: 200 },
-        })
-      );
-    }
-    // Handle bullet points
-    else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('• ')) {
-      paragraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: '• ' + trimmedLine.replace(/^[-•]\s*/, ''),
-              size: DOC_STYLES.body.size,
-              font: DOC_STYLES.body.font,
-            }),
-          ],
-          indent: { left: convertInchesToTwip(0.25) },
-          spacing: { before: 50, after: 50 },
-        })
-      );
-    }
-    // Handle numbered lists
-    else if (/^\d+\.\s/.test(trimmedLine)) {
-      paragraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: trimmedLine,
-              size: DOC_STYLES.body.size,
-              font: DOC_STYLES.body.font,
-            }),
-          ],
-          indent: { left: convertInchesToTwip(0.25) },
-          spacing: { before: 50, after: 50 },
-        })
-      );
-    }
-    // Handle box drawing characters (convert to styled section)
-    else if (/[┌┐└┘├┤┬┴┼─│═║╔╗╚╝╠╣╦╩╬]/.test(trimmedLine)) {
-      // Skip box drawing lines but preserve text content
-      const textContent = trimmedLine.replace(/[┌┐└┘├┤┬┴┼─│═║╔╗╚╝╠╣╦╩╬]/g, '').trim();
-      if (textContent) {
-        paragraphs.push(
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: textContent,
-                size: DOC_STYLES.body.size,
-                font: DOC_STYLES.body.font,
-                bold: textContent.includes('📚') || textContent.includes('🚀'),
-              }),
-            ],
-            border: {
-              top: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
-              bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
-            },
-            shading: { fill: 'F5F5F5' },
-            spacing: { before: 50, after: 50 },
-          })
-        );
-      }
-    }
-    // Handle bold text (**text**)
-    else if (/\*\*.*?\*\*/.test(trimmedLine)) {
-      const parts = trimmedLine.split(/(\*\*.*?\*\*)/);
-      const children = parts.map((part) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-          return new TextRun({
-            text: part.slice(2, -2),
-            bold: true,
-            size: DOC_STYLES.body.size,
-            font: DOC_STYLES.body.font,
-          });
-        }
-        return new TextRun({
-          text: part,
-          size: DOC_STYLES.body.size,
-          font: DOC_STYLES.body.font,
-        });
-      });
-      paragraphs.push(new Paragraph({ children, spacing: { before: 100, after: 100 } }));
-    }
-    // Handle separator lines
-    else if (/^[═─]{3,}$/.test(trimmedLine)) {
-      paragraphs.push(
-        new Paragraph({
-          border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000' } },
-          spacing: { before: 200, after: 200 },
-        })
-      );
-    }
-    // Regular text
-    else {
-      paragraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: trimmedLine,
-              size: DOC_STYLES.body.size,
-              font: DOC_STYLES.body.font,
-            }),
-          ],
-          spacing: { before: 100, after: 100 },
-        })
-      );
-    }
-  }
-
-  return paragraphs;
+// Get all docx children including tables - for sections that need full table support
+function markdownToChildren(text: string): (Paragraph | Table)[] {
+  return markdownToDocxChildren(text);
 }
 
 // Generate a complete Word document from markdown content
