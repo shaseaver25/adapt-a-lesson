@@ -15,6 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Copy, Download, Check, ChevronDown, FileText, FolderArchive, Clipboard, BookOpen, GraduationCap, FileIcon, Save, Loader2, Headphones, QrCode, Printer, Volume2, Languages, AlertCircle, LayoutTemplate } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
+import { OUTPUT_SECTION_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
+import { HelpTooltip } from '@/components/ui/help-tooltip';
 import type { StudentGroup } from '@/types/studentGroup';
 import {
   exportAsDocx,
@@ -823,6 +825,7 @@ export function DifferentiatedLessonOutput({
             <CardTitle className="flex items-center gap-2 text-lg">
               <Volume2 className="h-5 w-5 text-accent" />
               Audio Files
+              <HelpTooltip content={OUTPUT_SECTION_DESCRIPTIONS['Audio Files']} />
               <span className="text-xs bg-success/10 text-success px-2 py-1 rounded-full ml-2">
                 {preGeneratedAudio.length} files ready
               </span>
@@ -1066,6 +1069,7 @@ export function DifferentiatedLessonOutput({
                   <h2 className="text-xl font-display font-bold flex items-center gap-2 pb-3 border-b">
                     <Languages className="h-5 w-5 text-primary" />
                     Student Handouts (Bilingual)
+                    <HelpTooltip content={OUTPUT_SECTION_DESCRIPTIONS['Student Handouts']} />
                   </h2>
                   
                   {selectedGroups
@@ -1162,6 +1166,7 @@ function TeacherGuideSection({ content }: { content: string }) {
       <h2 className="text-xl font-display font-bold flex items-center gap-2 pb-3 border-b">
         <GraduationCap className="h-5 w-5 text-primary" />
         Teacher Guide
+        <HelpTooltip content={OUTPUT_SECTION_DESCRIPTIONS['Teacher Guide']} />
       </h2>
       <article className="prose prose-sm dark:prose-invert max-w-none">
         <ReactMarkdown>{teacherGuide}</ReactMarkdown>
