@@ -119,13 +119,17 @@ Requirements:
           console.error("Storage upload error:", uploadError);
           // Return base64 as fallback
         } else {
-          // Get public URL
-          const { data: urlData } = supabase.storage
+          // Get signed URL (bucket is private)
+          const { data: signedUrlData, error: signedUrlError } = await supabase.storage
             .from('lesson-audio')
-            .getPublicUrl(storagePath);
+            .createSignedUrl(storagePath, 604800); // 7 days
           
-          storedUrl = urlData.publicUrl;
-          console.log("Image stored at:", storedUrl);
+          if (signedUrlData?.signedUrl) {
+            storedUrl = signedUrlData.signedUrl;
+            console.log("Image stored at:", storedUrl);
+          } else {
+            console.error("Failed to create signed URL:", signedUrlError);
+          }
         }
       } catch (storageError) {
         console.error("Storage error, returning base64:", storageError);

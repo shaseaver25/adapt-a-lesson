@@ -306,11 +306,17 @@ async function storeAudio(
     return null;
   }
 
-  const { data: urlData } = supabase.storage
+  // Get signed URL (bucket is private)
+  const { data: signedUrlData, error: signedUrlError } = await supabase.storage
     .from('lesson-audio')
-    .getPublicUrl(fileName);
+    .createSignedUrl(fileName, 604800); // 7 days
 
-  return urlData.publicUrl;
+  if (signedUrlError) {
+    console.error('Signed URL error:', signedUrlError);
+    return null;
+  }
+
+  return signedUrlData?.signedUrl || null;
 }
 
 serve(async (req) => {
