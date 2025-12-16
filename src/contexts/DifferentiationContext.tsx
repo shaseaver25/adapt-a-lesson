@@ -23,6 +23,10 @@ export interface DifferentiationOptions {
 }
 
 interface DifferentiationState {
+  // Lesson name
+  lessonName: string;
+  setLessonName: (name: string) => void;
+  
   // Cached lesson content
   cachedLessonContent: string;
   setCachedLessonContent: (content: string) => void;
@@ -46,6 +50,7 @@ interface DifferentiationState {
 }
 
 const CACHE_KEY = 'educator-tools-lesson-cache';
+const NAME_KEY = 'educator-tools-lesson-name';
 const OPTIONS_KEY = 'educator-tools-diff-options';
 
 const defaultOptions: DifferentiationOptions = {
@@ -60,6 +65,14 @@ const defaultOptions: DifferentiationOptions = {
 const DifferentiationContext = createContext<DifferentiationState | undefined>(undefined);
 
 export function DifferentiationProvider({ children }: { children: ReactNode }) {
+  // Load lesson name from localStorage
+  const [lessonName, setLessonNameState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(NAME_KEY) || '';
+    }
+    return '';
+  });
+
   // Load cached content from localStorage
   const [cachedLessonContent, setCachedLessonContentState] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -87,6 +100,14 @@ export function DifferentiationProvider({ children }: { children: ReactNode }) {
 
   const [lastResult, setLastResultState] = useState<string | null>(null);
   const [lastSelectedGroups, setLastSelectedGroups] = useState<(StudentGroup & { id: string })[]>([]);
+
+  // Persist lesson name to localStorage
+  const setLessonName = (name: string) => {
+    setLessonNameState(name);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(NAME_KEY, name);
+    }
+  };
 
   // Persist lesson content to localStorage
   const setCachedLessonContent = (content: string) => {
@@ -119,6 +140,7 @@ export function DifferentiationProvider({ children }: { children: ReactNode }) {
 
   const clearSelection = () => {
     setSelectedGroupIds([]);
+    setLessonName('');
   };
 
   const setLastResult = (result: string | null, groups: (StudentGroup & { id: string })[]) => {
@@ -134,6 +156,8 @@ export function DifferentiationProvider({ children }: { children: ReactNode }) {
   return (
     <DifferentiationContext.Provider
       value={{
+        lessonName,
+        setLessonName,
         cachedLessonContent,
         setCachedLessonContent,
         selectedGroupIds,
