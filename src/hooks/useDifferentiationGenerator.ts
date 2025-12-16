@@ -4,9 +4,10 @@ import { toast } from '@/hooks/use-toast';
 import { StudentGroup } from '@/types/studentGroup';
 import { DifferentiationProgressState, createInitialProgressState } from '@/components/DifferentiationProgressModal';
 import { DifferentiateInput } from '@/components/DifferentiateForm';
+import type { DifferentiatedLessonData, StudentHandout } from '@/types/differentiatedLesson';
 
 interface UseDifferentiationGeneratorReturn {
-  differentiatedLesson: string | null;
+  differentiatedLesson: DifferentiatedLessonData | null;
   selectedGroups: (StudentGroup & { id: string })[];
   originalLessonContent: string;
   isDifferentiating: boolean;
@@ -23,6 +24,8 @@ interface UseDifferentiationGeneratorReturn {
   handleResetDifferentiation: () => void;
   setShowProgressModal: (show: boolean) => void;
   setProgressStatus: React.Dispatch<React.SetStateAction<DifferentiationProgressState>>;
+  // Helper to get content for a specific group
+  getGroupContent: (groupName: string) => string;
 }
 
 export function useDifferentiationGenerator(
@@ -30,7 +33,7 @@ export function useDifferentiationGenerator(
   clearSelection: () => void,
   generateAudio: (lessonId: string, content: string, groups: (StudentGroup & { id: string })[]) => Promise<any>
 ): UseDifferentiationGeneratorReturn {
-  const [differentiatedLesson, setDifferentiatedLesson] = useState<string | null>(null);
+  const [differentiatedLesson, setDifferentiatedLesson] = useState<DifferentiatedLessonData | null>(null);
   const [selectedGroups, setSelectedGroups] = useState<(StudentGroup & { id: string })[]>([]);
   const [originalLessonContent, setOriginalLessonContent] = useState<string>('');
   const [isDifferentiating, setIsDifferentiating] = useState(false);
@@ -42,6 +45,17 @@ export function useDifferentiationGenerator(
   const [isLessonSaved, setIsLessonSaved] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Helper to get content for a specific group from structured data
+  const getGroupContent = useCallback((groupName: string): string => {
+    if (!differentiatedLesson?.studentHandouts) return '';
+    
+    const handout = differentiatedLesson.studentHandouts.find(
+      h => h.groupName.toLowerCase() === groupName.toLowerCase()
+    );
+    
+    return handout?.content || '';
+  }, [differentiatedLesson]);
 
   const handleCancelGeneration = useCallback(() => {
     if (abortControllerRef.current) {
@@ -127,15 +141,26 @@ export function useDifferentiationGenerator(
       clearTimeout(progressTimer);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `Request failed with status ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Request failed with status ${response.status}`);
       }
 
-      const data = await response.json();
+      const result = await response.json();
 
-      if (data.error) {
-        throw new Error(data.error);
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Invalid response from server');
       }
+
+      const lessonData: DifferentiatedLessonData = result.data;
+      
+      console.log('Received structured lesson data:', {
+        teacherGuideLength: lessonData.teacherGuide?.length,
+        handoutCount: lessonData.studentHandouts?.length,
+        handouts: lessonData.studentHandouts?.map(h => ({ 
+          name: h.groupName, 
+          contentLength: h.content?.length 
+        }))
+      });
 
       setProgressStatus(prev => ({
         ...prev,
@@ -150,24 +175,27 @@ export function useDifferentiationGenerator(
       // Save lesson to database
       let lessonId: string | null = null;
       try {
-        const { data: lessonData, error: lessonError } = await supabase
+        const insertData = {
+          original_content: input.lessonContent,
+          lesson_title: input.lessonName || 'Untitled Lesson',
+          group_ids: input.selectedGroups.map(g => g.id),
+          teacher_guide: lessonData.teacherGuide,
+          student_handouts: JSON.parse(JSON.stringify(lessonData.studentHandouts)),
+          differentiation_options: JSON.parse(JSON.stringify(input.options)),
+        };
+        
+        const { data: savedLesson, error: lessonError } = await supabase
           .from('generated_lessons')
-          .insert({
-            original_content: input.lessonContent,
-            lesson_title: input.lessonName || 'Untitled Lesson',
-            group_ids: input.selectedGroups.map(g => g.id),
-            teacher_guide: data.differentiatedLesson,
-            differentiation_options: input.options as any,
-          })
+          .insert(insertData)
           .select('id')
           .single();
 
-        if (!lessonError && lessonData) {
-          lessonId = lessonData.id;
+        if (!lessonError && savedLesson) {
+          lessonId = savedLesson.id;
           setCurrentLessonId(lessonId);
         }
       } catch (saveError) {
-        console.error('Error saving lesson for audio:', saveError);
+        console.error('Error saving lesson:', saveError);
       }
 
       // Generate audio if needed
@@ -177,13 +205,17 @@ export function useDifferentiationGenerator(
           audioStatus: 'generating',
         }));
 
-        generateAudio(lessonId, data.differentiatedLesson, input.selectedGroups)
-          .then((result) => {
-            console.log('Audio generation result:', result);
+        // Combine teacher guide and handouts for audio generation
+        const fullContent = lessonData.teacherGuide + '\n\n' + 
+          lessonData.studentHandouts.map(h => h.content).join('\n\n');
+
+        generateAudio(lessonId, fullContent, input.selectedGroups)
+          .then((audioResult) => {
+            console.log('Audio generation result:', audioResult);
             setProgressStatus(prev => ({
               ...prev,
               audioStatus: 'complete',
-              audioSectionsComplete: result?.generated || prev.audioSectionsTotal,
+              audioSectionsComplete: audioResult?.generated || prev.audioSectionsTotal,
             }));
           })
           .catch((audioError) => {
@@ -202,7 +234,7 @@ export function useDifferentiationGenerator(
         audioStatus: needsAudio ? prev.audioStatus : 'skipped',
       }));
 
-      setDifferentiatedLesson(data.differentiatedLesson);
+      setDifferentiatedLesson(lessonData);
     } catch (error) {
       clearTimeout(progressTimer);
       console.error('Error differentiating lesson:', error);
@@ -263,5 +295,6 @@ export function useDifferentiationGenerator(
     handleResetDifferentiation,
     setShowProgressModal,
     setProgressStatus,
+    getGroupContent,
   };
 }
