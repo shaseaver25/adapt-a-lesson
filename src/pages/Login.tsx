@@ -1,13 +1,26 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { signInSchema, getAuthErrorMessage } from '@/lib/authValidation';
+import { supabase } from '@/integrations/supabase/client';
+
+// Error message constants
+const ERROR_MESSAGES = {
+  NO_ACCOUNT: 'No Account Exists with This Email',
+  ACCOUNT_LOCKED: 'This Account is Locked, contact Support',
+  WRONG_PASSWORD: 'Wrong Password',
+  TOO_MANY_DEVICES: 'Logged Into More than 3 Devices',
+  NETWORK_ERROR: 'Unable to connect. Please check your internet connection.',
+  SERVER_ERROR: 'Something went wrong. Please try again.',
+  POPUP_BLOCKED: 'Sign-in popup was blocked. Please allow popups and try again.',
+};
 
 // OAuth provider icons
 const GoogleIcon = () => (
@@ -60,6 +73,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
 
   const validateForm = (): boolean => {
     const result = signInSchema.safeParse({ email, password });
@@ -78,47 +92,179 @@ export default function Login() {
     return true;
   };
 
+  const clearPasswordAndSetError = (errorMessage: string) => {
+    setPassword('');
+    setFormError(errorMessage);
+  };
+
+  const checkEmailExists = async (email: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.rpc('check_email_exists', { p_email: email });
+      if (error) {
+        console.error('Error checking email:', error);
+        return true; // Assume exists on error to allow login attempt
+      }
+      return data ?? false;
+    } catch {
+      return true; // Assume exists on error
+    }
+  };
+
+  const checkAccountLocked = async (email: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.rpc('check_account_locked', { p_email: email });
+      if (error) {
+        console.error('Error checking account lock:', error);
+        return false;
+      }
+      return data?.[0]?.is_locked ?? false;
+    } catch {
+      return false;
+    }
+  };
+
+  const incrementFailedAttempts = async (email: string): Promise<{ isLocked: boolean; attempts: number }> => {
+    try {
+      const { data, error } = await supabase.rpc('increment_failed_login', { p_email: email });
+      if (error) {
+        console.error('Error incrementing failed login:', error);
+        return { isLocked: false, attempts: 0 };
+      }
+      return { 
+        isLocked: data?.[0]?.is_locked ?? false, 
+        attempts: data?.[0]?.attempts ?? 0 
+      };
+    } catch {
+      return { isLocked: false, attempts: 0 };
+    }
+  };
+
+  const resetFailedAttempts = async (userId: string) => {
+    try {
+      await supabase.rpc('reset_failed_login', { p_user_id: userId });
+    } catch (error) {
+      console.error('Error resetting failed login:', error);
+    }
+  };
+
   const handleEmailLogin = async (e: FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     
     if (!validateForm()) return;
 
     setIsLoading(true);
     
-    const { error } = await signInWithEmail(email, password);
-    
-    setIsLoading(false);
+    try {
+      // Check if email exists
+      const emailExists = await checkEmailExists(email);
+      if (!emailExists) {
+        setIsLoading(false);
+        clearPasswordAndSetError(ERROR_MESSAGES.NO_ACCOUNT);
+        return;
+      }
 
-    if (error) {
+      // Check if account is locked
+      const isLocked = await checkAccountLocked(email);
+      if (isLocked) {
+        setIsLoading(false);
+        clearPasswordAndSetError(ERROR_MESSAGES.ACCOUNT_LOCKED);
+        return;
+      }
+
+      // Attempt login
+      const { error, data } = await signInWithEmail(email, password);
+      
+      if (error) {
+        // Check for specific error types
+        const errorMessage = error.message?.toLowerCase() || '';
+        
+        if (errorMessage.includes('invalid login credentials') || 
+            errorMessage.includes('invalid password') ||
+            errorMessage.includes('wrong password')) {
+          // Increment failed attempts
+          const { isLocked } = await incrementFailedAttempts(email);
+          
+          if (isLocked) {
+            setIsLoading(false);
+            clearPasswordAndSetError(ERROR_MESSAGES.ACCOUNT_LOCKED);
+            return;
+          }
+          
+          setIsLoading(false);
+          clearPasswordAndSetError(ERROR_MESSAGES.WRONG_PASSWORD);
+          return;
+        }
+        
+        // Network error
+        if (errorMessage.includes('fetch') || 
+            errorMessage.includes('network') ||
+            errorMessage.includes('connection')) {
+          setIsLoading(false);
+          clearPasswordAndSetError(ERROR_MESSAGES.NETWORK_ERROR);
+          return;
+        }
+        
+        // Generic server error
+        setIsLoading(false);
+        clearPasswordAndSetError(ERROR_MESSAGES.SERVER_ERROR);
+        return;
+      }
+
+      // Success - reset failed attempts
+      if (data?.user?.id) {
+        await resetFailedAttempts(data.user.id);
+      }
+
+      setIsLoading(false);
+
       toast({
-        title: 'Login failed',
-        description: getAuthErrorMessage(error.message),
-        variant: 'destructive',
+        title: 'Welcome back!',
+        description: 'You have been logged in successfully.',
       });
-      return;
+      
+      navigate('/');
+    } catch (error) {
+      setIsLoading(false);
+      console.error('Login error:', error);
+      clearPasswordAndSetError(ERROR_MESSAGES.SERVER_ERROR);
     }
-
-    toast({
-      title: 'Welcome back!',
-      description: 'You have been logged in successfully.',
-    });
-    
-    navigate('/');
   };
 
   const handleOAuthLogin = async (provider: 'google' | 'azure' | 'canvas') => {
     setIsLoading(true);
+    setFormError(null);
     
-    const { error } = await signInWithOAuth(provider);
-    
-    setIsLoading(false);
+    try {
+      const { error } = await signInWithOAuth(provider);
+      
+      setIsLoading(false);
 
-    if (error) {
-      toast({
-        title: 'Login failed',
-        description: error.message,
-        variant: 'destructive',
-      });
+      if (error) {
+        const errorMessage = error.message?.toLowerCase() || '';
+        
+        // Popup blocked
+        if (errorMessage.includes('popup') || 
+            errorMessage.includes('blocked') ||
+            errorMessage.includes('window')) {
+          setFormError(ERROR_MESSAGES.POPUP_BLOCKED);
+          return;
+        }
+        
+        // Network error
+        if (errorMessage.includes('fetch') || 
+            errorMessage.includes('network') ||
+            errorMessage.includes('connection')) {
+          setFormError(ERROR_MESSAGES.NETWORK_ERROR);
+          return;
+        }
+        
+        setFormError(ERROR_MESSAGES.SERVER_ERROR);
+      }
+    } catch (error) {
+      setIsLoading(false);
+      console.error('OAuth error:', error);
+      setFormError(ERROR_MESSAGES.SERVER_ERROR);
     }
   };
 
@@ -157,6 +303,21 @@ export default function Login() {
         </CardHeader>
 
         <CardContent className="space-y-6">
+          {/* Error Alert */}
+          {formError && (
+            <Alert 
+              variant="destructive" 
+              role="alert"
+              aria-live="polite"
+              className="border-destructive/50 bg-destructive/10"
+            >
+              <AlertCircle className="h-4 w-4" aria-hidden="true" />
+              <AlertDescription className="font-medium">
+                {formError}
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* OAuth Buttons */}
           <div className="space-y-3">
             <Button
@@ -233,7 +394,7 @@ export default function Login() {
                   disabled={isFormLoading}
                   autoComplete="email"
                   aria-invalid={!!errors.email}
-                  aria-describedby={errors.email ? 'email-error' : undefined}
+                  aria-describedby={errors.email ? 'email-error' : formError ? 'form-error' : undefined}
                 />
               </div>
               {errors.email && (
@@ -272,7 +433,7 @@ export default function Login() {
                   disabled={isFormLoading}
                   autoComplete="current-password"
                   aria-invalid={!!errors.password}
-                  aria-describedby={errors.password ? 'password-error' : undefined}
+                  aria-describedby={errors.password ? 'password-error' : formError ? 'form-error' : undefined}
                 />
                 <button
                   type="button"
@@ -338,6 +499,11 @@ export default function Login() {
           </p>
         </CardContent>
       </Card>
+      
+      {/* Hidden aria-live region for form errors */}
+      <div id="form-error" className="sr-only" aria-live="assertive">
+        {formError}
+      </div>
     </div>
   );
 }

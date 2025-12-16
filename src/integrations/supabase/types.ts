@@ -375,34 +375,43 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_locked: boolean | null
           avatar_url: string | null
           created_at: string
           email: string | null
+          failed_login_attempts: number | null
           full_name: string | null
           id: string
           last_login_at: string | null
+          locked_at: string | null
           login_count: number | null
           provider: string | null
           updated_at: string
         }
         Insert: {
+          account_locked?: boolean | null
           avatar_url?: string | null
           created_at?: string
           email?: string | null
+          failed_login_attempts?: number | null
           full_name?: string | null
           id: string
           last_login_at?: string | null
+          locked_at?: string | null
           login_count?: number | null
           provider?: string | null
           updated_at?: string
         }
         Update: {
+          account_locked?: boolean | null
           avatar_url?: string | null
           created_at?: string
           email?: string | null
+          failed_login_attempts?: number | null
           full_name?: string | null
           id?: string
           last_login_at?: string | null
+          locked_at?: string | null
           login_count?: number | null
           provider?: string | null
           updated_at?: string
@@ -634,6 +643,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_account_locked: {
+        Args: { p_email: string }
+        Returns: {
+          is_locked: boolean
+          locked_timestamp: string
+        }[]
+      }
+      check_email_exists: { Args: { p_email: string }; Returns: boolean }
+      increment_failed_login: {
+        Args: { p_email: string }
+        Returns: {
+          attempts: number
+          is_locked: boolean
+        }[]
+      }
+      reset_failed_login: { Args: { p_user_id: string }; Returns: undefined }
       update_login_stats: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {
