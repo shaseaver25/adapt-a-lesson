@@ -287,19 +287,11 @@ export default function Login() {
         <div className="auth-wrapper animate-fade-in">
           {/* Brand Header */}
           <header className="brand-header">
-            <div className="brand-logo">
-              <img 
-                src="/real-logo.png" 
-                alt="REAL Logo" 
-                width={72} 
-                height={72}
-                onError={(e) => {
-                  // Fallback if logo doesn't exist
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-              <span className="brand-name">Authentic Learning Studio</span>
-            </div>
+            <img 
+              src="/real-logo.png" 
+              alt="REAL Authentic Learning Studio" 
+              className="brand-logo-img"
+            />
             <p className="brand-tagline">{t('login.subtitle')}</p>
             
             <h1 className="hero-headline">
