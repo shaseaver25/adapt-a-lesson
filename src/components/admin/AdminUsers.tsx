@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, Shield, User, RefreshCw, UserPlus, Pencil, Trash2 } from 'lucide-react';
+import { Search, Shield, User, RefreshCw, UserPlus, Pencil, Trash2, KeyRound } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,6 +76,11 @@ export function AdminUsers() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
+
+  // Password reset state
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [userToResetPassword, setUserToResetPassword] = useState<UserData | null>(null);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -336,6 +341,41 @@ export function AdminUsers() {
     }
   }
 
+  async function handleResetPassword() {
+    if (!userToResetPassword?.email) {
+      toast.error('User has no email address');
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        userToResetPassword.email,
+        { redirectTo: `${window.location.origin}/profile` }
+      );
+
+      if (error) throw error;
+
+      // Log the activity
+      await supabase.from('activity_logs').insert({
+        action_type: 'password_reset_sent',
+        description: `Sent password reset email to ${userToResetPassword.email}`,
+        target_user_id: userToResetPassword.id,
+        performed_by: userId,
+        metadata: { email: userToResetPassword.email }
+      });
+
+      toast.success(`Password reset email sent to ${userToResetPassword.email}`);
+      setIsResetPasswordDialogOpen(false);
+      setUserToResetPassword(null);
+    } catch (error) {
+      console.error('Error sending password reset:', error);
+      toast.error('Failed to send password reset email');
+    } finally {
+      setIsResettingPassword(false);
+    }
+  }
+
   const filteredUsers = users.filter(user =>
     (user.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
     (user.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
@@ -592,6 +632,18 @@ export function AdminUsers() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
+                                  setUserToResetPassword(user);
+                                  setIsResetPasswordDialogOpen(true);
+                                }}
+                                className="h-8 w-8 p-0"
+                                title="Reset Password"
+                              >
+                                <KeyRound className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
                                   setUserToDelete(user);
                                   setIsDeleteDialogOpen(true);
                                 }}
@@ -644,6 +696,28 @@ export function AdminUsers() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeletingUser ? 'Deleting...' : 'Delete User'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset Password Confirmation Dialog */}
+      <AlertDialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset User Password</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will send a password reset email to <strong>{userToResetPassword?.email}</strong>. 
+              The user will receive a link to create a new password.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isResettingPassword}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetPassword}
+              disabled={isResettingPassword || !userToResetPassword?.email}
+            >
+              {isResettingPassword ? 'Sending...' : 'Send Reset Email'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

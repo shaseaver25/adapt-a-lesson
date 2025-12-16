@@ -14,7 +14,8 @@ import {
   LogIn, 
   Edit, 
   Activity,
-  AlertCircle 
+  AlertCircle,
+  KeyRound
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -153,6 +154,8 @@ export function AdminActivityLog() {
         return <UserMinus className="h-4 w-4 text-destructive" />;
       case 'profile_updated':
         return <Edit className="h-4 w-4 text-amber-500" />;
+      case 'password_reset_sent':
+        return <KeyRound className="h-4 w-4 text-blue-500" />;
       default:
         return <Activity className="h-4 w-4 text-muted-foreground" />;
     }
@@ -172,6 +175,8 @@ export function AdminActivityLog() {
         return <Badge variant="destructive">User Deleted</Badge>;
       case 'profile_updated':
         return <Badge variant="secondary">Profile Updated</Badge>;
+      case 'password_reset_sent':
+        return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/20">Password Reset</Badge>;
       default:
         return <Badge variant="outline">{actionType}</Badge>;
     }
