@@ -10,7 +10,8 @@ export async function generateLessonImage(
   subject?: string
 ): Promise<string | null> {
   try {
-    console.log(`Generating image for: ${description}`);
+    console.log(`[ImageGen] Generating image for: "${description.substring(0, 100)}..."`);
+    console.log(`[ImageGen] Calling edge function with params:`, { lessonId, groupId, subject });
     
     const { data, error } = await supabase.functions.invoke('generate-lesson-diagram', {
       body: {
@@ -21,22 +22,31 @@ export async function generateLessonImage(
       },
     });
 
+    console.log(`[ImageGen] Edge function response:`, { data, error });
+
     if (error) {
-      console.error('Image generation function error:', error);
+      console.error('[ImageGen] Function invoke error:', error);
       return null;
     }
 
-    if (data.error) {
+    if (data?.error) {
+      console.error('[ImageGen] Edge function returned error:', data.error);
       if (data.fallback) {
-        console.warn('Image generation failed, using fallback:', data.error);
+        console.warn('[ImageGen] Using fallback due to:', data.error);
         return null;
       }
       throw new Error(data.error);
     }
 
-    return data.imageUrl || null;
+    if (!data?.imageUrl) {
+      console.error('[ImageGen] No imageUrl in response:', data);
+      return null;
+    }
+
+    console.log(`[ImageGen] SUCCESS - Image URL received (${data.imageUrl.length} chars)`);
+    return data.imageUrl;
   } catch (error) {
-    console.error('Image generation failed:', error);
+    console.error('[ImageGen] Generation failed:', error);
     return null;
   }
 }
