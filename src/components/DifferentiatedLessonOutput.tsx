@@ -140,7 +140,7 @@ export function DifferentiatedLessonOutput({
     console.log(`Looking for group: "${groupName}" (normalized: "${normalizedGroupName}")`);
     
     // STEP 3: Find ALL candidate headers for this group
-    const candidates: { index: number; level: number; line: string }[] = [];
+    const candidates: { index: number; level: number; line: string; isStudentHeader?: boolean; isTeacherHeader?: boolean }[] = [];
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -163,34 +163,62 @@ export function DifferentiatedLessonOutput({
                       normalizedGroupName.includes(normalizedHeader.split(/\s+/).slice(0, 2).join(' '));
       
       if (isMatch) {
-        candidates.push({ index: i, level: headerLevel, line });
+        // Check if header itself indicates student vs teacher content
+        const headerLower = headerText.toLowerCase();
+        const isStudentHeader = headerLower.includes('handout') || 
+                                headerLower.includes('edition') ||
+                                headerLower.includes('worksheet');
+        const isTeacherHeader = headerLower.includes('(english') || 
+                                headerLower.includes('(somali') ||
+                                headerLower.includes('(arabic') ||
+                                headerLower.includes('(spanish') ||
+                                headerLower.includes('iep)') ||
+                                headerLower.includes('504)');
+        
+        candidates.push({ 
+          index: i, 
+          level: headerLevel, 
+          line,
+          isStudentHeader,
+          isTeacherHeader
+        });
       }
     }
     
-    // STEP 4: Find the candidate followed by STUDENT content, NOT teacher scaffolding
-    // Teacher content: "Scaffolding Strategies", "Pacing", "What to Say"
-    // Student content: "Name:", "Learning Target", "🎯", practice sections
-    const teacherKeywords = ['scaffolding strategies', 'pacing adjustment', 'what to say', 'vocabulary support:'];
-    const studentKeywords = ['name:', '**name:**', 'learning target', '🎯', '✏️', 'practice', 'reflection'];
+    // STEP 4: Find the candidate that is a STUDENT HANDOUT, not teacher scaffolding
+    // Priority: 1) Has "Handout"/"Edition" in header, 2) No teacher keywords in content
+    const teacherKeywords = ['scaffolding strategies', 'pacing adjustment', 'what to say', 'vocabulary support:', 'chunk content', 'differentiation'];
+    const studentKeywords = ['name:', '**name:**', 'learning target', '🎯', '✏️', 'practice', 'reflection', 'date:'];
     
-    let bestCandidate: { index: number; level: number; line: string } | null = null;
+    let bestCandidate: { index: number; level: number; line: string; isStudentHeader?: boolean; isTeacherHeader?: boolean } | null = null;
     
     for (const candidate of candidates) {
-      // Look at the next 15 lines after this header
-      const nextLines = lines.slice(candidate.index + 1, candidate.index + 15).join('\n').toLowerCase();
-      
-      const hasTeacherContent = teacherKeywords.some(kw => nextLines.includes(kw));
-      const hasStudentContent = studentKeywords.some(kw => nextLines.includes(kw));
-      
-      console.log(`Candidate at line ${candidate.index + studentSectionStart}: teacher=${hasTeacherContent}, student=${hasStudentContent}, "${candidate.line.substring(0, 60)}"`);
-      
-      // Prefer sections with student content and NO teacher content
-      if (hasStudentContent && !hasTeacherContent) {
+      // FIRST: Prioritize headers that explicitly say "Handout" or "Edition"
+      if (candidate.isStudentHeader && !candidate.isTeacherHeader) {
         bestCandidate = candidate;
-        console.log(`Selected STUDENT section at line ${candidate.index + studentSectionStart}`);
+        console.log(`Selected STUDENT section (by header keyword) at line ${candidate.index + studentSectionStart}: "${candidate.line.substring(0, 60)}"`);
         break;
-      } else if (!bestCandidate && !hasTeacherContent) {
-        bestCandidate = candidate;
+      }
+    }
+    
+    // FALLBACK: Check content if no explicit student header found
+    if (!bestCandidate) {
+      for (const candidate of candidates) {
+        if (candidate.isTeacherHeader) continue; // Skip teacher-specific headers
+        
+        const nextLines = lines.slice(candidate.index + 1, candidate.index + 15).join('\n').toLowerCase();
+        const hasTeacherContent = teacherKeywords.some(kw => nextLines.includes(kw));
+        const hasStudentContent = studentKeywords.some(kw => nextLines.includes(kw));
+        
+        console.log(`Candidate at line ${candidate.index + studentSectionStart}: teacher=${hasTeacherContent}, student=${hasStudentContent}, "${candidate.line.substring(0, 60)}"`);
+        
+        if (hasStudentContent && !hasTeacherContent) {
+          bestCandidate = candidate;
+          console.log(`Selected STUDENT section (by content) at line ${candidate.index + studentSectionStart}`);
+          break;
+        } else if (!bestCandidate && !hasTeacherContent) {
+          bestCandidate = candidate;
+        }
       }
     }
     
