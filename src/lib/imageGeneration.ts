@@ -45,11 +45,17 @@ export async function generateLessonImage(
  * Extract all [VISUAL: ...] descriptions from content
  */
 export function extractVisualDescriptions(content: string): string[] {
-  const regex = /\[VISUAL:\s*(.+?)\]/g;
+  // Support both [VISUAL: ...] and [NANOBANANA: "..."] formats
+  const visualRegex = /\[VISUAL:\s*(.+?)\]/g;
+  const nanobananaRegex = /\[NANOBANANA:\s*"(.+?)"\]/g;
   const descriptions: string[] = [];
   let match;
   
-  while ((match = regex.exec(content)) !== null) {
+  while ((match = visualRegex.exec(content)) !== null) {
+    descriptions.push(match[1].trim());
+  }
+  
+  while ((match = nanobananaRegex.exec(content)) !== null) {
     descriptions.push(match[1].trim());
   }
   

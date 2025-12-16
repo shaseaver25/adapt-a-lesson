@@ -84,31 +84,31 @@ export function generateStudentHTML(data: LessonExportData): string {
   const direction = isRTL ? 'rtl' : 'ltr';
   const textAlign = isRTL ? 'right' : 'left';
   
-  // Process content - convert [VISUAL: ...] to images or styled placeholders
+  // Process content - convert [VISUAL: ...] and [NANOBANANA: "..."] to images or styled placeholders
   const processMarkdown = (md: string): string => {
     let processed = md;
     
-    // Replace [VISUAL: ...] with actual images if available, or fallback to placeholder
-    processed = processed.replace(
-      /\[VISUAL:\s*(.+?)\]/g,
-      (match, description) => {
-        const imageUrl = imageMap?.get(description.trim());
-        
-        if (imageUrl) {
-          return `<figure class="lesson-figure">
-            <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(description)}" class="lesson-image" loading="lazy" />
-            <figcaption>${escapeHtml(description)}</figcaption>
-          </figure>`;
-        }
-        
-        // Fallback to styled placeholder
-        return `<div class="visual-placeholder">
-          <span class="visual-icon">📐</span>
-          <span class="visual-label">${escapeHtml(description)}</span>
-          <span class="teacher-note">Teacher: Insert diagram or use whiteboard</span>
-        </div>`;
+    const replaceVisual = (match: string, description: string) => {
+      const imageUrl = imageMap?.get(description.trim());
+      
+      if (imageUrl) {
+        return `<figure class="lesson-figure">
+          <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(description)}" class="lesson-image" loading="lazy" />
+          <figcaption>${escapeHtml(description)}</figcaption>
+        </figure>`;
       }
-    );
+      
+      // Fallback to styled placeholder
+      return `<div class="visual-placeholder">
+        <span class="visual-icon">📐</span>
+        <span class="visual-label">${escapeHtml(description)}</span>
+        <span class="teacher-note">Teacher: Insert diagram or use whiteboard</span>
+      </div>`;
+    };
+    
+    // Replace both [VISUAL: ...] and [NANOBANANA: "..."] formats
+    processed = processed.replace(/\[VISUAL:\s*(.+?)\]/g, replaceVisual);
+    processed = processed.replace(/\[NANOBANANA:\s*"(.+?)"\]/g, replaceVisual);
     
     processed = processed.replace(/_{10,}/g, '<div class="answer-line"></div>');
     return marked.parse(processed) as string;
