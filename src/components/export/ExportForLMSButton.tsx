@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { Download, FileCode, FolderArchive, ChevronDown, Loader2 } from 'lucide-react';
+import { Download, FileCode, FolderArchive, ChevronDown, Loader2, Languages } from 'lucide-react';
 import { downloadGroupHTML, downloadAllAsZip } from '@/lib/export/htmlExporter';
 import { useToast } from '@/hooks/use-toast';
 import type { StudentGroup } from '@/types/studentGroup';
@@ -17,12 +17,14 @@ interface ExportForLMSButtonProps {
   groups: (StudentGroup & { id: string })[];
   lessonTitle: string;
   getGroupContent: (groupName: string) => string;
+  getGroupEnglishContent?: (groupName: string) => string;
 }
 
 export function ExportForLMSButton({
   groups,
   lessonTitle,
-  getGroupContent
+  getGroupContent,
+  getGroupEnglishContent
 }: ExportForLMSButtonProps) {
   const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
@@ -38,7 +40,10 @@ export function ExportForLMSButton({
   const handleExportSingle = (group: StudentGroup & { id: string }) => {
     try {
       const content = getGroupContent(group.groupName);
-      console.log('Export - Group:', group.groupName, 'Content length:', content?.length, 'Preview:', content?.substring(0, 200));
+      const englishContent = getGroupEnglishContent?.(group.groupName);
+      const isBilingual = group.homeLanguage !== 'English' && englishContent;
+      
+      console.log('Export - Group:', group.groupName, 'Content length:', content?.length, 'English length:', englishContent?.length);
       
       if (!content || content.trim().length === 0) {
         toast({
@@ -49,11 +54,13 @@ export function ExportForLMSButton({
         return;
       }
       
-      downloadGroupHTML(lessonTitle, content, group);
+      downloadGroupHTML(lessonTitle, content, group, englishContent);
       
       toast({
         title: 'Downloaded!',
-        description: `${group.groupName} handout ready for LMS upload.`
+        description: isBilingual 
+          ? `${group.groupName} bilingual handout (${group.homeLanguage} + English) ready for LMS upload.`
+          : `${group.groupName} handout ready for LMS upload.`
       });
     } catch (error: any) {
       console.error('Export error:', error);
@@ -70,13 +77,18 @@ export function ExportForLMSButton({
     try {
       const groupContents = groups.map(group => ({
         group,
-        content: getGroupContent(group.groupName)
+        content: getGroupContent(group.groupName),
+        englishContent: getGroupEnglishContent?.(group.groupName)
       }));
       await downloadAllAsZip(lessonTitle, groupContents);
       
+      const bilingualCount = groupContents.filter(g => g.group.homeLanguage !== 'English' && g.englishContent).length;
+      
       toast({
         title: 'Downloaded!',
-        description: `All ${groups.length} handouts exported. Upload to Canvas, Schoology, or Google Classroom.`
+        description: bilingualCount > 0 
+          ? `All ${groups.length} handouts exported (${bilingualCount} bilingual). Upload to Canvas, Schoology, or Google Classroom.`
+          : `All ${groups.length} handouts exported. Upload to Canvas, Schoology, or Google Classroom.`
       });
     } catch (error: any) {
       toast({
@@ -88,6 +100,9 @@ export function ExportForLMSButton({
       setExporting(false);
     }
   };
+
+  // Check if any group is bilingual
+  const hasBilingualGroups = groups.some(g => g.homeLanguage !== 'English');
 
   return (
     <DropdownMenu>
@@ -108,25 +123,42 @@ export function ExportForLMSButton({
           Download HTML files to upload to Canvas, Schoology, or Google Classroom
         </DropdownMenuLabel>
         
+        {hasBilingualGroups && (
+          <div className="px-2 py-1.5 text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/30 mx-2 rounded">
+            <Languages className="h-3 w-3" />
+            Bilingual groups show side-by-side layout
+          </div>
+        )}
+        
         <DropdownMenuSeparator />
         
         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
           Individual Handouts
         </DropdownMenuLabel>
         
-        {groups.map(group => (
-          <DropdownMenuItem
-            key={group.id}
-            onClick={() => handleExportSingle(group)}
-            className="gap-2 cursor-pointer"
-          >
-            <FileCode className="h-4 w-4 flex-shrink-0" />
-            <span className="flex-1 truncate">{group.groupName}</span>
-            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${levelStyles[group.readingLevelLabel] || 'bg-muted'}`}>
-              {group.readingLevelLabel}
-            </span>
-          </DropdownMenuItem>
-        ))}
+        {groups.map(group => {
+          const isBilingual = group.homeLanguage !== 'English';
+          return (
+            <DropdownMenuItem
+              key={group.id}
+              onClick={() => handleExportSingle(group)}
+              className="gap-2 cursor-pointer"
+            >
+              <FileCode className="h-4 w-4 flex-shrink-0" />
+              <span className="flex-1 truncate">{group.groupName}</span>
+              <div className="flex items-center gap-1">
+                {isBilingual && (
+                  <span className="text-xs px-1 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                    2-col
+                  </span>
+                )}
+                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${levelStyles[group.readingLevelLabel] || 'bg-muted'}`}>
+                  {group.readingLevelLabel}
+                </span>
+              </div>
+            </DropdownMenuItem>
+          );
+        })}
         
         <DropdownMenuSeparator />
         

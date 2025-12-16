@@ -5,11 +5,14 @@ interface StudentGroup {
   groupName: string;
   readingLevelLabel: string;
   homeLanguage: string;
+  content?: string;
+  englishContent?: string;
 }
 
 interface LessonExportData {
   title: string;
   content: string;
+  englishContent?: string;
   group: StudentGroup;
   generatedDate: string;
 }
@@ -67,7 +70,10 @@ function sanitizeFilename(name: string): string {
  * Generate a standalone HTML file for a student group
  */
 export function generateStudentHTML(data: LessonExportData): string {
-  const { title, content, group, generatedDate } = data;
+  const { title, content, englishContent, group, generatedDate } = data;
+  
+  // Detect if this is a bilingual export
+  const isBilingual = group.homeLanguage !== 'English' && englishContent && englishContent.trim().length > 0;
   
   // Detect RTL languages
   const rtlLanguages = ['Arabic', 'Hebrew', 'Farsi', 'Urdu', 'العربية'];
@@ -77,27 +83,52 @@ export function generateStudentHTML(data: LessonExportData): string {
   const direction = isRTL ? 'rtl' : 'ltr';
   const textAlign = isRTL ? 'right' : 'left';
   
-  // Process content
-  let processedContent = content;
+  // Process content - convert [VISUAL: ...] to styled placeholders
+  const processMarkdown = (md: string): string => {
+    let processed = md;
+    processed = processed.replace(
+      /\[VISUAL:\s*(.+?)\]/g,
+      '<div class="visual-placeholder"><span class="visual-icon">📊</span><span class="visual-label">$1</span></div>'
+    );
+    processed = processed.replace(/_{10,}/g, '<div class="answer-line"></div>');
+    return marked.parse(processed) as string;
+  };
   
-  // Convert [VISUAL: ...] to styled placeholders
-  processedContent = processedContent.replace(
-    /\[VISUAL:\s*(.+?)\]/g,
-    '<div class="visual-placeholder"><span class="visual-icon">📊</span><span class="visual-label">$1</span></div>'
-  );
-  
-  // Convert answer lines to input-like boxes
-  processedContent = processedContent.replace(/_{10,}/g, '<div class="answer-line"></div>');
-  
-  // Parse markdown to HTML
-  const contentHTML = marked.parse(processedContent);
+  const translatedHTML = processMarkdown(content);
+  const englishHTML = isBilingual && englishContent ? processMarkdown(englishContent) : '';
   
   // Get level styling
   const levelKey = getLevelKey(group.readingLevelLabel);
   const levelColors = getLevelColors(levelKey);
   
+  // Build body content based on bilingual or single-column
+  const bodyContent = isBilingual 
+    ? `
+      <div class="bilingual-container">
+        <div class="bilingual-column translated ${isRTL ? 'rtl' : 'ltr'}">
+          <div class="column-header">
+            <span class="column-flag">🌍</span>
+            ${escapeHtml(group.homeLanguage)}
+          </div>
+          <div class="column-content">${translatedHTML}</div>
+        </div>
+        <div class="bilingual-column english ltr">
+          <div class="column-header">
+            <span class="column-flag">🇺🇸</span>
+            English
+          </div>
+          <div class="column-content">${englishHTML}</div>
+        </div>
+      </div>
+    `
+    : `<div class="single-column-content">${translatedHTML}</div>`;
+  
+  const languageDisplay = isBilingual 
+    ? `${escapeHtml(group.homeLanguage)} + English` 
+    : escapeHtml(group.homeLanguage);
+
   return `<!DOCTYPE html>
-<html lang="en" dir="${direction}">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -117,6 +148,8 @@ export function generateStudentHTML(data: LessonExportData): string {
       --color-bg: #ffffff;
       --color-bg-subtle: #f9fafb;
       --color-border: #e5e7eb;
+      --color-english: #3b82f6;
+      --color-english-light: #eff6ff;
       --font-main: 'Nunito', 'Noto Sans Arabic', system-ui, sans-serif;
       --font-emoji: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
     }
@@ -129,14 +162,12 @@ export function generateStudentHTML(data: LessonExportData): string {
       line-height: 1.6;
       color: var(--color-text);
       background: var(--color-bg);
-      direction: ${direction};
-      text-align: ${textAlign};
       padding: 0;
       margin: 0;
     }
     
     .lesson-container {
-      max-width: 800px;
+      max-width: ${isBilingual ? '1200px' : '800px'};
       margin: 0 auto;
       padding: 2rem 1.5rem;
     }
@@ -186,7 +217,68 @@ export function generateStudentHTML(data: LessonExportData): string {
       gap: 0.375rem;
     }
     
-    .lesson-content h1, .lesson-content h2, .lesson-content h3, .lesson-content h4 {
+    /* ===== BILINGUAL LAYOUT ===== */
+    .bilingual-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 1.5rem;
+    }
+    
+    .bilingual-column {
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      background: var(--color-bg);
+      min-height: 400px;
+    }
+    
+    .bilingual-column.translated {
+      border-left: 4px solid var(--color-primary);
+      background: var(--color-primary-light);
+    }
+    
+    .bilingual-column.english {
+      border-left: 4px solid var(--color-english);
+      background: var(--color-english-light);
+    }
+    
+    .bilingual-column.rtl {
+      direction: rtl;
+      text-align: right;
+    }
+    
+    .bilingual-column.ltr {
+      direction: ltr;
+      text-align: left;
+    }
+    
+    .column-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-text-muted);
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--color-border);
+    }
+    
+    .column-flag {
+      font-size: 1rem;
+    }
+    
+    /* Single column for English-only */
+    .single-column-content {
+      direction: ${direction};
+      text-align: ${textAlign};
+    }
+    
+    /* Content styling */
+    .column-content h1, .column-content h2, .column-content h3, .column-content h4,
+    .single-column-content h1, .single-column-content h2, .single-column-content h3, .single-column-content h4 {
       font-weight: 600;
       line-height: 1.3;
       margin-top: 1.5rem;
@@ -194,47 +286,54 @@ export function generateStudentHTML(data: LessonExportData): string {
       color: var(--color-text);
     }
     
-    .lesson-content h1 { font-size: 1.75rem; }
-    .lesson-content h2 { 
-      font-size: 1.375rem; 
+    .column-content h1, .single-column-content h1 { font-size: 1.5rem; }
+    .column-content h2, .single-column-content h2 { 
+      font-size: 1.25rem; 
       padding-bottom: 0.5rem;
       border-bottom: 2px solid var(--color-border);
     }
-    .lesson-content h3 { font-size: 1.125rem; }
-    .lesson-content h4 { font-size: 1rem; }
+    .column-content h3, .single-column-content h3 { font-size: 1.125rem; }
+    .column-content h4, .single-column-content h4 { font-size: 1rem; }
     
-    .lesson-content p { margin-bottom: 1rem; }
-    .lesson-content strong, .lesson-content b { font-weight: 600; }
-    .lesson-content em, .lesson-content i { font-style: italic; }
+    .column-content p, .single-column-content p { margin-bottom: 1rem; }
+    .column-content strong, .single-column-content strong { font-weight: 600; }
+    .column-content em, .single-column-content em { font-style: italic; }
     
-    .lesson-content ul, .lesson-content ol {
+    .column-content ul, .column-content ol,
+    .single-column-content ul, .single-column-content ol {
       margin-bottom: 1rem;
-      padding-${isRTL ? 'right' : 'left'}: 1.5rem;
+      padding-left: 1.5rem;
     }
     
-    .lesson-content li { margin-bottom: 0.375rem; }
-    .lesson-content li::marker { color: var(--color-primary); }
+    .rtl .column-content ul, .rtl .column-content ol {
+      padding-left: 0;
+      padding-right: 1.5rem;
+    }
     
-    .lesson-content table {
+    .column-content li, .single-column-content li { margin-bottom: 0.375rem; }
+    .column-content li::marker, .single-column-content li::marker { color: var(--color-primary); }
+    
+    .column-content table, .single-column-content table {
       width: 100%;
       border-collapse: collapse;
       margin: 1.5rem 0;
-      font-size: 0.9375rem;
+      font-size: 0.9rem;
     }
     
-    .lesson-content th, .lesson-content td {
-      padding: 0.75rem 1rem;
-      text-align: ${textAlign};
+    .column-content th, .column-content td,
+    .single-column-content th, .single-column-content td {
+      padding: 0.625rem 0.75rem;
+      text-align: left;
       border: 1px solid var(--color-border);
     }
     
-    .lesson-content th {
-      background: var(--color-bg-subtle);
-      font-weight: 600;
+    .rtl .column-content th, .rtl .column-content td {
+      text-align: right;
     }
     
-    .lesson-content tr:nth-child(even) td {
-      background: var(--color-bg-subtle);
+    .column-content th, .single-column-content th {
+      background: rgba(0,0,0,0.03);
+      font-weight: 600;
     }
     
     .visual-placeholder {
@@ -244,7 +343,7 @@ export function generateStudentHTML(data: LessonExportData): string {
       justify-content: center;
       padding: 2rem;
       margin: 1.5rem 0;
-      background: var(--color-bg-subtle);
+      background: rgba(255,255,255,0.5);
       border: 2px dashed var(--color-border);
       border-radius: 0.75rem;
       text-align: center;
@@ -257,7 +356,7 @@ export function generateStudentHTML(data: LessonExportData): string {
       border-bottom: 2px solid var(--color-border);
       height: 2.5rem;
       margin: 0.75rem 0;
-      background: linear-gradient(to bottom, transparent 90%, var(--color-bg-subtle) 90%);
+      background: linear-gradient(to bottom, transparent 90%, rgba(0,0,0,0.02) 90%);
     }
     
     .lesson-footer {
@@ -269,6 +368,33 @@ export function generateStudentHTML(data: LessonExportData): string {
       color: var(--color-text-muted);
     }
     
+    /* Mobile: Stack columns vertically */
+    @media (max-width: 768px) {
+      .bilingual-container {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      .bilingual-column {
+        min-height: auto;
+      }
+    }
+    
+    /* Print styles */
+    @media print {
+      body { font-size: 10pt; }
+      .lesson-container { max-width: 100%; padding: 0; }
+      .bilingual-container { gap: 1rem; }
+      .bilingual-column { 
+        padding: 0.75rem;
+        font-size: 9pt;
+        page-break-inside: avoid;
+      }
+      .visual-placeholder { border-style: solid; }
+      h2, h3 { page-break-after: avoid; }
+      table { page-break-inside: avoid; }
+    }
+    
+    /* Dark mode */
     @media (prefers-color-scheme: dark) {
       :root {
         --color-text: #f3f4f6;
@@ -277,14 +403,12 @@ export function generateStudentHTML(data: LessonExportData): string {
         --color-bg-subtle: #1f2937;
         --color-border: #374151;
       }
-    }
-    
-    @media print {
-      body { font-size: 11pt; line-height: 1.4; }
-      .lesson-container { max-width: 100%; padding: 0; }
-      .visual-placeholder { border-style: solid; }
-      h2, h3 { page-break-after: avoid; }
-      table { page-break-inside: avoid; }
+      .bilingual-column.translated {
+        background: rgba(239, 68, 68, 0.1);
+      }
+      .bilingual-column.english {
+        background: rgba(59, 130, 246, 0.1);
+      }
     }
   </style>
 </head>
@@ -300,13 +424,13 @@ export function generateStudentHTML(data: LessonExportData): string {
         </span>
         <span class="lesson-meta-item">
           <span>🌐</span>
-          <span>${escapeHtml(group.homeLanguage)}</span>
+          <span>${languageDisplay}</span>
         </span>
       </div>
     </header>
     
     <main class="lesson-content">
-      ${contentHTML}
+      ${bodyContent}
     </main>
     
     <footer class="lesson-footer">
@@ -338,11 +462,13 @@ export function downloadHTML(html: string, filename: string): void {
 export function downloadGroupHTML(
   title: string,
   content: string,
-  group: StudentGroup
+  group: StudentGroup,
+  englishContent?: string
 ): void {
   const html = generateStudentHTML({
     title,
     content,
+    englishContent,
     group,
     generatedDate: new Date().toLocaleDateString()
   });
@@ -354,19 +480,20 @@ export function downloadGroupHTML(
  */
 export async function downloadAllAsZip(
   title: string,
-  groupContents: { group: StudentGroup; content: string }[]
+  groupContents: { group: StudentGroup; content: string; englishContent?: string }[]
 ): Promise<void> {
   const JSZip = (await import('jszip')).default;
   const zip = new JSZip();
   const generatedDate = new Date().toLocaleDateString();
   
-  groupContents.forEach(({ group, content }) => {
-    const html = generateStudentHTML({ title, content, group, generatedDate });
+  groupContents.forEach(({ group, content, englishContent }) => {
+    const html = generateStudentHTML({ title, content, englishContent, group, generatedDate });
     const filename = `${sanitizeFilename(title)}_${sanitizeFilename(group.groupName)}.html`;
     zip.file(filename, html);
   });
   
   // Add README
+  const bilingualGroups = groupContents.filter(g => g.group.homeLanguage !== 'English' && g.englishContent);
   const readme = `# ${title}
 
 Generated by Authentic Learning Studio
@@ -374,13 +501,17 @@ Date: ${generatedDate}
 
 ## Contents
 
-${groupContents.map(({ group }) => `- ${group.groupName}.html (${group.readingLevelLabel}, ${group.homeLanguage})`).join('\n')}
+${groupContents.map(({ group }) => {
+  const isBilingual = group.homeLanguage !== 'English';
+  return `- ${group.groupName}.html (${group.readingLevelLabel}, ${group.homeLanguage}${isBilingual ? ' + English bilingual' : ''})`;
+}).join('\n')}
 
 ## How to Use
 
 1. Upload these HTML files to your LMS (Canvas, Schoology, Google Classroom)
 2. Assign each file to the appropriate student group
 3. Students click the file to view their personalized lesson
+${bilingualGroups.length > 0 ? '\n## Bilingual Layout\n\nFiles for non-English groups display content side-by-side:\n- Left column: Content in student\'s home language\n- Right column: English version\n' : ''}
 `;
   
   zip.file('README.txt', readme);

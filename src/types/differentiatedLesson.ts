@@ -3,7 +3,8 @@ export interface StudentHandout {
   groupName: string;
   level: 'embers' | 'sparks' | 'flames' | 'blazers' | 'supernovas';
   language: string;
-  content: string; // Markdown content for this specific group
+  content: string; // Markdown content (in target language for non-English groups)
+  englishContent?: string; // English version for bilingual display (only for non-English groups)
 }
 
 export interface DifferentiatedLessonData {

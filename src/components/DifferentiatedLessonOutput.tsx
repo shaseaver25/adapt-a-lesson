@@ -111,6 +111,14 @@ export function DifferentiatedLessonOutput({
     return handout?.content || '';
   }, [studentHandouts]);
 
+  // Get English content for bilingual groups
+  const getGroupEnglishContent = useCallback((groupName: string): string => {
+    const handout = studentHandouts.find(
+      h => h.groupName.toLowerCase() === groupName.toLowerCase()
+    );
+    return handout?.englishContent || '';
+  }, [studentHandouts]);
+
   // Get audio for a specific group and language
   const getAudioUrl = useCallback((groupName: string, language: string): string | null => {
     const audio = preGeneratedAudio.find(
@@ -239,6 +247,7 @@ export function DifferentiatedLessonOutput({
                 groups={selectedGroups}
                 lessonTitle={lessonTitle}
                 getGroupContent={getGroupContent}
+                getGroupEnglishContent={getGroupEnglishContent}
               />
             </div>
           </div>
@@ -341,13 +350,49 @@ export function DifferentiatedLessonOutput({
                   </div>
                   
                   {/* Handout content */}
-                  {studentHandouts.map((handout) => (
-                    <TabsContent key={handout.groupId} value={handout.groupId} className="mt-0">
-                      <div className="prose prose-sm dark:prose-invert max-w-none">
-                        <ReactMarkdown>{handout.content}</ReactMarkdown>
-                      </div>
-                    </TabsContent>
-                  ))}
+                  {studentHandouts.map((handout) => {
+                    const isBilingual = handout.language !== 'English' && handout.englishContent;
+                    const rtlLanguages = ['Arabic', 'Hebrew', 'Farsi', 'Urdu'];
+                    const isRTL = rtlLanguages.some(lang => 
+                      handout.language.toLowerCase().includes(lang.toLowerCase())
+                    );
+                    
+                    return (
+                      <TabsContent key={handout.groupId} value={handout.groupId} className="mt-0">
+                        {isBilingual ? (
+                          // Bilingual side-by-side layout
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Translated content (left) */}
+                            <div className={`p-4 rounded-lg border-l-4 border-primary bg-primary/5 ${isRTL ? 'text-right' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                              <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 pb-2 border-b">
+                                <span>🌍</span>
+                                <span>{handout.language}</span>
+                              </div>
+                              <div className="prose prose-sm dark:prose-invert max-w-none">
+                                <ReactMarkdown>{handout.content}</ReactMarkdown>
+                              </div>
+                            </div>
+                            
+                            {/* English content (right) */}
+                            <div className="p-4 rounded-lg border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-950/20">
+                              <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 pb-2 border-b">
+                                <span>🇺🇸</span>
+                                <span>English</span>
+                              </div>
+                              <div className="prose prose-sm dark:prose-invert max-w-none">
+                                <ReactMarkdown>{handout.englishContent}</ReactMarkdown>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          // Single column for English-only
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <ReactMarkdown>{handout.content}</ReactMarkdown>
+                          </div>
+                        )}
+                      </TabsContent>
+                    );
+                  })}
                 </Tabs>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">

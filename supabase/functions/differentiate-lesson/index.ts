@@ -85,8 +85,9 @@ Output this exact JSON structure:
       "groupId": "group-id-from-input",
       "groupName": "Exact group name from input",
       "level": "embers|sparks|flames|blazers|supernovas",
-      "language": "English|Spanish|Arabic|etc",
-      "content": "Complete student handout as markdown string"
+      "language": "English|Spanish|Arabic|Somali|etc",
+      "content": "Complete student handout as markdown string",
+      "englishContent": "English version of the same content (ONLY for non-English groups)"
     }
   ]
 }
@@ -99,12 +100,27 @@ TEACHER GUIDE REQUIREMENTS (teacherGuide field):
 - Include: Formative Assessment Checkpoints
 - Use markdown formatting
 
-STUDENT HANDOUT REQUIREMENTS (content field for each handout):
-- If group's language is NOT English, write the ENTIRE handout in that language
+STUDENT HANDOUT REQUIREMENTS:
+
+FOR ENGLISH GROUPS:
+- content: The lesson in English
+- englishContent: null or omit
+
+FOR NON-ENGLISH GROUPS (CRITICAL - BILINGUAL OUTPUT):
+- content: The FULL lesson translated into the group's home language
+- englishContent: The SAME lesson content in English
+- BOTH versions must have IDENTICAL STRUCTURE so they align side-by-side:
+  - Same section headers (translated vs English)
+  - Same number of practice problems
+  - Same vocabulary terms
+  - Same reflection prompts
+- This enables side-by-side bilingual display
+
+HANDOUT CONTENT STRUCTURE (both languages):
 - Start with: **Name:** _____ **Date:** _____
 - Include: 🎯 Learning Target (student-friendly)
 - Include: Lesson content with [VISUAL: description] placeholders
-- Include: Vocabulary box (bilingual for non-English groups)
+- Include: Vocabulary box 
 - Include: Practice section with answer lines
 - Include: Reflection section
 - Use markdown formatting
