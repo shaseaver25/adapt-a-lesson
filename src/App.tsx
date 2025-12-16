@@ -12,6 +12,7 @@ import SavedRubrics from "./pages/SavedRubrics";
 import AudioUsage from "./pages/AudioUsage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/student-groups" element={<StudentGroups />} />
               <Route path="/saved-lessons" element={<SavedLessons />} />
               <Route path="/saved-rubrics" element={<SavedRubrics />} />
