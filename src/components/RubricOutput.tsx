@@ -196,7 +196,7 @@ export function RubricOutput({
         <div className="flex items-center gap-2 p-3 bg-primary/10 border border-primary/20 rounded-lg">
           <div className="h-2 w-2 bg-primary rounded-full animate-pulse" />
           <span className="text-sm text-foreground">
-            <strong>{autoVerificationCount}</strong> AI-proof verification criteria auto-added based on vulnerability analysis
+            <strong>{autoVerificationCount}</strong> authenticity verification criteria auto-added based on vulnerability analysis
           </span>
         </div>
       )}
@@ -349,7 +349,7 @@ export function RubricOutput({
                   </div>
                   
                   <p className="text-xs text-muted-foreground">
-                    Student version excludes: verification guide, red flags section, teacher notes, and AI-proof indicators
+                    Student version excludes: verification guide, red flags section, teacher notes, and authenticity indicators
                   </p>
                 </CardContent>
               </Card>

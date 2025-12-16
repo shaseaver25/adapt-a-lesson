@@ -56,7 +56,7 @@ export function RubricForm({ onSubmit, isLoading }: RubricFormProps) {
   const [numCriteria, setNumCriteria] = useState('4');
   const [gradeLevel, setGradeLevel] = useState('');
   
-  // AI-Proof Settings
+  // Authentic Learning Mode Settings
   const [aiProofSettings, setAiProofSettings] = useState<AIProofSettings>(DEFAULT_AI_PROOF_SETTINGS);
   const [verificationCheckpoints, setVerificationCheckpoints] = useState<VerificationCheckpoints>(DEFAULT_VERIFICATION_CHECKPOINTS);
   const [aiProofOpen, setAiProofOpen] = useState(false);
@@ -162,7 +162,7 @@ export function RubricForm({ onSubmit, isLoading }: RubricFormProps) {
     
     const enhancedDescription = `${assessmentDescription}
 
-REQUIRED AI-PROOF ELEMENTS:
+REQUIRED AUTHENTIC LEARNING ELEMENTS:
 ${enhancements.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
     
     setAssessmentDescription(enhancedDescription);
@@ -353,7 +353,7 @@ ${enhancements.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
           </div>
         </div>
 
-        {/* AI-Proof Settings */}
+        {/* Authentic Learning Mode Settings */}
         <Collapsible open={aiProofOpen} onOpenChange={setAiProofOpen}>
           <Card className="border-border">
             <CollapsibleTrigger asChild>
@@ -361,7 +361,7 @@ ${enhancements.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Settings2 className="h-5 w-5 text-primary" />
-                    <CardTitle className="text-lg font-display">AI-Proof Settings</CardTitle>
+                    <CardTitle className="text-lg font-display">Authentic Learning Mode</CardTitle>
                   </div>
                   <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${aiProofOpen ? 'rotate-180' : ''}`} />
                 </div>
@@ -379,7 +379,7 @@ ${enhancements.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
                     />
                     <div className="space-y-1">
                       <Label htmlFor="enableAIProofAnalysis" className="text-sm font-medium cursor-pointer">
-                        Enable AI-Proof Analysis
+                        Enable Authenticity Analysis
                       </Label>
                       <p className="text-xs text-muted-foreground">
                         Analyze assessment for AI vulnerabilities before generating rubric

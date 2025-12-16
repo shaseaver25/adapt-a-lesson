@@ -126,6 +126,6 @@ export const RUBRIC_SECTION_DESCRIPTIONS: Record<string, string> = {
   'Assessment Description': 'Describe the task students will complete. Be specific about deliverables, requirements, and expectations.',
   'Learning Objectives': 'What students should demonstrate through this assessment. The rubric will evaluate these objectives.',
   'Rubric Settings': 'Configure the number of criteria and grade level to adjust rubric complexity and language.',
-  'AI-Proof Settings': 'Controls for making the rubric verify authentic student work. Enable analysis to identify AI vulnerabilities.',
+  'Authentic Learning Mode': 'Controls for making the rubric verify authentic student work. Enable analysis to identify AI vulnerabilities.',
   'Verification Checkpoints': 'Artifacts and evidence students must provide to verify their work is authentic.',
 };
