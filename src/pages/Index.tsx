@@ -1,57 +1,31 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { DifferentiateForm, DifferentiateInput } from '@/components/DifferentiateForm';
 import { DifferentiatedLessonOutput } from '@/components/DifferentiatedLessonOutput';
 import { AssessmentMethodSelector } from '@/components/assessment/AssessmentMethodSelector';
 import { AssessmentOutput } from '@/components/AssessmentOutput';
-import { LessonContext, LocalContext, MethodOutput } from '@/types/assessmentMethods';
 import { RubricForm } from '@/components/RubricForm';
 import { RubricOutput } from '@/components/RubricOutput';
 import { Button } from '@/components/ui/button';
-import { StudentGroup } from '@/types/studentGroup';
-
-import { RubricInput } from '@/types/rubric';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles, BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, XCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2 } from 'lucide-react';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
-import { DifferentiationProgressModal, DifferentiationProgressState, createInitialProgressState } from '@/components/DifferentiationProgressModal';
+import { DifferentiationProgressModal, createInitialProgressState } from '@/components/DifferentiationProgressModal';
 import { useLessonAudio } from '@/hooks/useLessonAudio';
+import { useDifferentiationGenerator } from '@/hooks/useDifferentiationGenerator';
+import { useAssessmentGenerator } from '@/hooks/useAssessmentGenerator';
+import { useRubricGenerator } from '@/hooks/useRubricGenerator';
 
 const Index = () => {
   const [searchParams] = useSearchParams();
   const { setCachedLessonContent, clearSelection } = useDifferentiation();
+  
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
     return tabParam && ['differentiate', 'assessment', 'rubric'].includes(tabParam) 
       ? tabParam 
       : 'differentiate';
   });
-  
-  // Differentiation state
-  const [differentiatedLesson, setDifferentiatedLesson] = useState<string | null>(null);
-  const [selectedGroups, setSelectedGroups] = useState<(StudentGroup & { id: string })[]>([]);
-  const [originalLessonContent, setOriginalLessonContent] = useState<string>('');
-  const [isDifferentiating, setIsDifferentiating] = useState(false);
-  const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
-  const [progressStatus, setProgressStatus] = useState<DifferentiationProgressState>(createInitialProgressState());
-  const [showProgressModal, setShowProgressModal] = useState(false);
-  const [lastDifferentiateInput, setLastDifferentiateInput] = useState<DifferentiateInput | null>(null);
-  const [differentiateError, setDifferentiateError] = useState<string | null>(null);
-
-  // Assessment state
-  const [generatedAssessment, setGeneratedAssessment] = useState<string | null>(null);
-  const [isGeneratingAssessment, setIsGeneratingAssessment] = useState(false);
-
-  // Rubric state
-  const [generatedRubric, setGeneratedRubric] = useState<string | null>(null);
-  const [currentRubricInput, setCurrentRubricInput] = useState<RubricInput | null>(null);
-  const [isGeneratingRubric, setIsGeneratingRubric] = useState(false);
-  const [rubricAutoVerification, setRubricAutoVerification] = useState<{ added: boolean; count: number } | null>(null);
-
-  // Abort controller for cancellation
-  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Audio generation hook
   const { 
@@ -60,12 +34,46 @@ const Index = () => {
     audioRecords, 
     vocabularyAudio,
     generateAudio, 
-    fetchLessonAudio,
-    fetchVocabularyAudio 
   } = useLessonAudio();
 
-  // Track if lesson has been saved
-  const [isLessonSaved, setIsLessonSaved] = useState(false);
+  // Differentiation hook
+  const {
+    differentiatedLesson,
+    selectedGroups,
+    originalLessonContent,
+    isDifferentiating,
+    currentLessonId,
+    progressStatus,
+    showProgressModal,
+    lastDifferentiateInput,
+    differentiateError,
+    isLessonSaved,
+    handleDifferentiate,
+    handleRetryDifferentiate,
+    handleCancelGeneration,
+    handleLessonSaved,
+    handleResetDifferentiation,
+    setShowProgressModal,
+    setProgressStatus,
+  } = useDifferentiationGenerator(setCachedLessonContent, clearSelection, generateAudio);
+
+  // Assessment hook
+  const {
+    generatedAssessment,
+    isGeneratingAssessment,
+    handleGenerateAssessment,
+    handleResetAssessment,
+  } = useAssessmentGenerator();
+
+  // Rubric hook
+  const {
+    generatedRubric,
+    currentRubricInput,
+    isGeneratingRubric,
+    rubricAutoVerification,
+    handleGenerateRubric,
+    handleResetRubric,
+  } = useRubricGenerator();
 
   // Warn user before leaving if there's unsaved content
   useEffect(() => {
@@ -80,312 +88,6 @@ const Index = () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [differentiatedLesson, isLessonSaved]);
-
-  // Reset saved state when new lesson is generated
-  useEffect(() => {
-    if (differentiatedLesson) {
-      setIsLessonSaved(false);
-    }
-  }, [differentiatedLesson]);
-
-  const handleCancelGeneration = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-      setIsDifferentiating(false);
-      setShowProgressModal(false);
-      setProgressStatus(createInitialProgressState());
-      toast({
-        title: 'Generation cancelled',
-        description: 'Lesson differentiation was stopped.',
-      });
-    }
-  }, []);
-
-  const handleLessonSaved = useCallback(() => {
-    setIsLessonSaved(true);
-  }, []);
-
-  const handleDifferentiate = async (input: DifferentiateInput, isRetry = false) => {
-    setIsDifferentiating(true);
-    setDifferentiateError(null);
-    setSelectedGroups(input.selectedGroups);
-    setOriginalLessonContent(input.lessonContent);
-    setLastDifferentiateInput(input);
-
-    // Determine audio needs
-    const groupsNeedingAudio = input.selectedGroups.filter(g => 
-      g.accommodations?.includes('Read Aloud') || g.homeLanguage !== 'English'
-    );
-    const audioLanguages = [...new Set(
-      groupsNeedingAudio.flatMap(g => [
-        'English',
-        g.homeLanguage !== 'English' ? g.homeLanguage : null
-      ].filter(Boolean) as string[])
-    )];
-
-    // Initialize progress state
-    const initialProgress: DifferentiationProgressState = {
-      contentStatus: 'generating',
-      groupsProcessed: 0,
-      totalGroups: input.selectedGroups.length,
-      audioStatus: groupsNeedingAudio.length > 0 ? 'pending' : 'skipped',
-      audioSectionsComplete: 0,
-      audioSectionsTotal: groupsNeedingAudio.length * 5, // Estimate ~5 sections per group
-      audioSectionsFailed: 0,
-      audioLanguages,
-      isComplete: false,
-    };
-    setProgressStatus(initialProgress);
-    setShowProgressModal(true);
-
-    // Simulate content generation progress
-    const progressTimer = setTimeout(() => {
-      setProgressStatus(prev => ({ 
-        ...prev, 
-        groupsProcessed: Math.floor(prev.totalGroups / 2),
-      }));
-    }, 2000);
-
-    try {
-      // Create abort controller for timeout
-      abortControllerRef.current = new AbortController();
-      
-      // Use fetch directly with extended timeout (5 minutes)
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/differentiate-lesson`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({
-            lessonContent: input.lessonContent,
-            selectedGroups: input.selectedGroups,
-            options: input.options,
-          }),
-          signal: abortControllerRef.current.signal,
-        }
-      );
-
-      clearTimeout(progressTimer);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `Request failed with status ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      // Update progress - content done
-      setProgressStatus(prev => ({
-        ...prev,
-        contentStatus: 'complete',
-        groupsProcessed: prev.totalGroups,
-      }));
-
-      // Check if groups need audio
-      const needsAudio = input.selectedGroups.some(g => 
-        g.accommodations?.includes('Read Aloud') || g.homeLanguage !== 'English'
-      );
-
-      // Save lesson to database first to get an ID for audio storage
-      let lessonId: string | null = null;
-      try {
-        const { data: lessonData, error: lessonError } = await supabase
-          .from('generated_lessons')
-          .insert({
-            original_content: input.lessonContent,
-            lesson_title: input.lessonName || 'Untitled Lesson',
-            group_ids: input.selectedGroups.map(g => g.id),
-            teacher_guide: data.differentiatedLesson,
-            differentiation_options: input.options as any,
-          })
-          .select('id')
-          .single();
-
-        if (!lessonError && lessonData) {
-          lessonId = lessonData.id;
-          setCurrentLessonId(lessonId);
-        }
-      } catch (saveError) {
-        console.error('Error saving lesson for audio:', saveError);
-      }
-
-      // Generate audio if needed and we have a lesson ID
-      if (needsAudio && lessonId) {
-        setProgressStatus(prev => ({
-          ...prev,
-          audioStatus: 'generating',
-        }));
-
-        // Generate audio in background (don't block UI)
-        generateAudio(lessonId, data.differentiatedLesson, input.selectedGroups)
-          .then((result) => {
-            console.log('Audio generation result:', result);
-            setProgressStatus(prev => ({
-              ...prev,
-              audioStatus: 'complete',
-              audioSectionsComplete: result?.generated || prev.audioSectionsTotal,
-            }));
-          })
-          .catch((audioError) => {
-            console.error('Audio generation error:', audioError);
-            setProgressStatus(prev => ({
-              ...prev,
-              audioStatus: 'partial',
-              audioSectionsFailed: prev.audioSectionsTotal - prev.audioSectionsComplete,
-            }));
-          });
-      }
-
-      // Update final progress
-      setProgressStatus(prev => ({
-        ...prev,
-        isComplete: true,
-        audioStatus: needsAudio ? prev.audioStatus : 'skipped',
-      }));
-
-      setDifferentiatedLesson(data.differentiatedLesson);
-    } catch (error) {
-      clearTimeout(progressTimer);
-      console.error('Error differentiating lesson:', error);
-      
-      setShowProgressModal(false);
-      const errorMessage = error instanceof Error ? error.message : 'Please try again later.';
-      const isTimeout = errorMessage.includes('abort') || errorMessage.includes('timeout') || errorMessage.includes('connection');
-      
-      setDifferentiateError(isTimeout 
-        ? 'The request took too long. This can happen with long lessons or many student groups. Click "Retry" to try again.'
-        : errorMessage
-      );
-      
-      toast({
-        title: isTimeout ? 'Request timed out' : 'Error differentiating lesson',
-        description: isTimeout 
-          ? 'Large lessons may take longer to process. Try again or reduce the number of groups.'
-          : errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsDifferentiating(false);
-      abortControllerRef.current = null;
-    }
-  };
-
-  const handleRetryDifferentiate = () => {
-    if (lastDifferentiateInput) {
-      handleDifferentiate(lastDifferentiateInput, true);
-    }
-  };
-
-  const handleGenerateAssessment = async (input: {
-    lessonContext: LessonContext;
-    localContext: LocalContext;
-    selectedCategory: string;
-    selectedMethod: string;
-    methodDetails: MethodOutput;
-  }) => {
-    setIsGeneratingAssessment(true);
-
-    try {
-      // Transform to the existing API format
-      const assessmentInput = {
-        lessonTitle: input.lessonContext.title,
-        subject: input.lessonContext.subject,
-        gradeLevel: input.lessonContext.gradeLevel,
-        learningObjectives: input.lessonContext.objectives.filter(o => o.trim() !== ''),
-        aiPolicy: 'limited_assist' as const,
-        schoolName: input.localContext.schoolName,
-        city: input.localContext.city,
-        state: input.localContext.state,
-        localContext: input.localContext.details,
-        assessmentMethod: input.selectedMethod,
-        methodCategory: input.selectedCategory,
-        methodOutputs: input.methodDetails.outputs || [],
-      };
-
-      const { data, error } = await supabase.functions.invoke('generate-assessment', {
-        body: assessmentInput,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      setGeneratedAssessment(data.assessment);
-    } catch (error) {
-      console.error('Error generating assessment:', error);
-      toast({
-        title: 'Error generating assessment',
-        description: error instanceof Error ? error.message : 'Please try again later.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsGeneratingAssessment(false);
-    }
-  };
-
-  const handleGenerateRubric = async (input: RubricInput) => {
-    setIsGeneratingRubric(true);
-    setCurrentRubricInput(input);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-rubric', {
-        body: input,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      setGeneratedRubric(data.rubric);
-      setRubricAutoVerification({
-        added: data.autoVerificationAdded || false,
-        count: data.autoVerificationCount || 0,
-      });
-    } catch (error) {
-      console.error('Error generating rubric:', error);
-      toast({
-        title: 'Error generating rubric',
-        description: error instanceof Error ? error.message : 'Please try again later.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsGeneratingRubric(false);
-    }
-  };
-
-  const handleResetDifferentiation = () => {
-    setDifferentiatedLesson(null);
-    setSelectedGroups([]);
-    setCachedLessonContent('');
-    clearSelection();
-  };
-
-  const handleResetAssessment = () => {
-    setGeneratedAssessment(null);
-  };
-
-  const handleResetRubric = () => {
-    setGeneratedRubric(null);
-    setCurrentRubricInput(null);
-    setRubricAutoVerification(null);
-  };
 
   const handleReset = () => {
     if (differentiatedLesson) handleResetDifferentiation();
@@ -502,7 +204,6 @@ const Index = () => {
           </div>
         ) : differentiatedLesson ? (
           <div className="max-w-4xl mx-auto animate-slide-up">
-            {/* Differentiation result header */}
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-success/10">
                 <BookOpenCheck className="h-5 w-5 text-success" />
@@ -541,7 +242,6 @@ const Index = () => {
           </div>
         ) : generatedAssessment ? (
           <div className="max-w-4xl mx-auto animate-slide-up">
-            {/* Assessment result header */}
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-success/10">
                 <ShieldCheck className="h-5 w-5 text-success" />
@@ -563,7 +263,6 @@ const Index = () => {
           </div>
         ) : generatedRubric ? (
           <div className="max-w-4xl mx-auto animate-slide-up">
-            {/* Rubric result header */}
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-success/10">
                 <TableProperties className="h-5 w-5 text-success" />
@@ -599,7 +298,6 @@ const Index = () => {
           setProgressStatus(createInitialProgressState());
         }}
         onRetryFailed={() => {
-          // Retry failed audio generation
           if (currentLessonId && lastDifferentiateInput) {
             generateAudio(currentLessonId, differentiatedLesson || '', lastDifferentiateInput.selectedGroups);
           }
