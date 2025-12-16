@@ -124,27 +124,12 @@ export function DifferentiatedLessonOutput({
       }
     }
     
-    // If no explicit marker, look for student content patterns after teacher content
-    if (studentSectionStart === -1) {
-      for (let i = 0; i < allLines.length; i++) {
-        const line = allLines[i];
-        // Student handouts often have "Name:" or "Learning Target" or "Edition"
-        if (line.includes('**Name:**') || 
-            line.includes('Learning Target') ||
-            line.match(/#{2,4}.*Edition/i)) {
-          studentSectionStart = Math.max(0, i - 3);
-          console.log(`Found student content pattern at line ${i}`);
-          break;
-        }
-      }
-    }
-    
     // Use only the student section
     const lines = studentSectionStart > 0 
       ? allLines.slice(studentSectionStart)
       : allLines;
     
-    // STEP 2: Find the specific group within student section
+    // STEP 2: Normalize group name for matching
     const normalizedGroupName = groupName
       .toLowerCase()
       .replace(/\s*\(.*?\)\s*/g, '')
@@ -154,13 +139,11 @@ export function DifferentiatedLessonOutput({
     
     console.log(`Looking for group: "${groupName}" (normalized: "${normalizedGroupName}")`);
     
-    let startIndex = -1;
-    let endIndex = lines.length;
-    let startHeaderLevel = 0;
+    // STEP 3: Find ALL candidate headers for this group
+    const candidates: { index: number; level: number; line: string }[] = [];
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      
       const headerMatch = line.match(/^(#{1,4})\s+(.+)$/);
       if (!headerMatch) continue;
       
@@ -180,29 +163,55 @@ export function DifferentiatedLessonOutput({
                       normalizedGroupName.includes(normalizedHeader.split(/\s+/).slice(0, 2).join(' '));
       
       if (isMatch) {
-        if (startIndex === -1) {
-          startIndex = i;
-          startHeaderLevel = headerLevel;
-          console.log(`Found group "${groupName}" at line ${i + studentSectionStart}: ${line}`);
-        } else if (headerLevel <= startHeaderLevel) {
-          endIndex = i;
-          console.log(`Found end at line ${i + studentSectionStart}: ${line}`);
-          break;
-        }
-      } else if (startIndex !== -1 && headerLevel <= startHeaderLevel) {
+        candidates.push({ index: i, level: headerLevel, line });
+      }
+    }
+    
+    // STEP 4: Find the candidate followed by STUDENT content, NOT teacher scaffolding
+    // Teacher content: "Scaffolding Strategies", "Pacing", "What to Say"
+    // Student content: "Name:", "Learning Target", "🎯", practice sections
+    const teacherKeywords = ['scaffolding strategies', 'pacing adjustment', 'what to say', 'vocabulary support:'];
+    const studentKeywords = ['name:', '**name:**', 'learning target', '🎯', '✏️', 'practice', 'reflection'];
+    
+    let bestCandidate: { index: number; level: number; line: string } | null = null;
+    
+    for (const candidate of candidates) {
+      // Look at the next 15 lines after this header
+      const nextLines = lines.slice(candidate.index + 1, candidate.index + 15).join('\n').toLowerCase();
+      
+      const hasTeacherContent = teacherKeywords.some(kw => nextLines.includes(kw));
+      const hasStudentContent = studentKeywords.some(kw => nextLines.includes(kw));
+      
+      console.log(`Candidate at line ${candidate.index + studentSectionStart}: teacher=${hasTeacherContent}, student=${hasStudentContent}, "${candidate.line.substring(0, 60)}"`);
+      
+      // Prefer sections with student content and NO teacher content
+      if (hasStudentContent && !hasTeacherContent) {
+        bestCandidate = candidate;
+        console.log(`Selected STUDENT section at line ${candidate.index + studentSectionStart}`);
+        break;
+      } else if (!bestCandidate && !hasTeacherContent) {
+        bestCandidate = candidate;
+      }
+    }
+    
+    if (!bestCandidate) {
+      console.warn(`Could not find student section for group: ${groupName}`);
+      return '';
+    }
+    
+    // STEP 5: Find the end of this section (next same-level or higher header)
+    let endIndex = lines.length;
+    for (let i = bestCandidate.index + 1; i < lines.length; i++) {
+      const headerMatch = lines[i].match(/^(#{1,4})\s+/);
+      if (headerMatch && headerMatch[1].length <= bestCandidate.level) {
         endIndex = i;
-        console.log(`Found end at line ${i + studentSectionStart}: ${line}`);
+        console.log(`Found end at line ${i + studentSectionStart}: ${lines[i].substring(0, 50)}`);
         break;
       }
     }
     
-    if (startIndex === -1) {
-      console.warn(`Could not find section for group: ${groupName} in STUDENT HANDOUTS`);
-      return '';
-    }
-    
-    const extracted = lines.slice(startIndex, endIndex).join('\n').trim();
-    console.log(`Extracted ${endIndex - startIndex} lines (${extracted.length} chars) for ${groupName}`);
+    const extracted = lines.slice(bestCandidate.index, endIndex).join('\n').trim();
+    console.log(`Extracted ${endIndex - bestCandidate.index} lines (${extracted.length} chars) for ${groupName}`);
     
     return extracted;
   }, [content]);
