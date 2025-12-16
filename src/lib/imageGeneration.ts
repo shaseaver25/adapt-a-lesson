@@ -109,3 +109,87 @@ export async function generateAllLessonImages(
   
   return imageMap;
 }
+
+/**
+ * Escape special regex characters in a string
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Process lesson text to find and replace visual tags with image HTML.
+ * Handles both [VISUAL: ...] and [NANOBANANA: "..."] formats.
+ */
+export async function processLessonImages(
+  lessonText: string,
+  lessonId?: string,
+  groupId?: string,
+  subject?: string,
+  onProgress?: (completed: number, total: number) => void
+): Promise<{ processedText: string; imageMap: Map<string, string> }> {
+  const imageMap = new Map<string, string>();
+  let processedText = lessonText;
+  
+  // Find all NANOBANANA matches
+  const nanobananaRegex = /\[NANOBANANA:\s*"(.*?)"\]/g;
+  const nanobananaMatches = [...lessonText.matchAll(nanobananaRegex)];
+  
+  // Find all VISUAL matches
+  const visualRegex = /\[VISUAL:\s*(.+?)\]/g;
+  const visualMatches = [...lessonText.matchAll(visualRegex)];
+  
+  const allMatches = [
+    ...nanobananaMatches.map(m => ({ fullTag: m[0], prompt: m[1] })),
+    ...visualMatches.map(m => ({ fullTag: m[0], prompt: m[1] }))
+  ];
+  
+  // Deduplicate by prompt
+  const uniquePrompts = [...new Set(allMatches.map(m => m.prompt))];
+  const total = uniquePrompts.length;
+  
+  if (total === 0) {
+    return { processedText, imageMap };
+  }
+  
+  let completed = 0;
+  
+  // Generate images for unique prompts
+  for (const prompt of uniquePrompts) {
+    try {
+      const imageUrl = await generateLessonImage(prompt, lessonId, groupId, subject);
+      
+      if (imageUrl) {
+        imageMap.set(prompt, imageUrl);
+        
+        // Create HTML replacement
+        const imageHtml = `
+<figure class="lesson-figure">
+  <img src="${imageUrl}" alt="${prompt}" class="lesson-image" loading="lazy" />
+  <figcaption>${prompt}</figcaption>
+</figure>`;
+        
+        // Replace all instances of this prompt (both formats)
+        const nanobananaPattern = new RegExp(`\\[NANOBANANA:\\s*"${escapeRegex(prompt)}"\\]`, 'g');
+        const visualPattern = new RegExp(`\\[VISUAL:\\s*${escapeRegex(prompt)}\\]`, 'g');
+        
+        processedText = processedText.replace(nanobananaPattern, imageHtml);
+        processedText = processedText.replace(visualPattern, imageHtml);
+      }
+      
+      completed++;
+      onProgress?.(completed, total);
+    } catch (error) {
+      console.error('Failed to generate image for prompt:', prompt, error);
+      completed++;
+      onProgress?.(completed, total);
+    }
+    
+    // Small delay between requests
+    if (completed < total) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+  }
+  
+  return { processedText, imageMap };
+}
