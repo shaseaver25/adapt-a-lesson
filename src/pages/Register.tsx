@@ -8,11 +8,13 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { signUpSchema, getAuthErrorMessage } from '@/lib/authValidation';
+import { useTranslation } from '@/i18n';
+import { LanguageSelector } from '@/components/LanguageSelector';
 
 // Password strength calculator
 function calculatePasswordStrength(password: string): {
   score: number;
-  label: string;
+  label: 'weak' | 'fair' | 'good' | 'strong';
   color: string;
 } {
   let score = 0;
@@ -29,16 +31,17 @@ function calculatePasswordStrength(password: string): {
   // Bonus for length
   if (password.length >= 16) score += 15;
   
-  if (score >= 80) return { score, label: 'Strong', color: 'bg-green-500' };
-  if (score >= 50) return { score, label: 'Medium', color: 'bg-yellow-500' };
-  if (score >= 25) return { score, label: 'Weak', color: 'bg-orange-500' };
-  return { score: Math.max(score, 5), label: 'Very weak', color: 'bg-destructive' };
+  if (score >= 80) return { score, label: 'strong', color: 'bg-green-500' };
+  if (score >= 50) return { score, label: 'good', color: 'bg-yellow-500' };
+  if (score >= 25) return { score, label: 'fair', color: 'bg-orange-500' };
+  return { score: Math.max(score, 5), label: 'weak', color: 'bg-destructive' };
 }
 
 export default function Register() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { signUpWithEmail, loading: authLoading } = useAuth();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -65,11 +68,13 @@ export default function Register() {
     const result = signUpSchema.safeParse({ email, password, confirmPassword });
 
     if (!result.success) {
-      const fieldErrors: typeof errors = {};
+      const fieldErrors: { email?: string; password?: string; confirmPassword?: string } = {};
       result.error.errors.forEach((err) => {
-        const field = err.path[0] as keyof typeof errors;
+        const field = err.path[0] as 'email' | 'password' | 'confirmPassword';
         if (!fieldErrors[field]) {
-          fieldErrors[field] = err.message;
+          if (field === 'email') fieldErrors.email = t('errors.invalidEmail');
+          else if (field === 'password') fieldErrors.password = t('errors.passwordTooShort');
+          else if (field === 'confirmPassword') fieldErrors.confirmPassword = t('errors.passwordsDoNotMatch');
         }
       });
       setErrors(fieldErrors);
@@ -82,6 +87,9 @@ export default function Register() {
 
   const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
+    
+    // Prevent double submission
+    if (isLoading) return;
 
     if (!validateForm()) return;
 
@@ -93,14 +101,14 @@ export default function Register() {
 
     if (error) {
       toast({
-        title: 'Registration failed',
+        title: t('common.error'),
         description: getAuthErrorMessage(error.message),
         variant: 'destructive',
       });
       return;
     }
 
-    setSuccessMessage('Check your email to verify your account before logging in');
+    setSuccessMessage(t('register.successMessage'));
     
     // Redirect to login after showing success message
     setTimeout(() => {
@@ -108,17 +116,21 @@ export default function Register() {
     }, 3000);
   };
 
-  const isFormLoading = isLoading || authLoading;
+  const isFormDisabled = isLoading || authLoading || !!successMessage;
 
   return (
-    <div className="min-h-screen gradient-hero flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-lg border-border">
-        <CardHeader className="space-y-4 pb-4">
-          {/* Logo */}
+    <div className="min-h-screen min-h-[100dvh] gradient-hero flex items-center justify-center p-4 sm:p-6">
+      {/* Language Selector */}
+      <div className="fixed top-3 right-3 sm:top-4 sm:right-4 z-50">
+        <LanguageSelector />
+      </div>
+
+      <Card className="w-full max-w-md shadow-lg border-border animate-fade-in">
+        <CardHeader className="space-y-4 pb-4 px-4 sm:px-6">
           <div className="flex flex-col items-center gap-2">
-            <div className="p-3 rounded-xl bg-primary/10">
+            <div className="p-3 rounded-xl bg-primary/10 transition-transform duration-200 hover:scale-105">
               <svg
-                className="h-10 w-10 text-primary"
+                className="h-8 w-8 sm:h-10 sm:w-10 text-primary"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -132,40 +144,46 @@ export default function Register() {
               </svg>
             </div>
             <div className="text-center">
-              <h1 className="font-display font-bold text-2xl text-foreground">
-                Create your account
+              <h1 className="font-display font-bold text-xl sm:text-2xl text-foreground">
+                {t('register.title')}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Join Authentic Learning Studio
+                {t('register.subtitle')}
               </p>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-6">
-          {/* Success Message */}
-          {successMessage && (
-            <div
-              className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800"
-              role="status"
-              aria-live="polite"
-            >
-              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" aria-hidden="true" />
-              <p className="text-sm text-green-800 dark:text-green-200">
-                {successMessage}
-              </p>
-            </div>
-          )}
+        <CardContent className="space-y-5 sm:space-y-6 px-4 sm:px-6 pb-6">
+          {/* Success Message with animation */}
+          <div
+            className={`transition-all duration-300 ease-out ${
+              successMessage 
+                ? 'opacity-100 max-h-24 translate-y-0' 
+                : 'opacity-0 max-h-0 -translate-y-2 overflow-hidden'
+            }`}
+          >
+            {successMessage && (
+              <div
+                className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800"
+                role="status"
+                aria-live="polite"
+              >
+                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" aria-hidden="true" />
+                <p className="text-sm text-green-800 dark:text-green-200">
+                  {successMessage}
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* Registration Form */}
-          <form onSubmit={handleRegister} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-4" noValidate>
             {/* Email Field */}
             <div className="space-y-2">
-              <Label
-                htmlFor="email"
-                className="text-sm font-medium text-foreground"
-              >
-                Email address <span className="text-destructive">*</span>
+              <Label htmlFor="email" className="text-sm font-medium text-foreground">
+                {t('common.email')} <span className="text-destructive" aria-hidden="true">*</span>
+                <span className="sr-only">(required)</span>
               </Label>
               <div className="relative">
                 <Mail
@@ -175,37 +193,37 @@ export default function Register() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@school.edu"
+                  inputMode="email"
+                  placeholder={t('register.emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`pl-10 h-12 text-base focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
-                    errors.email ? 'border-destructive' : ''
+                  className={`pl-10 min-h-[48px] h-12 text-base transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                    errors.email ? 'border-destructive focus-visible:ring-destructive' : ''
                   }`}
-                  disabled={isFormLoading || !!successMessage}
+                  disabled={isFormDisabled}
                   autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
                   required
                   aria-invalid={!!errors.email}
                   aria-describedby={errors.email ? 'email-error' : undefined}
                 />
               </div>
-              {errors.email && (
-                <p
-                  id="email-error"
-                  className="text-sm text-destructive"
-                  role="alert"
-                >
-                  {errors.email}
-                </p>
-              )}
+              <div className={`transition-all duration-200 ${errors.email ? 'opacity-100 max-h-8' : 'opacity-0 max-h-0 overflow-hidden'}`}>
+                {errors.email && (
+                  <p id="email-error" className="text-sm text-destructive" role="alert">
+                    {errors.email}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Password Field */}
             <div className="space-y-2">
-              <Label
-                htmlFor="password"
-                className="text-sm font-medium text-foreground"
-              >
-                Password <span className="text-destructive">*</span>
+              <Label htmlFor="password" className="text-sm font-medium text-foreground">
+                {t('common.password')} <span className="text-destructive" aria-hidden="true">*</span>
+                <span className="sr-only">(required)</span>
               </Label>
               <div className="relative">
                 <Lock
@@ -215,13 +233,13 @@ export default function Register() {
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Create a password"
+                  placeholder={t('register.passwordPlaceholder')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`pl-10 pr-12 h-12 text-base focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
-                    errors.password ? 'border-destructive' : ''
+                  className={`pl-10 pr-12 min-h-[48px] h-12 text-base transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                    errors.password ? 'border-destructive focus-visible:ring-destructive' : ''
                   }`}
-                  disabled={isFormLoading || !!successMessage}
+                  disabled={isFormDisabled}
                   autoComplete="new-password"
                   required
                   aria-invalid={!!errors.password}
@@ -230,14 +248,15 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-95"
+                  aria-label={showPassword ? t('accessibility.hidePassword') : t('accessibility.showPassword')}
+                  aria-pressed={showPassword}
                   tabIndex={0}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5" aria-hidden="true" />
+                    <EyeOff className="h-5 w-5 transition-transform duration-200" aria-hidden="true" />
                   ) : (
-                    <Eye className="h-5 w-5" aria-hidden="true" />
+                    <Eye className="h-5 w-5 transition-transform duration-200" aria-hidden="true" />
                   )}
                 </button>
               </div>
@@ -245,53 +264,51 @@ export default function Register() {
               {/* Password Requirements */}
               <p
                 id="password-requirements"
-                className={`text-sm ${
+                className={`text-sm transition-colors duration-200 ${
                   meetsMinLength ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
                 }`}
               >
-                {meetsMinLength ? '✓ ' : ''}Password must be at least 12 characters
+                {meetsMinLength ? '✓ ' : ''}{t('register.passwordRequirements')}
               </p>
 
               {/* Password Strength Indicator */}
-              {password.length > 0 && (
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all duration-300 ${passwordStrength.color}`}
-                        style={{ width: `${passwordStrength.score}%` }}
-                        role="progressbar"
-                        aria-valuenow={passwordStrength.score}
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                        aria-label={`Password strength: ${passwordStrength.label}`}
-                      />
+              <div className={`transition-all duration-300 ${password.length > 0 ? 'opacity-100 max-h-12' : 'opacity-0 max-h-0 overflow-hidden'}`}>
+                {password.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-300 ${passwordStrength.color}`}
+                          style={{ width: `${passwordStrength.score}%` }}
+                          role="progressbar"
+                          aria-valuenow={passwordStrength.score}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`${t('register.passwordStrength.' + passwordStrength.label)}`}
+                        />
+                      </div>
+                      <span className="text-xs font-medium text-muted-foreground w-16">
+                        {t('register.passwordStrength.' + passwordStrength.label)}
+                      </span>
                     </div>
-                    <span className="text-xs font-medium text-muted-foreground w-16">
-                      {passwordStrength.label}
-                    </span>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              {errors.password && (
-                <p
-                  id="password-error"
-                  className="text-sm text-destructive"
-                  role="alert"
-                >
-                  {errors.password}
-                </p>
-              )}
+              <div className={`transition-all duration-200 ${errors.password ? 'opacity-100 max-h-8' : 'opacity-0 max-h-0 overflow-hidden'}`}>
+                {errors.password && (
+                  <p id="password-error" className="text-sm text-destructive" role="alert">
+                    {errors.password}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Confirm Password Field */}
             <div className="space-y-2">
-              <Label
-                htmlFor="confirmPassword"
-                className="text-sm font-medium text-foreground"
-              >
-                Confirm password <span className="text-destructive">*</span>
+              <Label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">
+                {t('common.confirmPassword')} <span className="text-destructive" aria-hidden="true">*</span>
+                <span className="sr-only">(required)</span>
               </Label>
               <div className="relative">
                 <Lock
@@ -301,13 +318,13 @@ export default function Register() {
                 <Input
                   id="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Confirm your password"
+                  placeholder={t('register.confirmPasswordPlaceholder')}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={`pl-10 pr-12 h-12 text-base focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
-                    errors.confirmPassword ? 'border-destructive' : ''
+                  className={`pl-10 pr-12 min-h-[48px] h-12 text-base transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                    errors.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : ''
                   }`}
-                  disabled={isFormLoading || !!successMessage}
+                  disabled={isFormDisabled}
                   autoComplete="new-password"
                   required
                   aria-invalid={!!errors.confirmPassword}
@@ -322,73 +339,80 @@ export default function Register() {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-95"
+                  aria-label={showConfirmPassword ? t('accessibility.hidePassword') : t('accessibility.showPassword')}
+                  aria-pressed={showConfirmPassword}
                   tabIndex={0}
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5" aria-hidden="true" />
+                    <EyeOff className="h-5 w-5 transition-transform duration-200" aria-hidden="true" />
                   ) : (
-                    <Eye className="h-5 w-5" aria-hidden="true" />
+                    <Eye className="h-5 w-5 transition-transform duration-200" aria-hidden="true" />
                   )}
                 </button>
               </div>
 
               {/* Password Match Status */}
-              {confirmPassword.length > 0 && (
-                <p
-                  id="password-match-status"
-                  className={`text-sm ${
-                    passwordsMatch
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-destructive'
-                  }`}
-                  aria-live="polite"
-                >
-                  {passwordsMatch ? '✓ Passwords match' : 'Passwords do not match'}
-                </p>
-              )}
+              <div className={`transition-all duration-200 ${confirmPassword.length > 0 ? 'opacity-100 max-h-8' : 'opacity-0 max-h-0 overflow-hidden'}`}>
+                {confirmPassword.length > 0 && (
+                  <p
+                    id="password-match-status"
+                    className={`text-sm transition-colors duration-200 ${
+                      passwordsMatch
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-destructive'
+                    }`}
+                    aria-live="polite"
+                  >
+                    {passwordsMatch ? '✓ Passwords match' : t('errors.passwordsDoNotMatch')}
+                  </p>
+                )}
+              </div>
 
-              {errors.confirmPassword && (
-                <p
-                  id="confirm-password-error"
-                  className="text-sm text-destructive"
-                  role="alert"
-                >
-                  {errors.confirmPassword}
-                </p>
-              )}
+              <div className={`transition-all duration-200 ${errors.confirmPassword ? 'opacity-100 max-h-8' : 'opacity-0 max-h-0 overflow-hidden'}`}>
+                {errors.confirmPassword && (
+                  <p id="confirm-password-error" className="text-sm text-destructive" role="alert">
+                    {errors.confirmPassword}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Register Button */}
             <Button
               type="submit"
-              className="w-full h-12 text-base font-semibold focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-              disabled={isFormLoading || !!successMessage}
+              className="w-full min-h-[48px] h-12 text-base font-semibold transition-all duration-200 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60"
+              disabled={isFormDisabled}
+              aria-busy={isLoading}
             >
-              {isFormLoading ? (
+              {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" />
-                  Creating account...
+                  <span>{t('register.creating')}</span>
                 </>
               ) : (
-                'Create account'
+                t('register.createAccount')
               )}
             </Button>
           </form>
 
           {/* Login Link */}
           <p className="text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
+            {t('register.hasAccount')}{' '}
             <Link
               to="/login"
-              className="text-primary hover:text-primary/80 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm"
+              className="text-primary hover:text-primary/80 font-medium py-1 px-1 -mx-1 rounded-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
-              Log in
+              {t('register.logIn')}
             </Link>
           </p>
         </CardContent>
       </Card>
+
+      {/* Screen reader announcements */}
+      <div className="sr-only" aria-live="assertive" aria-atomic="true">
+        {successMessage}
+      </div>
     </div>
   );
 }
