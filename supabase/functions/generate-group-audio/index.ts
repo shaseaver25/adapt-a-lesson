@@ -191,15 +191,20 @@ async function generateTTS(text: string, language: string, apiKey: string): Prom
   }
 }
 
-async function storeAudio(supabase: any, lessonId: string, groupName: string, sectionId: string, language: string, audioBuffer: ArrayBuffer): Promise<string | null> {
+async function storeAudio(supabase: any, lessonId: string, groupName: string, sectionId: string, language: string, audioBuffer: ArrayBuffer): Promise<{ storagePath: string; signedUrl: string } | null> {
   const fileName = `lessons/${lessonId}/${groupName.replace(/\s+/g, '-')}/${sectionId}-${language.toLowerCase()}.mp3`;
   const { error: uploadError } = await supabase.storage.from('lesson-audio').upload(fileName, audioBuffer, { contentType: 'audio/mpeg', upsert: true });
   if (uploadError) {
     console.error('Storage upload error:', uploadError);
     return null;
   }
-  const { data: urlData } = supabase.storage.from('lesson-audio').getPublicUrl(fileName);
-  return urlData.publicUrl;
+  // Create a signed URL valid for 7 days (used for immediate playback and stored in DB)
+  const { data: signedData, error: signedError } = await supabase.storage.from('lesson-audio').createSignedUrl(fileName, 60 * 60 * 24 * 7);
+  if (signedError) {
+    console.error('Signed URL error:', signedError);
+    return null;
+  }
+  return { storagePath: fileName, signedUrl: signedData.signedUrl };
 }
 
 serve(async (req) => {
@@ -282,8 +287,8 @@ serve(async (req) => {
             continue;
           }
 
-          const audioUrl = await storeAudio(supabase, lessonId, group.groupName, section.id, language, audioBuffer);
-          if (!audioUrl) {
+          const audioResult = await storeAudio(supabase, lessonId, group.groupName, section.id, language, audioBuffer);
+          if (!audioResult) {
             results.failed++;
             continue;
           }
@@ -297,7 +302,8 @@ serve(async (req) => {
             group_name: group.groupName,
             section_type: section.id.split('-')[0],
             section_id: sectionId,
-            audio_url: audioUrl,
+            audio_url: audioResult.signedUrl,
+            storage_path: audioResult.storagePath,
             duration_seconds: estimatedDuration,
             language: language,
             characters_used: textToSpeak.length,
@@ -310,12 +316,12 @@ serve(async (req) => {
             characters_used: textToSpeak.length,
             estimated_cost: estimatedCost,
             language: language,
-            audio_url: audioUrl,
+            audio_url: audioResult.signedUrl,
             duration_seconds: estimatedDuration,
           });
 
           results.generated++;
-          results.audioRecords.push({ groupName: group.groupName, sectionId, language, audioUrl, duration: estimatedDuration });
+          results.audioRecords.push({ groupName: group.groupName, sectionId, language, audioUrl: audioResult.signedUrl, storagePath: audioResult.storagePath, duration: estimatedDuration });
           console.log(`Generated: ${group.groupName}/${sectionId}`);
 
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -346,9 +352,9 @@ serve(async (req) => {
           if (vocabItem.term) {
             const termBuffer = await generateTTS(vocabItem.term, 'English', ELEVENLABS_API_KEY);
             if (termBuffer) {
-              const termUrl = await storeAudio(supabase, lessonId, group.groupName, `${vocabId}-term`, 'english', termBuffer);
-              if (termUrl) {
-                vocabRecord.english_term_audio_url = termUrl;
+              const termResult = await storeAudio(supabase, lessonId, group.groupName, `${vocabId}-term`, 'english', termBuffer);
+              if (termResult) {
+                vocabRecord.english_term_audio_url = termResult.signedUrl;
                 results.generated++;
               }
             }
@@ -359,9 +365,9 @@ serve(async (req) => {
             vocabRecord.translated_term = translatedTerm;
             const hlTermBuffer = await generateTTS(translatedTerm, group.homeLanguage, ELEVENLABS_API_KEY);
             if (hlTermBuffer) {
-              const hlTermUrl = await storeAudio(supabase, lessonId, group.groupName, `${vocabId}-term`, group.homeLanguage.toLowerCase(), hlTermBuffer);
-              if (hlTermUrl) {
-                vocabRecord.home_language_term_audio_url = hlTermUrl;
+              const hlTermResult = await storeAudio(supabase, lessonId, group.groupName, `${vocabId}-term`, group.homeLanguage.toLowerCase(), hlTermBuffer);
+              if (hlTermResult) {
+                vocabRecord.home_language_term_audio_url = hlTermResult.signedUrl;
                 results.generated++;
               }
             }

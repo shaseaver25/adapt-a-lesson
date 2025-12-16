@@ -13,6 +13,7 @@ export interface AudioRecord {
   section_type: string;
   section_id: string;
   audio_url: string;
+  storage_path: string | null;
   duration_seconds: number;
   language: string;
   characters_used: number;
@@ -69,6 +70,7 @@ export interface UseLessonAudioReturn {
   getAudioForSection: (groupName: string, sectionType: string, language?: string) => AudioRecord | undefined;
   getBilingualAudioForSection: (groupName: string, sectionType: string) => SectionAudio;
   getVocabularyAudioForGroup: (groupName: string) => VocabularyAudioRecord[];
+  refreshSignedUrl: (storagePath: string) => Promise<string | null>;
 }
 
 export function useLessonAudio(): UseLessonAudioReturn {
@@ -77,6 +79,21 @@ export function useLessonAudio(): UseLessonAudioReturn {
   const [audioRecords, setAudioRecords] = useState<AudioRecord[]>([]);
   const [vocabularyAudio, setVocabularyAudio] = useState<VocabularyAudioRecord[]>([]);
   const [audioStatus, setAudioStatus] = useState<AudioStatusRecord | null>(null);
+
+  // Refresh a signed URL for a storage path (called when URLs expire)
+  const refreshSignedUrl = useCallback(async (storagePath: string): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('lesson-audio')
+        .createSignedUrl(storagePath, 60 * 60); // 1 hour expiry
+      
+      if (error) throw error;
+      return data?.signedUrl || null;
+    } catch (error) {
+      console.error('Error refreshing signed URL:', error);
+      return null;
+    }
+  }, []);
 
   const fetchLessonAudio = useCallback(async (lessonId: string): Promise<AudioRecord[]> => {
     try {
@@ -88,14 +105,27 @@ export function useLessonAudio(): UseLessonAudioReturn {
 
       if (error) throw error;
       
+      // For each record with a storage_path, refresh the signed URL
       const records = (data || []) as AudioRecord[];
-      setAudioRecords(records);
-      return records;
+      const refreshedRecords = await Promise.all(
+        records.map(async (record) => {
+          if (record.storage_path) {
+            const newUrl = await refreshSignedUrl(record.storage_path);
+            if (newUrl) {
+              return { ...record, audio_url: newUrl };
+            }
+          }
+          return record;
+        })
+      );
+      
+      setAudioRecords(refreshedRecords);
+      return refreshedRecords;
     } catch (error) {
       console.error('Error fetching lesson audio:', error);
       return [];
     }
-  }, []);
+  }, [refreshSignedUrl]);
 
   const fetchVocabularyAudio = useCallback(async (lessonId: string): Promise<VocabularyAudioRecord[]> => {
     try {
@@ -393,5 +423,6 @@ export function useLessonAudio(): UseLessonAudioReturn {
     getAudioForSection,
     getBilingualAudioForSection,
     getVocabularyAudioForGroup,
+    refreshSignedUrl,
   };
 }
