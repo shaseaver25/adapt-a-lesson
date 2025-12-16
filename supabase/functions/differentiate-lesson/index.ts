@@ -133,6 +133,15 @@ LEVEL MAPPING:
 - "Above Grade" → "blazers"
 - "Advanced" → "supernovas"
 
+CRITICAL FOR [VISUAL:] TAGS:
+- [VISUAL: description] tags must ALWAYS be written in ENGLISH, even inside translated content
+- This ensures consistent image generation across all language versions
+- Example in a Spanish handout: "[VISUAL: A diagram showing the water cycle with arrows]" (NOT "[VISUAL: Un diagrama del ciclo del agua]")
+- For translated content, add a translated caption on the line AFTER the [VISUAL:] tag to help students understand
+- Example:
+  [VISUAL: A labeled diagram of a plant cell]
+  *Diagrama etiquetado de una célula vegetal*
+
 ORDER: Always process groups from lowest to highest level (embers → supernovas).`;
 
     // Build group descriptions
@@ -175,7 +184,7 @@ ORDER: Always process groups from lowest to highest level (embers → supernovas
       optionsDesc += '- Generate comprehension questions for each group\n';
     }
     if (options.includeVisualPlaceholders) {
-      optionsDesc += `- IMPORTANT: Include [VISUAL: detailed description] tags throughout the content where diagrams, charts, illustrations, or visual aids would help students understand concepts. Add at least 2-3 visuals per handout. Example format: [VISUAL: A diagram showing the water cycle with arrows indicating evaporation, condensation, and precipitation]\n`;
+      optionsDesc += `- IMPORTANT: Include [VISUAL: detailed English description] tags throughout the content. ALWAYS write the description in ENGLISH even for translated handouts. Add at least 2-3 visuals per handout. For translated content, add a translated caption line after the tag. Example in Spanish handout:\n  [VISUAL: A diagram showing the water cycle]\n  *Un diagrama del ciclo del agua*\n`;
     }
     if (options.includeGraphicOrganizers) {
       optionsDesc += `- Include graphic organizers (type: ${options.graphicOrganizerType || 'auto'})\n`;
