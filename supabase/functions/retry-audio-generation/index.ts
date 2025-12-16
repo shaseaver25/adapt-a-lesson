@@ -64,8 +64,8 @@ async function storeAudio(
   sectionId: string,
   language: string,
   audioBuffer: ArrayBuffer
-): Promise<string | null> {
-  const fileName = `${lessonId}/${groupName}/${sectionId}_${language}_${Date.now()}.mp3`;
+): Promise<{ storagePath: string; signedUrl: string } | null> {
+  const fileName = `lessons/${lessonId}/${groupName.replace(/\s+/g, '-')}/${sectionId}_${language}_${Date.now()}.mp3`;
   
   const { error: uploadError } = await supabase.storage
     .from('lesson-audio')
@@ -79,11 +79,17 @@ async function storeAudio(
     return null;
   }
 
-  const { data: { publicUrl } } = supabase.storage
+  // Create signed URL valid for 7 days
+  const { data: signedData, error: signedError } = await supabase.storage
     .from('lesson-audio')
-    .getPublicUrl(fileName);
+    .createSignedUrl(fileName, 60 * 60 * 24 * 7);
 
-  return publicUrl;
+  if (signedError) {
+    console.error('Signed URL error:', signedError);
+    return null;
+  }
+
+  return { storagePath: fileName, signedUrl: signedData.signedUrl };
 }
 
 serve(async (req) => {
@@ -142,7 +148,7 @@ serve(async (req) => {
         continue;
       }
 
-      const audioUrl = await storeAudio(
+      const audioResult = await storeAudio(
         supabase,
         lessonId,
         groupName,
@@ -151,7 +157,7 @@ serve(async (req) => {
         audioBuffer
       );
 
-      if (!audioUrl) {
+      if (!audioResult) {
         failCount++;
         newErrors.push(section);
         continue;
@@ -166,7 +172,8 @@ serve(async (req) => {
           section_id: sectionId,
           section_type: sectionType,
           language,
-          audio_url: audioUrl,
+          audio_url: audioResult.signedUrl,
+          storage_path: audioResult.storagePath,
           characters_used: text.length,
         }, {
           onConflict: 'lesson_id,group_name,section_id,language'

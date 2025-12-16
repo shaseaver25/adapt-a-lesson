@@ -266,38 +266,44 @@ serve(async (req) => {
       if (uploadError) {
         console.error('Storage upload error:', uploadError);
       } else {
-        const { data: urlData } = supabase.storage
+        // Create signed URL valid for 7 days
+        const { data: signedData, error: signedError } = await supabase.storage
           .from('lesson-audio')
-          .getPublicUrl(fileName);
+          .createSignedUrl(fileName, 60 * 60 * 24 * 7);
 
-        // Save to generated_audio table
-        await supabase.from('generated_audio').upsert({
-          lesson_id: lessonId,
-          group_id: groupId,
-          group_name: groupName,
-          section_type: sectionType,
-          section_id: sectionId,
-          audio_url: urlData.publicUrl,
-          duration_seconds: estimatedDuration,
-          language: language,
-          characters_used: text.length,
-        }, {
-          onConflict: 'lesson_id,group_name,section_id'
-        });
+        if (signedError) {
+          console.error('Signed URL error:', signedError);
+        } else {
+          // Save to generated_audio table with storage_path and signed URL
+          await supabase.from('generated_audio').upsert({
+            lesson_id: lessonId,
+            group_id: groupId,
+            group_name: groupName,
+            section_type: sectionType,
+            section_id: sectionId,
+            audio_url: signedData.signedUrl,
+            storage_path: fileName,
+            duration_seconds: estimatedDuration,
+            language: language,
+            characters_used: text.length,
+          }, {
+            onConflict: 'lesson_id,group_name,section_id'
+          });
 
-        // Track usage
-        await supabase.from('audio_usage').insert({
-          lesson_id: lessonId,
-          group_id: groupId,
-          section_type: sectionType,
-          characters_used: text.length,
-          estimated_cost: estimatedCost,
-          language: language,
-          audio_url: urlData.publicUrl,
-          duration_seconds: estimatedDuration,
-        });
+          // Track usage
+          await supabase.from('audio_usage').insert({
+            lesson_id: lessonId,
+            group_id: groupId,
+            section_type: sectionType,
+            characters_used: text.length,
+            estimated_cost: estimatedCost,
+            language: language,
+            audio_url: signedData.signedUrl,
+            duration_seconds: estimatedDuration,
+          });
 
-        console.log(`Audio stored at: ${urlData.publicUrl}`);
+          console.log(`Audio stored at: ${fileName}`);
+        }
       }
     }
 
