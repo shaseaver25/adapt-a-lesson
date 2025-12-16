@@ -148,14 +148,24 @@ export function useLessonAudio(): UseLessonAudioReturn {
       return { status: 'complete', generated: 0, failed: 0 };
     }
 
-    // Estimate total sections (rough estimate: ~5 sections per group, x2 for bilingual)
+    // First, fetch any existing audio (use what exists)
+    console.log('Fetching existing audio before generation...');
+    await Promise.all([
+      fetchLessonAudio(lessonId),
+      fetchVocabularyAudio(lessonId),
+    ]);
+
+    // Estimate total sections (rough estimate: ~8 sections per group, x2 for bilingual)
     const estimatedSections = audioGroups.reduce((acc, g) => {
       const multiplier = g.homeLanguage !== 'English' ? 2 : 1;
-      return acc + (5 * multiplier);
+      return acc + (8 * multiplier);
     }, 0);
     
     setProgress({ generated: 0, total: estimatedSections });
     setIsGenerating(true);
+
+    const totalResults = { generated: 0, failed: 0, audioRecords: [] as any[] };
+    const MAX_RETRIES = 2;
 
     try {
       // Create initial status record
@@ -168,75 +178,147 @@ export function useLessonAudio(): UseLessonAudioReturn {
         started_at: new Date().toISOString(),
       }, { onConflict: 'lesson_id' });
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-lesson-audio`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({
-            lessonId,
-            differentiatedContent: content,
-            selectedGroups: audioGroups.map(g => ({
-              id: g.id,
-              groupName: g.groupName,
-              homeLanguage: g.homeLanguage,
-              accommodations: g.accommodations || [],
-            })),
-          }),
-        }
-      );
+      // Process ONE GROUP AT A TIME (chunked processing)
+      for (let i = 0; i < audioGroups.length; i++) {
+        const group = audioGroups[i];
+        console.log(`Processing group ${i + 1}/${audioGroups.length}: ${group.groupName}`);
+        
+        let retries = 0;
+        let groupSuccess = false;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `Request failed with status ${response.status}`);
+        while (retries <= MAX_RETRIES && !groupSuccess) {
+          try {
+            const response = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-group-audio`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+                  'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                },
+                body: JSON.stringify({
+                  lessonId,
+                  differentiatedContent: content,
+                  group: {
+                    id: group.id,
+                    groupName: group.groupName,
+                    homeLanguage: group.homeLanguage,
+                    accommodations: group.accommodations || [],
+                  },
+                  retryFailedOnly: retries > 0, // On retry, skip already generated
+                }),
+              }
+            );
+
+            if (!response.ok) {
+              throw new Error(`Request failed with status ${response.status}`);
+            }
+
+            const result = await response.json();
+            totalResults.generated += result.generated;
+            totalResults.failed += result.failed;
+            if (result.audioRecords) {
+              totalResults.audioRecords.push(...result.audioRecords);
+            }
+
+            // Update progress
+            setProgress(prev => ({ 
+              generated: prev.generated + result.generated, 
+              total: estimatedSections 
+            }));
+
+            // Update status record with progress
+            await supabase.from('lesson_audio_status').update({
+              completed_sections: totalResults.generated,
+              failed_sections: totalResults.failed,
+              updated_at: new Date().toISOString(),
+            }).eq('lesson_id', lessonId);
+
+            groupSuccess = result.status === 'complete' || result.failed === 0;
+            
+            if (!groupSuccess && retries < MAX_RETRIES) {
+              console.log(`Group ${group.groupName} had failures, retrying... (attempt ${retries + 2})`);
+              retries++;
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait before retry
+            } else {
+              break;
+            }
+          } catch (error) {
+            console.error(`Error processing group ${group.groupName}:`, error);
+            retries++;
+            if (retries <= MAX_RETRIES) {
+              console.log(`Retrying group ${group.groupName}... (attempt ${retries + 1})`);
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+          }
+        }
+
+        // Small delay between groups to avoid overwhelming the API
+        if (i < audioGroups.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       }
 
-      const result = await response.json();
-      
-      setProgress({ generated: result.generated, total: result.generated + result.failed });
-
-      // Update status record
+      // Update final status
+      const finalStatus = totalResults.failed === 0 ? 'complete' : 'partial';
       await supabase.from('lesson_audio_status').update({
-        status: result.failed === 0 ? 'complete' : 'partial',
-        completed_sections: result.generated,
-        failed_sections: result.failed,
+        status: finalStatus,
+        completed_sections: totalResults.generated,
+        failed_sections: totalResults.failed,
         completed_at: new Date().toISOString(),
       }).eq('lesson_id', lessonId);
 
-      // Fetch the updated audio records (both general and vocabulary)
+      // Fetch all the generated audio
       await Promise.all([
         fetchLessonAudio(lessonId),
         fetchVocabularyAudio(lessonId),
         fetchAudioStatus(lessonId),
       ]);
 
-      if (result.status === 'complete') {
+      if (finalStatus === 'complete') {
         toast({
           title: 'Audio generated successfully',
-          description: `${result.generated} audio files created for ${audioGroups.length} groups.`,
+          description: `${totalResults.generated} audio files created for ${audioGroups.length} groups.`,
         });
-      } else if (result.status === 'partial') {
+      } else {
         toast({
           title: 'Audio partially generated',
-          description: `${result.generated} files created, ${result.failed} failed.`,
-          variant: 'destructive',
+          description: `${totalResults.generated} files created, ${totalResults.failed} failed. QR codes will use available audio.`,
+          variant: 'default',
         });
       }
 
-      return result as AudioGenerationResult;
+      return { 
+        status: finalStatus as 'complete' | 'partial', 
+        generated: totalResults.generated, 
+        failed: totalResults.failed,
+        audioRecords: totalResults.audioRecords,
+      };
     } catch (error) {
       console.error('Error generating audio:', error);
       
-      // Update status to failed
+      // Still try to use any existing audio
+      await Promise.all([
+        fetchLessonAudio(lessonId),
+        fetchVocabularyAudio(lessonId),
+      ]);
+      
       await supabase.from('lesson_audio_status').update({
-        status: 'failed',
+        status: totalResults.generated > 0 ? 'partial' : 'failed',
+        completed_sections: totalResults.generated,
         completed_at: new Date().toISOString(),
         error_details: [{ message: error instanceof Error ? error.message : 'Unknown error' }],
       }).eq('lesson_id', lessonId);
+      
+      if (totalResults.generated > 0) {
+        toast({
+          title: 'Audio partially generated',
+          description: `${totalResults.generated} files created before error. QR codes will use available audio.`,
+          variant: 'default',
+        });
+        return { status: 'partial', generated: totalResults.generated, failed: totalResults.failed };
+      }
       
       toast({
         title: 'Audio generation failed',
@@ -247,7 +329,7 @@ export function useLessonAudio(): UseLessonAudioReturn {
     } finally {
       setIsGenerating(false);
     }
-  }, [fetchLessonAudio, fetchAudioStatus]);
+  }, [fetchLessonAudio, fetchVocabularyAudio, fetchAudioStatus]);
 
   const getAudioForSection = useCallback((
     groupName: string,

@@ -21,6 +21,9 @@ verify_jwt = false
 [functions.generate-lesson-audio]
 verify_jwt = false
 
+[functions.generate-group-audio]
+verify_jwt = false
+
 [functions.get-lesson-audio-status]
 verify_jwt = false
 
