@@ -1,43 +1,46 @@
 project_id = "vdjiqdvrpeavnhyiovvn"
 
 [functions.generate-assessment]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-rubric]
-verify_jwt = false
+verify_jwt = true
 
 [functions.differentiate-lesson]
-verify_jwt = false
+verify_jwt = true
 
 [functions.analyze-assessment-vulnerability]
-verify_jwt = false
+verify_jwt = true
 
 [functions.elevenlabs-tts]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-lesson-audio]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-group-audio]
-verify_jwt = false
+verify_jwt = true
 
 [functions.get-lesson-audio-status]
-verify_jwt = false
+verify_jwt = true
 
 [functions.retry-audio-generation]
-verify_jwt = false
+verify_jwt = true
 
 [functions.get-lesson-with-audio]
-verify_jwt = false
+verify_jwt = true
 
 [functions.translate-content]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-graphic-organizer]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-lesson-diagram]
-verify_jwt = false
+verify_jwt = true
 
 [functions.track-login-attempt]
 verify_jwt = false
+
+[functions.admin-create-user]
+verify_jwt = true
