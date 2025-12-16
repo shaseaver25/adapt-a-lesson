@@ -16,10 +16,10 @@ serve(async (req) => {
     
     console.log(`Generating lesson diagram for: ${description}`);
 
-    // Use LOVABLE_API_KEY for Lovable AI Gateway (Nano Banana model)
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    // Use NANOBANANA_API_KEY for image generation via Lovable AI Gateway
+    const apiKey = Deno.env.get("NANOBANANA_API_KEY");
     if (!apiKey) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      throw new Error("NANOBANANA_API_KEY is not configured");
     }
 
     // Build educational diagram prompt
