@@ -83,24 +83,19 @@ const LANGUAGE_FLAGS: Record<string, string> = {
 
 const getFlag = (language: string): string => LANGUAGE_FLAGS[language] || '🌐';
 
-// Find image URL with fuzzy matching (handles translated descriptions)
+// Find image URL - now uses simple exact match since [VISUAL:] tags are always in English
 const findImageUrl = (description: string, imageMap: Map<string, string>): string | undefined => {
   const trimmedDesc = description.trim();
   
-  // Try exact match first
+  // Exact match (keys are now always English)
   if (imageMap.has(trimmedDesc)) {
     return imageMap.get(trimmedDesc);
   }
   
-  // Try fuzzy match - check if any key contains this description or vice versa
+  // Fallback: case-insensitive match
+  const lowerDesc = trimmedDesc.toLowerCase();
   for (const [key, url] of imageMap.entries()) {
-    // Check if the key contains the description (for Chinese descriptions)
-    if (key.includes(trimmedDesc) || trimmedDesc.includes(key)) {
-      return url;
-    }
-    // Check for partial match with English in parentheses
-    const englishMatch = key.match(/\(([^)]+)\)$/);
-    if (englishMatch && trimmedDesc.toLowerCase().includes(englishMatch[1].toLowerCase().substring(0, 30))) {
+    if (key.toLowerCase() === lowerDesc) {
       return url;
     }
   }
