@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Copy, Check, BookOpen, GraduationCap, Save, Loader2, Volume2, Languages, LayoutTemplate, FileText, ImageIcon } from 'lucide-react';
+import { Copy, Check, BookOpen, GraduationCap, Save, Loader2, Volume2, Languages, LayoutTemplate, FileText, ImageIcon, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import { OUTPUT_SECTION_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
@@ -137,10 +137,17 @@ export function DifferentiatedLessonOutput({
   // Check if audio already exists for this lesson
   const hasExistingAudio = preGeneratedAudio.length > 0;
 
-  // Check if any content has visual placeholders
-  const contentHasVisuals = useMemo(() => {
+  // Check if any content has visual placeholders - with debugging
+  const { contentHasVisuals, visualDescriptions } = useMemo(() => {
     const allContent = studentHandouts.map(h => h.content).join('\n');
-    return extractVisualDescriptions(allContent).length > 0;
+    const descriptions = extractVisualDescriptions(allContent);
+    console.log('[Visuals] Checking content for visuals:', {
+      contentLength: allContent.length,
+      foundDescriptions: descriptions.length,
+      descriptions: descriptions.slice(0, 3), // Log first 3
+      contentPreview: allContent.substring(0, 500)
+    });
+    return { contentHasVisuals: descriptions.length > 0, visualDescriptions: descriptions };
   }, [studentHandouts]);
 
   // Track if auto-generation has been attempted for THIS lesson
@@ -149,9 +156,15 @@ export function DifferentiatedLessonOutput({
   // Handle diagram generation
   const handleGenerateDiagrams = useCallback(async () => {
     const allContent = studentHandouts.map(h => h.content).join('\n');
-    console.log('Starting diagram generation, content length:', allContent.length);
+    console.log('[Visuals] Manual generation triggered, content length:', allContent.length);
     const visuals = extractVisualDescriptions(allContent);
-    console.log('Found visual descriptions:', visuals.length, visuals);
+    console.log('[Visuals] Found visual descriptions:', visuals.length, visuals);
+    
+    if (visuals.length === 0) {
+      console.warn('[Visuals] No visual descriptions found! Content preview:', allContent.substring(0, 1000));
+      return;
+    }
+    
     await generateImages(allContent, lessonId || undefined, undefined, lessonTitle);
   }, [studentHandouts, generateImages, lessonId, lessonTitle]);
 
@@ -162,22 +175,22 @@ export function DifferentiatedLessonOutput({
   }, [lessonId, studentHandouts]);
 
   // Auto-generate images when content has visuals and no images exist yet
-  // Reset when lesson content changes
   useEffect(() => {
-    console.log('Image auto-gen check:', {
+    console.log('[Visuals] Auto-gen check:', {
       contentHasVisuals,
+      visualCount: visualDescriptions.length,
       imageMapSize: imageMap.size,
       isGeneratingImages,
-      lessonContentId,
-      attempted: autoGenerationAttempted.current,
+      lessonContentId: lessonContentId.substring(0, 50),
+      attempted: autoGenerationAttempted.current?.substring(0, 50),
     });
     
     if (contentHasVisuals && imageMap.size === 0 && !isGeneratingImages && autoGenerationAttempted.current !== lessonContentId) {
       autoGenerationAttempted.current = lessonContentId;
-      console.log('Starting auto-generation for:', lessonContentId);
+      console.log('[Visuals] Starting auto-generation for:', lessonContentId.substring(0, 50));
       handleGenerateDiagrams();
     }
-  }, [contentHasVisuals, imageMap.size, isGeneratingImages, handleGenerateDiagrams, lessonContentId]);
+  }, [contentHasVisuals, visualDescriptions.length, imageMap.size, isGeneratingImages, handleGenerateDiagrams, lessonContentId]);
 
   // Get content for a specific group - now using structured data directly
   const getGroupContent = useCallback((groupName: string): string => {
@@ -384,8 +397,8 @@ export function DifferentiatedLessonOutput({
             </div>
           )}
           
-          {/* Diagram Generation - Now auto-generates, but show status */}
-          {contentHasVisuals && imageMap.size === 0 && !isGeneratingImages && (
+          {/* Diagram Generation Section */}
+          {contentHasVisuals && (
             <div className="p-4 rounded-lg border bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-950/20 dark:to-blue-950/20 border-sky-200 dark:border-sky-800">
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-3">
@@ -395,53 +408,43 @@ export function DifferentiatedLessonOutput({
                   <div>
                     <p className="font-medium text-sm">📐 AI Diagram Generation</p>
                     <p className="text-xs text-muted-foreground">
-                      Diagrams will generate automatically...
+                      {isGeneratingImages 
+                        ? `Generating... (${imageProgress.completed}/${imageProgress.total})`
+                        : imageMap.size > 0 
+                          ? `✅ ${imageMap.size} diagram(s) ready`
+                          : `${visualDescriptions.length} diagram(s) found in content`}
                     </p>
                   </div>
                 </div>
                 <Button
-                  onClick={handleGenerateDiagrams}
+                  onClick={() => {
+                    console.log('[Visuals] Manual generate clicked');
+                    autoGenerationAttempted.current = null; // Reset to allow regeneration
+                    handleGenerateDiagrams();
+                  }}
                   size="sm"
-                  variant="outline"
+                  variant={imageMap.size > 0 ? "outline" : "default"}
                   className="gap-2"
+                  disabled={isGeneratingImages}
                 >
-                  <ImageIcon className="h-4 w-4" />
-                  Generate Now
+                  {isGeneratingImages ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : imageMap.size > 0 ? (
+                    <>
+                      <RefreshCw className="h-4 w-4" />
+                      Regenerate
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="h-4 w-4" />
+                      Generate Now
+                    </>
+                  )}
                 </Button>
               </div>
-            </div>
-          )}
-          
-          {/* Diagram generation in progress */}
-          {isGeneratingImages && (
-            <div className="p-3 rounded-lg bg-sky-50 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-800 flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin text-sky-600" />
-              <span className="text-sm text-sky-700 dark:text-sky-300">
-                Generating diagrams... ({imageProgress.completed}/{imageProgress.total})
-              </span>
-            </div>
-          )}
-          
-          {/* Diagrams ready indicator */}
-          {imageMap.size > 0 && (
-            <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-600" />
-                <span className="text-sm text-green-700 dark:text-green-300">
-                  Diagrams ready ({imageMap.size} generated) - export HTML to include images
-                </span>
-              </div>
-              <Button
-                onClick={() => {
-                  autoGenerationAttempted.current = null;
-                  handleGenerateDiagrams();
-                }}
-                size="sm"
-                variant="ghost"
-                className="text-xs"
-              >
-                Regenerate
-              </Button>
             </div>
           )}
         </CardContent>
