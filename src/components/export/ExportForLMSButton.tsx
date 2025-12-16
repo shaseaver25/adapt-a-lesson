@@ -38,6 +38,17 @@ export function ExportForLMSButton({
   const handleExportSingle = (group: StudentGroup & { id: string }) => {
     try {
       const content = getGroupContent(group.groupName);
+      console.log('Export - Group:', group.groupName, 'Content length:', content?.length, 'Preview:', content?.substring(0, 200));
+      
+      if (!content || content.trim().length === 0) {
+        toast({
+          title: 'No content found',
+          description: `Could not find content for ${group.groupName}. Check if the lesson was generated correctly.`,
+          variant: 'destructive'
+        });
+        return;
+      }
+      
       downloadGroupHTML(lessonTitle, content, group);
       
       toast({
@@ -45,6 +56,7 @@ export function ExportForLMSButton({
         description: `${group.groupName} handout ready for LMS upload.`
       });
     } catch (error: any) {
+      console.error('Export error:', error);
       toast({
         title: 'Export failed',
         description: error.message,

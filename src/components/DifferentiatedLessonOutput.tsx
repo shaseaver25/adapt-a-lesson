@@ -102,6 +102,10 @@ export function DifferentiatedLessonOutput({
 
   // Extract content for a specific group from the full content
   const extractGroupContent = useCallback((groupName: string): string => {
+    console.log('extractGroupContent called for:', groupName);
+    console.log('Full content length:', content?.length);
+    console.log('Content preview:', content?.substring(0, 500));
+    
     const lines = content.split('\n');
     let inGroup = false;
     let groupContent: string[] = [];
@@ -110,15 +114,19 @@ export function DifferentiatedLessonOutput({
       if (line.includes(groupName) && (line.includes('Edition') || line.includes('Edición') || line.includes('✨'))) {
         inGroup = true;
         groupContent.push(line);
+        console.log('Found group start:', line);
       } else if (inGroup) {
         if ((line.includes('Edition') || line.includes('Edición')) && line.includes('✨') && !line.includes(groupName)) {
+          console.log('Found group end:', line);
           break;
         }
         groupContent.push(line);
       }
     }
     
-    return groupContent.join('\n');
+    const result = groupContent.join('\n');
+    console.log('Extracted content length:', result.length, 'Preview:', result.substring(0, 200));
+    return result;
   }, [content]);
 
   // Get audio for a specific group and language
