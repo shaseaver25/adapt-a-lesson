@@ -22,30 +22,18 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build educational diagram prompt - be very specific about matching the description
-    const prompt = `IMPORTANT: Generate EXACTLY what is described below. Do not substitute or generalize.
+    // Build educational diagram prompt - simple and direct for image generation
+    const prompt = `Generate an educational diagram: ${description}
 
-EXACT VISUAL TO CREATE: "${description}"
+Requirements:
+- Clean, simple illustration suitable for K-12 students
+- High contrast, printable in black and white
+- Include all labels mentioned in the description
+- Professional textbook/worksheet quality`;
 
-You MUST create this specific visual element as described. If it mentions:
-- A world map with book covers → draw a world map with book covers placed on countries
-- Character silhouettes with labels → draw silhouettes with the specified labels
-- A narrator with thought bubbles → draw a person with thought bubbles as described
-- A specific diagram type → create that exact diagram type
+    console.log(`Calling Nano Banana API with prompt: ${prompt.substring(0, 200)}...`);
 
-Style requirements:
-- Educational illustration suitable for K-12 students
-- Clean lines with high contrast (printable in black and white)
-- Include ALL labels and text mentioned in the description
-- Professional worksheet/textbook quality
-- Subject: ${subject || 'general education'}
-- Landscape orientation (800x600)
-
-DO NOT create a generic diagram. Match the description EXACTLY.`;
-
-    console.log(`Calling Nano Banana API with prompt: ${prompt.substring(0, 100)}...`);
-
-    // Call Nano Banana (Gemini 2.5 Flash Image) via Lovable AI Gateway
+    // Call Nano Banana via Lovable AI Gateway
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
