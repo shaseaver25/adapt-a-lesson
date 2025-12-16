@@ -119,7 +119,7 @@ FOR NON-ENGLISH GROUPS (CRITICAL - BILINGUAL OUTPUT):
 HANDOUT CONTENT STRUCTURE (both languages):
 - Start with: **Name:** _____ **Date:** _____
 - Include: 🎯 Learning Target (student-friendly)
-- Include: Lesson content with [VISUAL: description] placeholders
+- Include: Lesson content
 - Include: Vocabulary box 
 - Include: Practice section with answer lines
 - Include: Reflection section
@@ -175,7 +175,7 @@ ORDER: Always process groups from lowest to highest level (embers → supernovas
       optionsDesc += '- Generate comprehension questions for each group\n';
     }
     if (options.includeVisualPlaceholders) {
-      optionsDesc += '- Include [VISUAL: description] placeholders\n';
+      optionsDesc += `- IMPORTANT: Include [VISUAL: detailed description] tags throughout the content where diagrams, charts, illustrations, or visual aids would help students understand concepts. Add at least 2-3 visuals per handout. Example format: [VISUAL: A diagram showing the water cycle with arrows indicating evaporation, condensation, and precipitation]\n`;
     }
     if (options.includeGraphicOrganizers) {
       optionsDesc += `- Include graphic organizers (type: ${options.graphicOrganizerType || 'auto'})\n`;
