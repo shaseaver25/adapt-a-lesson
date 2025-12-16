@@ -239,11 +239,28 @@ Remember:
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
-    const aiResponse = await response.json();
+    // Handle potentially empty or malformed response
+    let aiResponse;
+    try {
+      const responseText = await response.text();
+      console.log('Response text length:', responseText?.length || 0);
+      
+      if (!responseText || responseText.trim() === '') {
+        throw new Error("Empty response from AI gateway");
+      }
+      
+      aiResponse = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse AI gateway response:', parseError);
+      const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown parse error';
+      throw new Error(`Failed to parse AI response: ${errorMsg}`);
+    }
+
     const rawContent = aiResponse.choices?.[0]?.message?.content;
 
     if (!rawContent) {
-      throw new Error("No content generated");
+      console.error('AI response structure:', JSON.stringify(aiResponse).substring(0, 500));
+      throw new Error("No content generated from AI");
     }
 
     console.log('Raw AI response length:', rawContent.length);
