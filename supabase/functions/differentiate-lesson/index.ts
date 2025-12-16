@@ -202,6 +202,14 @@ Remember:
 6. Use groupId exactly as provided in the input`;
 
     console.log('Calling AI with structured JSON request...');
+    
+    // Use Pro model for multiple groups (larger output needed)
+    // Flash model truncates at ~10K chars even with high max_tokens
+    const modelToUse = selectedGroups.length > 2 
+      ? "google/gemini-2.5-pro" 
+      : "google/gemini-2.5-flash";
+    
+    console.log(`Using model: ${modelToUse} for ${selectedGroups.length} groups`);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -210,13 +218,13 @@ Remember:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: modelToUse,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
         response_format: { type: "json_object" },
-        max_tokens: 32000, // Allow larger responses for multiple groups
+        max_tokens: 65000, // Pro model supports larger outputs
       }),
     });
 
