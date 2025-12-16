@@ -8,7 +8,7 @@ import { RubricForm } from '@/components/RubricForm';
 import { RubricOutput } from '@/components/RubricOutput';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, LogIn, LogOut, Settings } from 'lucide-react';
+import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, LogIn, LogOut, Settings, UserCircle } from 'lucide-react';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
 import { DifferentiationProgressModal, createInitialProgressState } from '@/components/DifferentiationProgressModal';
@@ -161,14 +161,22 @@ const Index = () => {
             
             {/* Auth buttons */}
             {user ? (
-              <Button 
-                onClick={signOut}
-                size="sm" 
-                className="gap-2 bg-[#166534] hover:bg-[#14532d] text-white font-semibold"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Log Out</span>
-              </Button>
+              <>
+                <Link to="/profile">
+                  <Button variant="ghost" size="sm" className="gap-2">
+                    <UserCircle className="h-4 w-4" />
+                    <span className="hidden sm:inline">Profile</span>
+                  </Button>
+                </Link>
+                <Button 
+                  onClick={signOut}
+                  size="sm" 
+                  className="gap-2 bg-[#166534] hover:bg-[#14532d] text-white font-semibold"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden sm:inline">Log Out</span>
+                </Button>
+              </>
             ) : (
               <Link to="/login">
                 <Button variant="ghost" size="sm" className="gap-2">
