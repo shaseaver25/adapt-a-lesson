@@ -60,6 +60,7 @@ export function AdminUsers() {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserName, setNewUserName] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<string>('user');
   const [isAddingUser, setIsAddingUser] = useState(false);
 
@@ -212,32 +213,43 @@ export function AdminUsers() {
       return;
     }
 
+    if (newUserPassword && newUserPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
     setIsAddingUser(true);
     try {
-      // Check if user already exists
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', newUserEmail.toLowerCase())
-        .maybeSingle();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await supabase.functions.invoke('admin-create-user', {
+        body: {
+          email: newUserEmail.toLowerCase().trim(),
+          password: newUserPassword || undefined,
+          full_name: newUserName.trim() || undefined,
+          role: newUserRole,
+        },
+      });
 
-      if (existingUser) {
-        toast.error('A user with this email already exists');
-        setIsAddingUser(false);
-        return;
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to create user');
       }
 
-      // Note: In a production app, you'd use Supabase Admin API or send an invitation
-      // For now, we'll inform the user that the person needs to sign up
-      toast.info(`User ${newUserEmail} will need to sign up. Once they do, you can assign their role here.`);
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      toast.success(`User ${newUserEmail} created successfully`);
       
       setNewUserEmail('');
       setNewUserName('');
+      setNewUserPassword('');
       setNewUserRole('user');
       setIsAddUserOpen(false);
-    } catch (error) {
+      fetchUsers();
+    } catch (error: any) {
       console.error('Error adding user:', error);
-      toast.error('Failed to add user');
+      toast.error(error.message || 'Failed to add user');
     } finally {
       setIsAddingUser(false);
     }
@@ -411,7 +423,7 @@ export function AdminUsers() {
               <DialogHeader>
                 <DialogTitle>Add New User</DialogTitle>
                 <DialogDescription>
-                  Enter the email of the user you want to add. They will need to sign up with this email to access the platform.
+                  Create a new user account with email, password, and profile.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -426,13 +438,26 @@ export function AdminUsers() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name (optional)</Label>
+                  <Label htmlFor="name">Full Name</Label>
                   <Input
                     id="name"
                     placeholder="John Doe"
                     value={newUserName}
                     onChange={(e) => setNewUserName(e.target.value)}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Min 6 characters (leave empty to send invite)"
+                    value={newUserPassword}
+                    onChange={(e) => setNewUserPassword(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    If left empty, the user will receive an invite to set their own password.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
