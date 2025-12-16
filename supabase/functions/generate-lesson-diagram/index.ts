@@ -22,17 +22,26 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build educational diagram prompt
-    const prompt = `Create a clear, educational diagram for K-12 students showing: ${description}.
+    // Build educational diagram prompt - be very specific about matching the description
+    const prompt = `IMPORTANT: Generate EXACTLY what is described below. Do not substitute or generalize.
+
+EXACT VISUAL TO CREATE: "${description}"
+
+You MUST create this specific visual element as described. If it mentions:
+- A world map with book covers → draw a world map with book covers placed on countries
+- Character silhouettes with labels → draw silhouettes with the specified labels
+- A narrator with thought bubbles → draw a person with thought bubbles as described
+- A specific diagram type → create that exact diagram type
+
 Style requirements:
-- Clean, simple line art with high contrast
-- Labeled parts with clear text
-- Suitable for classroom printing (black and white friendly)
-- Professional educational worksheet style
-- No excessive decoration, focus on clarity
-- Subject context: ${subject || 'general education'}
-- 800x600 aspect ratio
-Ultra high resolution.`;
+- Educational illustration suitable for K-12 students
+- Clean lines with high contrast (printable in black and white)
+- Include ALL labels and text mentioned in the description
+- Professional worksheet/textbook quality
+- Subject: ${subject || 'general education'}
+- Landscape orientation (800x600)
+
+DO NOT create a generic diagram. Match the description EXACTLY.`;
 
     console.log(`Calling Nano Banana API with prompt: ${prompt.substring(0, 100)}...`);
 
