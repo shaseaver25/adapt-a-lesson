@@ -1,6 +1,6 @@
 {
   "common": {
-    "email": "Email address",
+    "email": "Email",
     "password": "Password",
     "confirmPassword": "Confirm password",
     "newPassword": "New password",
@@ -8,28 +8,33 @@
     "loading": "Loading...",
     "or": "or",
     "error": "Error",
-    "back": "Back"
+    "back": "Back",
+    "and": "and"
   },
   "login": {
     "title": "Authentic Learning Studio",
-    "subtitle": "Sign in to continue",
+    "subtitle": "AI-powered teacher productivity",
     "continueWithGoogle": "Continue with Google",
     "continueWithMicrosoft": "Continue with Microsoft",
     "continueWithCanvas": "Continue with Canvas LMS",
-    "emailPlaceholder": "you@school.edu",
+    "emailPlaceholder": "you@district.org",
     "passwordPlaceholder": "Enter your password",
     "forgotPassword": "Forgot password?",
     "loginButton": "Log in",
     "signingIn": "Signing in...",
     "noAccount": "Don't have an account?",
     "signUp": "Sign up",
+    "createAccount": "Create account",
     "welcomeBack": "Welcome back!",
-    "loginSuccess": "You have been logged in successfully."
+    "loginSuccess": "You have been logged in successfully.",
+    "legalText": "By continuing, you agree to our",
+    "terms": "Terms",
+    "privacy": "Privacy"
   },
   "register": {
     "title": "Create your account",
     "subtitle": "Join Authentic Learning Studio",
-    "emailPlaceholder": "you@school.edu",
+    "emailPlaceholder": "you@district.org",
     "passwordPlaceholder": "Create a password",
     "confirmPasswordPlaceholder": "Confirm your password",
     "passwordRequirements": "Password must be at least 12 characters",

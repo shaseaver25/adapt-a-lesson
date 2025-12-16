@@ -1,12 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
@@ -15,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from '@/i18n';
 import { LanguageSelector } from '@/components/LanguageSelector';
 
-// OAuth provider icons with proper sizing for touch targets
+// OAuth provider icons
 const GoogleIcon = () => (
   <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -41,30 +35,13 @@ const CanvasIcon = () => (
   </svg>
 );
 
-// Loading skeleton for initial session check
+// Loading skeleton
 const LoginSkeleton = () => (
-  <div className="min-h-screen gradient-hero flex items-center justify-center p-4">
-    <Card className="w-full max-w-md shadow-lg border-border">
-      <CardHeader className="space-y-4 pb-4">
-        <div className="flex flex-col items-center gap-2">
-          <Skeleton className="h-16 w-16 rounded-xl" />
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-32" />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-3">
-          <Skeleton className="h-12 w-full rounded-md" />
-          <Skeleton className="h-12 w-full rounded-md" />
-          <Skeleton className="h-12 w-full rounded-md" />
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-12 w-full rounded-md" />
-          <Skeleton className="h-12 w-full rounded-md" />
-          <Skeleton className="h-12 w-full rounded-md" />
-        </div>
-      </CardContent>
-    </Card>
+  <div className="auth-background">
+    <div className="orb orb-green" />
+    <div className="orb orb-gold" />
+    <div className="orb orb-clay" />
+    <div className="orb orb-accent" />
   </div>
 );
 
@@ -84,26 +61,35 @@ export default function Login() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
-  // Check for existing session on mount
   useEffect(() => {
     const checkSession = async () => {
-      // Small delay to allow auth state to settle
       await new Promise(resolve => setTimeout(resolve, 100));
       setIsCheckingSession(false);
     };
     checkSession();
   }, []);
 
-  // Redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
       navigate('/');
     }
   }, [user, authLoading, navigate]);
 
-  // Show loading skeleton during initial session check
   if (isCheckingSession || (authLoading && !isLoading)) {
-    return <LoginSkeleton />;
+    return (
+      <>
+        <LoginSkeleton />
+        <div className="auth-container">
+          <div className="auth-wrapper">
+            <div className="glass-card animate-pulse">
+              <div className="h-12 bg-muted rounded-lg mb-4" />
+              <div className="h-12 bg-muted rounded-lg mb-4" />
+              <div className="h-12 bg-muted rounded-lg" />
+            </div>
+          </div>
+        </div>
+      </>
+    );
   }
 
   const validateForm = (): boolean => {
@@ -168,12 +154,9 @@ export default function Login() {
 
   const handleEmailLogin = async (e: FormEvent) => {
     e.preventDefault();
-    
-    // Prevent double submission
     if (isLoading) return;
     
     setFormError(null);
-    
     if (!validateForm()) return;
 
     setIsLoading(true);
@@ -214,7 +197,7 @@ export default function Login() {
           return;
         }
         
-        if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('connection')) {
+        if (errorMessage.includes('fetch') || errorMessage.includes('network')) {
           setIsLoading(false);
           clearPasswordAndSetError('errors.networkError');
           return;
@@ -226,7 +209,6 @@ export default function Login() {
       }
 
       if (data?.user?.id) {
-        // Check session limit before allowing login
         const { allowed } = await checkSessionLimit(data.user.id);
         if (!allowed) {
           setIsLoading(false);
@@ -234,7 +216,6 @@ export default function Login() {
           return;
         }
 
-        // Create session and reset failed attempts
         await createSession(data.user.id);
         await resetFailedAttempts(data.user.id);
       }
@@ -253,7 +234,6 @@ export default function Login() {
   };
 
   const handleOAuthLogin = async (provider: 'google' | 'azure' | 'canvas') => {
-    // Prevent double submission
     if (isLoading || oauthLoading) return;
     
     setOauthLoading(provider);
@@ -266,19 +246,18 @@ export default function Login() {
         setOauthLoading(null);
         const errorMessage = error.message?.toLowerCase() || '';
         
-        if (errorMessage.includes('popup') || errorMessage.includes('blocked') || errorMessage.includes('window')) {
+        if (errorMessage.includes('popup') || errorMessage.includes('blocked')) {
           setFormError(t('errors.popupBlocked'));
           return;
         }
         
-        if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('connection')) {
+        if (errorMessage.includes('fetch') || errorMessage.includes('network')) {
           setFormError(t('errors.networkError'));
           return;
         }
         
         setFormError(t('errors.serverError'));
       }
-      // Note: OAuth redirect will happen, so we don't reset loading state on success
     } catch (error) {
       setOauthLoading(null);
       console.error('OAuth error:', error);
@@ -289,259 +268,217 @@ export default function Login() {
   const isFormDisabled = isLoading || !!oauthLoading;
 
   return (
-    <div className="min-h-screen min-h-[100dvh] gradient-hero flex items-center justify-center p-4 sm:p-6">
-      {/* Language Selector - Top Right with proper touch target */}
-      <div className="fixed top-3 right-3 sm:top-4 sm:right-4 z-50">
+    <>
+      {/* Animated Orb Background */}
+      <div className="auth-background">
+        <div className="orb orb-green" />
+        <div className="orb orb-gold" />
+        <div className="orb orb-clay" />
+        <div className="orb orb-accent" />
+      </div>
+
+      {/* Language Selector */}
+      <div className="auth-lang-selector">
         <LanguageSelector />
       </div>
 
-      <Card className="w-full max-w-md shadow-lg border-border animate-fade-in">
-        <CardHeader className="space-y-4 pb-4 px-4 sm:px-6">
-          <div className="flex flex-col items-center gap-2">
-            <div className="p-3 rounded-xl bg-primary/10 transition-transform duration-200 hover:scale-105">
-              <svg 
-                className="h-8 w-8 sm:h-10 sm:w-10 text-primary" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                aria-hidden="true"
-              >
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-              </svg>
+      {/* Main Content */}
+      <div className="auth-container">
+        <div className="auth-wrapper animate-fade-in">
+          {/* Brand Header */}
+          <header className="brand-header">
+            <div className="brand-logo">
+              <img 
+                src="/real-logo.png" 
+                alt="REAL Logo" 
+                width={72} 
+                height={72}
+                onError={(e) => {
+                  // Fallback if logo doesn't exist
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+              <span className="brand-name">Authentic Learning Studio</span>
             </div>
-            <div className="text-center">
-              <h1 className="font-display font-bold text-xl sm:text-2xl text-foreground">{t('login.title')}</h1>
-              <p className="text-sm text-muted-foreground mt-1">{t('login.subtitle')}</p>
-            </div>
-          </div>
-        </CardHeader>
+            <p className="brand-tagline">{t('login.subtitle')}</p>
+            
+            <h1 className="hero-headline">
+              <span className="text-forest">Let's Get </span>
+              <span className="text-gold">REAL</span>
+            </h1>
+            <p className="hero-subline">Responsive. Equitable. Adaptive. Learning.</p>
+            <p className="hero-support">One lesson. Designed to accommodate every learner.</p>
+          </header>
 
-        <CardContent className="space-y-5 sm:space-y-6 px-4 sm:px-6 pb-6">
-          {/* Error Alert with animation */}
-          <div 
-            className={`transition-all duration-300 ease-out ${
-              formError 
-                ? 'opacity-100 max-h-24 translate-y-0' 
-                : 'opacity-0 max-h-0 -translate-y-2 overflow-hidden'
-            }`}
-            role="alert"
-            aria-live="polite"
-          >
+          {/* Login Card */}
+          <div className="glass-card">
+            {/* Error Alert */}
             {formError && (
-              <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
-                <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <AlertDescription className="font-medium">{formError}</AlertDescription>
-              </Alert>
+              <div className="auth-alert" role="alert" aria-live="polite">
+                <AlertCircle className="auth-alert-icon" aria-hidden="true" />
+                <span className="auth-alert-message">{formError}</span>
+              </div>
             )}
-          </div>
 
-          {/* OAuth Buttons - Stack vertically on mobile, responsive sizing */}
-          <div className="space-y-2.5 sm:space-y-3">
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full min-h-[48px] h-12 gap-2.5 sm:gap-3 text-sm sm:text-base font-medium transition-all duration-200 hover:bg-muted/80 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60" 
-              onClick={() => handleOAuthLogin('google')} 
-              disabled={isFormDisabled} 
-              aria-label={t('login.continueWithGoogle')}
-              aria-busy={oauthLoading === 'google'}
-            >
-              {oauthLoading === 'google' ? (
-                <Loader2 className="h-5 w-5 animate-spin shrink-0" aria-hidden="true" />
-              ) : (
-                <GoogleIcon />
-              )}
-              <span className="truncate">{t('login.continueWithGoogle')}</span>
-            </Button>
-            
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full min-h-[48px] h-12 gap-2.5 sm:gap-3 text-sm sm:text-base font-medium transition-all duration-200 hover:bg-muted/80 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60" 
-              onClick={() => handleOAuthLogin('azure')} 
-              disabled={isFormDisabled} 
-              aria-label={t('login.continueWithMicrosoft')}
-              aria-busy={oauthLoading === 'azure'}
-            >
-              {oauthLoading === 'azure' ? (
-                <Loader2 className="h-5 w-5 animate-spin shrink-0" aria-hidden="true" />
-              ) : (
-                <MicrosoftIcon />
-              )}
-              <span className="truncate">{t('login.continueWithMicrosoft')}</span>
-            </Button>
-            
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full min-h-[48px] h-12 gap-2.5 sm:gap-3 text-sm sm:text-base font-medium transition-all duration-200 hover:bg-muted/80 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60" 
-              onClick={() => handleOAuthLogin('canvas')} 
-              disabled={isFormDisabled} 
-              aria-label={t('login.continueWithCanvas')}
-              aria-busy={oauthLoading === 'canvas'}
-            >
-              {oauthLoading === 'canvas' ? (
-                <Loader2 className="h-5 w-5 animate-spin shrink-0" aria-hidden="true" />
-              ) : (
-                <CanvasIcon />
-              )}
-              <span className="truncate">{t('login.continueWithCanvas')}</span>
-            </Button>
-          </div>
-
-          {/* Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">{t('common.or')}</span>
-            </div>
-          </div>
-
-          {/* Email/Password Form */}
-          <form onSubmit={handleEmailLogin} className="space-y-4" noValidate>
-            <div className="space-y-2">
-              <Label 
-                htmlFor="email" 
-                className="text-sm font-medium text-foreground"
+            {/* OAuth Buttons */}
+            <div className="space-y-3">
+              <button
+                type="button"
+                className="btn-oauth"
+                onClick={() => handleOAuthLogin('google')}
+                disabled={isFormDisabled}
+                aria-label={t('login.continueWithGoogle')}
+                aria-busy={oauthLoading === 'google'}
               >
-                {t('common.email')}
-              </Label>
-              <div className="relative">
-                <Mail 
-                  className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" 
-                  aria-hidden="true" 
-                />
-                <Input 
-                  id="email" 
-                  type="email" 
+                {oauthLoading === 'google' ? (
+                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <GoogleIcon />
+                )}
+                <span>{t('login.continueWithGoogle')}</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn-oauth"
+                onClick={() => handleOAuthLogin('azure')}
+                disabled={isFormDisabled}
+                aria-label={t('login.continueWithMicrosoft')}
+                aria-busy={oauthLoading === 'azure'}
+              >
+                {oauthLoading === 'azure' ? (
+                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <MicrosoftIcon />
+                )}
+                <span>{t('login.continueWithMicrosoft')}</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn-oauth"
+                onClick={() => handleOAuthLogin('canvas')}
+                disabled={isFormDisabled}
+                aria-label={t('login.continueWithCanvas')}
+                aria-busy={oauthLoading === 'canvas'}
+              >
+                {oauthLoading === 'canvas' ? (
+                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <CanvasIcon />
+                )}
+                <span>{t('login.continueWithCanvas')}</span>
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="auth-divider">
+              <span>{t('common.or')}</span>
+            </div>
+
+            {/* Email/Password Form */}
+            <form onSubmit={handleEmailLogin} noValidate>
+              <div className="mb-4">
+                <label htmlFor="email" className="auth-label">
+                  {t('common.email')}
+                </label>
+                <input
+                  id="email"
+                  type="email"
                   inputMode="email"
-                  placeholder={t('login.emailPlaceholder')} 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                  className={`pl-10 min-h-[48px] h-12 text-base transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
-                  disabled={isFormDisabled} 
-                  autoComplete="email" 
+                  placeholder={t('login.emailPlaceholder')}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={`auth-input ${errors.email ? 'has-error' : ''}`}
+                  disabled={isFormDisabled}
+                  autoComplete="email"
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck="false"
-                  aria-invalid={!!errors.email} 
-                  aria-describedby={errors.email ? 'email-error' : undefined} 
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? 'email-error' : undefined}
                 />
-              </div>
-              <div 
-                className={`transition-all duration-200 ${errors.email ? 'opacity-100 max-h-8' : 'opacity-0 max-h-0 overflow-hidden'}`}
-              >
                 {errors.email && (
-                  <p id="email-error" className="text-sm text-destructive" role="alert">
+                  <p id="email-error" className="field-error" role="alert">
                     {errors.email}
                   </p>
                 )}
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label 
-                htmlFor="password" 
-                className="text-sm font-medium text-foreground"
-              >
-                {t('common.password')}
-              </Label>
-              <div className="relative">
-                <Lock 
-                  className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" 
-                  aria-hidden="true" 
-                />
-                <Input 
-                  id="password" 
-                  type={showPassword ? 'text' : 'password'} 
-                  placeholder={t('login.passwordPlaceholder')} 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  className={`pl-10 pr-12 min-h-[48px] h-12 text-base transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`} 
-                  disabled={isFormDisabled} 
-                  autoComplete="current-password" 
-                  aria-invalid={!!errors.password} 
-                  aria-describedby={errors.password ? 'password-error' : undefined} 
-                />
-                <button 
-                  type="button" 
-                  onClick={() => setShowPassword(!showPassword)} 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-95" 
-                  aria-label={showPassword ? t('accessibility.hidePassword') : t('accessibility.showPassword')} 
-                  aria-pressed={showPassword}
-                  tabIndex={0}
-                >
-                  <span className="sr-only">{showPassword ? t('accessibility.hidePassword') : t('accessibility.showPassword')}</span>
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 transition-transform duration-200" aria-hidden="true" />
-                  ) : (
-                    <Eye className="h-5 w-5 transition-transform duration-200" aria-hidden="true" />
-                  )}
-                </button>
-              </div>
-              <div 
-                className={`transition-all duration-200 ${errors.password ? 'opacity-100 max-h-8' : 'opacity-0 max-h-0 overflow-hidden'}`}
-              >
+              <div className="mb-4">
+                <label htmlFor="password" className="auth-label">
+                  {t('common.password')}
+                </label>
+                <div className="auth-input-wrapper">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={`auth-input ${errors.password ? 'has-error' : ''}`}
+                    style={{ paddingRight: '52px' }}
+                    disabled={isFormDisabled}
+                    autoComplete="current-password"
+                    aria-invalid={!!errors.password}
+                    aria-describedby={errors.password ? 'password-error' : undefined}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={isFormDisabled}
+                    aria-label={showPassword ? t('accessibility.hidePassword') : t('accessibility.showPassword')}
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" aria-hidden="true" />
+                    ) : (
+                      <Eye className="h-5 w-5" aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
                 {errors.password && (
-                  <p id="password-error" className="text-sm text-destructive" role="alert">
+                  <p id="password-error" className="field-error" role="alert">
                     {errors.password}
                   </p>
                 )}
               </div>
-            </div>
 
-            <div className="flex justify-end">
-              <Link 
-                to="/forgot-password" 
-                className="text-sm text-primary hover:text-primary/80 font-medium py-1 px-1 -mx-1 rounded-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={isFormDisabled}
+                aria-busy={isLoading}
               >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                    <span>{t('common.loading')}</span>
+                  </>
+                ) : (
+                  <span>{t('login.loginButton')}</span>
+                )}
+              </button>
+            </form>
+
+            {/* Links */}
+            <div className="auth-links">
+              <Link to="/forgot-password" className="link-forest">
                 {t('login.forgotPassword')}
+              </Link>
+              <Link to="/register" className="link-clay">
+                {t('login.createAccount')}
               </Link>
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full min-h-[48px] h-12 text-base font-semibold transition-all duration-200 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60" 
-              disabled={isFormDisabled}
-              aria-busy={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" />
-                  <span>{t('login.signingIn')}</span>
-                </>
-              ) : (
-                t('login.loginButton')
-              )}
-            </Button>
-          </form>
-
-          <p className="text-center text-sm text-muted-foreground">
-            {t('login.noAccount')}{' '}
-            <Link 
-              to="/register" 
-              className="text-primary hover:text-primary/80 font-medium py-1 px-1 -mx-1 rounded-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            >
-              {t('login.signUp')}
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Screen reader announcements */}
-      <div className="sr-only" aria-live="assertive" aria-atomic="true">
-        {formError}
+            {/* Legal Text */}
+            <p className="legal-text">
+              {t('login.legalText')} <a href="/terms">{t('login.terms')}</a> {t('common.and')} <a href="/privacy">{t('login.privacy')}</a>.
+            </p>
+          </div>
+        </div>
       </div>
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
-        {isLoading && t('login.signingIn')}
-        {oauthLoading && `${t('common.loading')}`}
-      </div>
-    </div>
+    </>
   );
 }
