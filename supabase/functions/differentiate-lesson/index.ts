@@ -216,6 +216,7 @@ Remember:
           { role: "user", content: userPrompt },
         ],
         response_format: { type: "json_object" },
+        max_tokens: 32000, // Allow larger responses for multiple groups
       }),
     });
 
