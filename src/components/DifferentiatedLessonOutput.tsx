@@ -135,7 +135,33 @@ const processContentWithImages = (content: string, imageMap: Map<string, string>
   return processed;
 };
 
-export function DifferentiatedLessonOutput({ 
+// Shared markdown component mappings for consistent HTML rendering
+const createMarkdownComponents = (imageMap: Map<string, string>) => ({
+  img: ({ src, alt }: { src?: string; alt?: string }) => <LessonImageFrame src={src || ''} alt={alt || ''} />,
+  h1: ({ children }: { children?: React.ReactNode }) => <h1 className="text-2xl font-display font-bold text-foreground mt-6 mb-4 pb-2 border-b border-border">{children}</h1>,
+  h2: ({ children }: { children?: React.ReactNode }) => <h2 className="text-xl font-display font-semibold text-foreground mt-5 mb-3">{children}</h2>,
+  h3: ({ children }: { children?: React.ReactNode }) => <h3 className="text-lg font-display font-medium text-foreground mt-4 mb-2">{children}</h3>,
+  h4: ({ children }: { children?: React.ReactNode }) => <h4 className="text-base font-semibold text-foreground mt-3 mb-2">{children}</h4>,
+  p: ({ children }: { children?: React.ReactNode }) => <p className="text-foreground/90 leading-relaxed mb-3">{children}</p>,
+  ul: ({ children }: { children?: React.ReactNode }) => <ul className="list-disc list-inside space-y-1.5 mb-4 ml-2">{children}</ul>,
+  ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal list-inside space-y-1.5 mb-4 ml-2">{children}</ol>,
+  li: ({ children }: { children?: React.ReactNode }) => <li className="text-foreground/90">{children}</li>,
+  strong: ({ children }: { children?: React.ReactNode }) => <strong className="font-semibold text-foreground">{children}</strong>,
+  em: ({ children }: { children?: React.ReactNode }) => <em className="italic text-foreground/80">{children}</em>,
+  blockquote: ({ children }: { children?: React.ReactNode }) => <blockquote className="border-l-4 border-primary/50 pl-4 py-2 my-4 bg-primary/5 rounded-r-md italic">{children}</blockquote>,
+  hr: () => <hr className="my-6 border-border" />,
+  table: ({ children }: { children?: React.ReactNode }) => <div className="overflow-x-auto my-4"><table className="w-full border-collapse border border-border rounded-lg">{children}</table></div>,
+  thead: ({ children }: { children?: React.ReactNode }) => <thead className="bg-muted/50">{children}</thead>,
+  tbody: ({ children }: { children?: React.ReactNode }) => <tbody className="divide-y divide-border">{children}</tbody>,
+  tr: ({ children }: { children?: React.ReactNode }) => <tr className="hover:bg-muted/30 transition-colors">{children}</tr>,
+  th: ({ children }: { children?: React.ReactNode }) => <th className="px-4 py-2 text-left font-semibold text-foreground border border-border">{children}</th>,
+  td: ({ children }: { children?: React.ReactNode }) => <td className="px-4 py-2 text-foreground/90 border border-border">{children}</td>,
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => <a href={href} className="text-primary hover:text-primary/80 underline underline-offset-2" target="_blank" rel="noopener noreferrer">{children}</a>,
+  code: ({ children }: { children?: React.ReactNode }) => <code className="px-1.5 py-0.5 bg-muted rounded text-sm font-mono">{children}</code>,
+  pre: ({ children }: { children?: React.ReactNode }) => <pre className="p-4 bg-muted rounded-lg overflow-x-auto my-4">{children}</pre>,
+});
+
+export function DifferentiatedLessonOutput({
   lessonData,
   selectedGroups, 
   lessonTitle = 'Lesson',
@@ -572,7 +598,7 @@ export function DifferentiatedLessonOutput({
                                 <span>{handout.language}</span>
                               </div>
                               <div className="prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown components={{ img: ({ src, alt }) => <LessonImageFrame src={src || ''} alt={alt || ''} /> }}>
+                                <ReactMarkdown components={createMarkdownComponents(imageMap)}>
                                   {processContentWithImages(handout.content, imageMap)}
                                 </ReactMarkdown>
                               </div>
@@ -585,7 +611,7 @@ export function DifferentiatedLessonOutput({
                                 <span>English</span>
                               </div>
                               <div className="prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown components={{ img: ({ src, alt }) => <LessonImageFrame src={src || ''} alt={alt || ''} /> }}>
+                                <ReactMarkdown components={createMarkdownComponents(imageMap)}>
                                   {processContentWithImages(handout.englishContent || '', imageMap)}
                                 </ReactMarkdown>
                               </div>
@@ -594,7 +620,7 @@ export function DifferentiatedLessonOutput({
                         ) : (
                           // Single column for English-only
                           <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <ReactMarkdown components={{ img: ({ src, alt }) => <LessonImageFrame src={src || ''} alt={alt || ''} /> }}>
+                            <ReactMarkdown components={createMarkdownComponents(imageMap)}>
                               {processContentWithImages(handout.content, imageMap)}
                             </ReactMarkdown>
                           </div>
@@ -613,7 +639,7 @@ export function DifferentiatedLessonOutput({
             {/* Teacher Guide */}
             <TabsContent value="teacher" className="mt-0 p-4">
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown components={{ img: ({ src, alt }) => <LessonImageFrame src={src || ''} alt={alt || ''} /> }}>
+                <ReactMarkdown components={createMarkdownComponents(imageMap)}>
                   {processContentWithImages(teacherGuide, imageMap)}
                 </ReactMarkdown>
               </div>
