@@ -127,6 +127,25 @@ Requirements:
           if (signedUrlData?.signedUrl) {
             storedUrl = signedUrlData.signedUrl;
             console.log("Image stored at:", storedUrl);
+            
+            // Track image in lesson_images table
+            const { error: trackError } = await supabase
+              .from('lesson_images')
+              .insert({
+                lesson_id: lessonId,
+                group_id: groupId || null,
+                storage_path: storagePath,
+                description: description,
+                alt_text: description.substring(0, 255),
+                file_size: imageBuffer.length,
+              });
+            
+            if (trackError) {
+              console.error("Failed to track image in database:", trackError);
+              // Don't fail the request, image is still usable
+            } else {
+              console.log("Image tracked in lesson_images table");
+            }
           } else {
             console.error("Failed to create signed URL:", signedUrlError);
           }
