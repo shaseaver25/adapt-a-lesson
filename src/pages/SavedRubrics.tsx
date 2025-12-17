@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -33,14 +34,19 @@ import {
   Loader2,
   FolderOpen,
   ShieldCheck,
-  ShieldAlert
+  ShieldAlert,
+  Pencil,
+  Check,
+  X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { format } from 'date-fns';
 
 interface SavedRubric {
   id: string;
+  rubric_name: string | null;
   assessment_description: string;
   learning_objectives: string[];
   rubric_content: string;
@@ -59,6 +65,8 @@ interface SavedRubric {
 export default function SavedRubrics() {
   const [selectedRubric, setSelectedRubric] = useState<SavedRubric | null>(null);
   const [rubricToDelete, setRubricToDelete] = useState<SavedRubric | null>(null);
+  const [editingRubricId, setEditingRubricId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -99,10 +107,54 @@ export default function SavedRubrics() {
     },
   });
 
+  const updateNameMutation = useMutation({
+    mutationFn: async ({ rubricId, name }: { rubricId: string; name: string }) => {
+      const { error } = await supabase
+        .from('generated_rubrics')
+        .update({ rubric_name: name || null })
+        .eq('id', rubricId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['saved-rubrics'] });
+      toast({ title: 'Name updated', description: 'Rubric name has been saved.' });
+      setEditingRubricId(null);
+      setEditingName('');
+    },
+    onError: (error) => {
+      console.error('Error updating rubric name:', error);
+      toast({
+        title: 'Update failed',
+        description: 'Could not update the rubric name. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleDelete = () => {
     if (rubricToDelete) {
       deleteMutation.mutate(rubricToDelete.id);
     }
+  };
+
+  const handleStartEdit = (rubric: SavedRubric) => {
+    setEditingRubricId(rubric.id);
+    setEditingName(rubric.rubric_name || '');
+  };
+
+  const handleSaveEdit = (rubricId: string) => {
+    updateNameMutation.mutate({ rubricId, name: editingName.trim() });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRubricId(null);
+    setEditingName('');
+  };
+
+  const getRubricDisplayName = (rubric: SavedRubric): string => {
+    if (rubric.rubric_name) return rubric.rubric_name;
+    return rubric.assessment_description.slice(0, 60) + (rubric.assessment_description.length > 60 ? '...' : '');
   };
 
   const getVulnerabilityBadge = (score: number | null) => {
@@ -191,10 +243,56 @@ export default function SavedRubrics() {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg font-display line-clamp-2">
-                        {rubric.assessment_description.slice(0, 80)}
-                        {rubric.assessment_description.length > 80 ? '...' : ''}
-                      </CardTitle>
+                      {editingRubricId === rubric.id ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            placeholder="Enter rubric name..."
+                            className="h-8 text-sm"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveEdit(rubric.id);
+                              if (e.key === 'Escape') handleCancelEdit();
+                            }}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={() => handleSaveEdit(rubric.id)}
+                            disabled={updateNameMutation.isPending}
+                          >
+                            {updateNameMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Check className="h-4 w-4 text-primary" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={handleCancelEdit}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-2">
+                          <CardTitle className="text-lg font-display line-clamp-2 flex-1">
+                            {getRubricDisplayName(rubric)}
+                          </CardTitle>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleStartEdit(rubric)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
                       <CardDescription className="flex items-center gap-2 mt-1">
                         <Calendar className="h-3 w-3" />
                         {format(new Date(rubric.created_at), 'MMM d, yyyy')}
@@ -207,6 +305,14 @@ export default function SavedRubrics() {
                   </div>
                 </CardHeader>
                 <CardContent>
+                  {/* Assessment description preview (only if no custom name) */}
+                  {rubric.rubric_name && (
+                    <div className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                      {rubric.assessment_description.slice(0, 100)}
+                      {rubric.assessment_description.length > 100 ? '...' : ''}
+                    </div>
+                  )}
+
                   {/* Learning objectives preview */}
                   <div className="text-sm text-muted-foreground mb-3">
                     <span className="font-medium text-foreground">Objectives: </span>
@@ -261,7 +367,7 @@ export default function SavedRubrics() {
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="font-display">
-              Rubric Details
+              {selectedRubric?.rubric_name || 'Rubric Details'}
             </DialogTitle>
             <DialogDescription>
               Created on {selectedRubric && format(new Date(selectedRubric.created_at), 'MMMM d, yyyy')}
@@ -272,17 +378,7 @@ export default function SavedRubrics() {
           </DialogHeader>
           
           <ScrollArea className="flex-1 mt-4">
-            <article className="prose prose-sm dark:prose-invert max-w-none 
-              prose-headings:font-display
-              prose-h1:text-xl prose-h1:border-b prose-h1:border-border prose-h1:pb-2 prose-h1:mb-4
-              prose-h2:text-lg prose-h2:mt-6 prose-h2:mb-3
-              prose-h3:text-base prose-h3:text-primary
-              prose-p:leading-relaxed
-              prose-ul:my-2 prose-li:my-0.5
-              prose-table:border prose-table:border-border
-              prose-th:bg-muted prose-th:p-2 prose-th:text-left prose-th:border prose-th:border-border
-              prose-td:p-2 prose-td:border prose-td:border-border
-            ">
+            <article className="prose prose-sm dark:prose-invert max-w-none">
               {selectedRubric && (
                 <>
                   <div className="mb-6 p-4 bg-muted/50 rounded-lg">
@@ -306,7 +402,45 @@ export default function SavedRubrics() {
                     </div>
                   )}
                   
-                  <ReactMarkdown>{selectedRubric.rubric_content}</ReactMarkdown>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h1: ({ children }) => (
+                        <h1 className="text-2xl font-display font-bold text-primary mt-6 mb-4 pb-2 border-b border-border">{children}</h1>
+                      ),
+                      h2: ({ children }) => (
+                        <h2 className="text-xl font-display font-semibold text-primary/90 mt-5 mb-3">{children}</h2>
+                      ),
+                      h3: ({ children }) => (
+                        <h3 className="text-lg font-display font-medium text-primary/80 mt-4 mb-2">{children}</h3>
+                      ),
+                      p: ({ children }) => (
+                        <p className="text-foreground/90 leading-relaxed mb-3">{children}</p>
+                      ),
+                      table: ({ children }) => (
+                        <div className="overflow-x-auto my-4">
+                          <table className="w-full border-collapse border border-border rounded-lg">{children}</table>
+                        </div>
+                      ),
+                      thead: ({ children }) => (
+                        <thead className="bg-muted/50">{children}</thead>
+                      ),
+                      tbody: ({ children }) => (
+                        <tbody className="divide-y divide-border">{children}</tbody>
+                      ),
+                      tr: ({ children }) => (
+                        <tr className="hover:bg-muted/30 transition-colors">{children}</tr>
+                      ),
+                      th: ({ children }) => (
+                        <th className="px-4 py-2 text-left font-semibold text-foreground border border-border">{children}</th>
+                      ),
+                      td: ({ children }) => (
+                        <td className="px-4 py-2 text-foreground/90 border border-border">{children}</td>
+                      ),
+                    }}
+                  >
+                    {selectedRubric.rubric_content}
+                  </ReactMarkdown>
                 </>
               )}
             </article>
@@ -320,7 +454,7 @@ export default function SavedRubrics() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this rubric?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the rubric for "{rubricToDelete?.assessment_description.slice(0, 50)}...". 
+              This will permanently delete "{rubricToDelete?.rubric_name || rubricToDelete?.assessment_description.slice(0, 50)}...". 
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

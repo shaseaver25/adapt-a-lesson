@@ -165,6 +165,7 @@ export function RubricOutput({
       }
 
       const { error } = await supabase.from('generated_rubrics').insert([{
+        rubric_name: rubricInput.rubricName || null,
         assessment_description: rubricInput.assessmentDescription,
         learning_objectives: rubricInput.learningObjectives,
         rubric_content: content,
