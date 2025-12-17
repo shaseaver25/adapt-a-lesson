@@ -75,6 +75,7 @@ const Index = () => {
   // Assessment hook
   const {
     generatedAssessment,
+    lastAssessmentInput,
     isGeneratingAssessment,
     handleGenerateAssessment,
     handleResetAssessment,
@@ -136,6 +137,12 @@ const Index = () => {
               <Button variant="ghost" size="sm" className="gap-2">
                 <TableProperties className="h-4 w-4" />
                 <span className="hidden sm:inline">Rubrics</span>
+              </Button>
+            </Link>
+            <Link to="/saved-assessments">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <ShieldCheck className="h-4 w-4" />
+                <span className="hidden sm:inline">Assessments</span>
               </Button>
             </Link>
             <Link to="/student-groups">
@@ -313,7 +320,9 @@ const Index = () => {
 
             <AssessmentOutput 
               content={generatedAssessment} 
-              lessonTitle={'assessment'} 
+              lessonTitle={lastAssessmentInput?.lessonContext?.title || 'assessment'}
+              assessmentInput={lastAssessmentInput}
+              onReset={handleResetAssessment}
             />
           </div>
         ) : generatedRubric ? (
