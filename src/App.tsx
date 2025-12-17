@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DifferentiationProvider } from "@/contexts/DifferentiationContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { I18nProvider } from "@/i18n";
+import Landing from "./pages/Landing";
 import Index from "./pages/Index";
 import StudentGroups from "./pages/StudentGroups";
 import SavedLessons from "./pages/SavedLessons";
@@ -33,7 +34,8 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <Routes>
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<Landing />} />
+                <Route path="/studio" element={<Index />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
