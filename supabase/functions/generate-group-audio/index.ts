@@ -6,6 +6,36 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Get authenticated user from request
+async function getAuthenticatedUser(req: Request, supabaseAdmin: any) {
+  const authHeader = req.headers.get('Authorization');
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  
+  if (error || !user) {
+    return null;
+  }
+  
+  return user;
+}
+
+// Verify user owns a lesson
+async function verifyLessonOwnership(supabaseAdmin: any, userId: string, lessonId: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from('generated_lessons')
+    .select('id')
+    .eq('id', lessonId)
+    .eq('user_id', userId)
+    .single();
+  
+  return !error && !!data;
+}
+
 // Voice configuration by language
 const VOICE_CONFIG: Record<string, { voiceId: string; stability: number; similarityBoost: number; style: number }> = {
   english: { voiceId: 'EXAVITQu4vr4xnSDxMaL', stability: 0.75, similarityBoost: 0.75, style: 0.5 },
@@ -213,8 +243,6 @@ serve(async (req) => {
   }
 
   try {
-    const { lessonId, differentiatedContent, group, retryFailedOnly }: GenerateGroupAudioRequest = await req.json();
-
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
@@ -225,6 +253,37 @@ serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // 1. AUTHENTICATE: Get user from JWT
+    const user = await getAuthenticatedUser(req, supabase);
+    if (!user) {
+      console.log('Unauthorized access attempt to generate-group-audio');
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { lessonId, differentiatedContent, group, retryFailedOnly }: GenerateGroupAudioRequest = await req.json();
+
+    if (!lessonId) {
+      return new Response(
+        JSON.stringify({ error: 'lessonId is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 2. AUTHORIZE: Verify user owns this lesson
+    const isOwner = await verifyLessonOwnership(supabase, user.id, lessonId);
+    if (!isOwner) {
+      console.log(`Access denied: User ${user.id} attempted to generate audio for lesson ${lessonId}`);
+      return new Response(
+        JSON.stringify({ error: 'You do not have access to this lesson' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 3. PROCESS: Now safe to generate audio
     console.log(`Processing single group: ${group.groupName}`);
 
     // Check existing audio for this group if retrying

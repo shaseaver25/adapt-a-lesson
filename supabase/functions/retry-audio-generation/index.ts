@@ -6,6 +6,36 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Get authenticated user from request
+async function getAuthenticatedUser(req: Request, supabaseAdmin: any) {
+  const authHeader = req.headers.get('Authorization');
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  
+  if (error || !user) {
+    return null;
+  }
+  
+  return user;
+}
+
+// Verify user owns a lesson
+async function verifyLessonOwnership(supabaseAdmin: any, userId: string, lessonId: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from('generated_lessons')
+    .select('id')
+    .eq('id', lessonId)
+    .eq('user_id', userId)
+    .single();
+  
+  return !error && !!data;
+}
+
 const VOICE_CONFIG: Record<string, { voiceId: string; stability: number; similarityBoost: number; style: number }> = {
   'English': { voiceId: 'EXAVITQu4vr4xnSDxMaL', stability: 0.5, similarityBoost: 0.75, style: 0.3 },
   'Spanish': { voiceId: 'XrExE9yKIg1WjnnlVkGX', stability: 0.5, similarityBoost: 0.8, style: 0.3 },
@@ -98,6 +128,21 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const elevenLabsKey = Deno.env.get('ELEVENLABS_API_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // 1. AUTHENTICATE: Get user from JWT
+    const user = await getAuthenticatedUser(req, supabase);
+    if (!user) {
+      console.log('Unauthorized access attempt to retry-audio-generation');
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { lessonId, sectionIds } = await req.json();
 
     if (!lessonId) {
@@ -107,11 +152,17 @@ serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const elevenLabsKey = Deno.env.get('ELEVENLABS_API_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // 2. AUTHORIZE: Verify user owns this lesson
+    const isOwner = await verifyLessonOwnership(supabase, user.id, lessonId);
+    if (!isOwner) {
+      console.log(`Access denied: User ${user.id} attempted to retry audio for lesson ${lessonId}`);
+      return new Response(
+        JSON.stringify({ error: 'You do not have access to this lesson' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
+    // 3. PROCESS: Now safe to retry audio generation
     // Get failed sections from status
     const { data: status } = await supabase
       .from('lesson_audio_status')
