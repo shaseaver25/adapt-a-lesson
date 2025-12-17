@@ -469,6 +469,54 @@ export type Database = {
           },
         ]
       }
+      lesson_images: {
+        Row: {
+          alt_text: string | null
+          created_at: string | null
+          description: string | null
+          file_size: number | null
+          group_id: string | null
+          id: string
+          lesson_id: string
+          storage_path: string
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string | null
+          description?: string | null
+          file_size?: number | null
+          group_id?: string | null
+          id?: string
+          lesson_id: string
+          storage_path: string
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string | null
+          description?: string | null
+          file_size?: number | null
+          group_id?: string | null
+          id?: string
+          lesson_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_images_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "student_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_images_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "generated_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       login_attempts: {
         Row: {
           created_at: string

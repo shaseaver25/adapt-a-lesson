@@ -35,11 +35,13 @@ import {
   Users, 
   Loader2,
   FolderOpen,
-  Pencil
+  Pencil,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
 import { format } from 'date-fns';
+import { LessonImageBrowser } from '@/components/LessonImageBrowser';
 
 interface SavedLesson {
   id: string;
@@ -57,6 +59,7 @@ export default function SavedLessons() {
   const [selectedLesson, setSelectedLesson] = useState<SavedLesson | null>(null);
   const [lessonToDelete, setLessonToDelete] = useState<SavedLesson | null>(null);
   const [lessonToEdit, setLessonToEdit] = useState<SavedLesson | null>(null);
+  const [lessonForImages, setLessonForImages] = useState<SavedLesson | null>(null);
   const [editName, setEditName] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -270,6 +273,14 @@ export default function SavedLessons() {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => setLessonForImages(lesson)}
+                      title="View Images"
+                    >
+                      <ImageIcon className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleStartEdit(lesson)}
                     >
                       <Pencil className="h-4 w-4" />
@@ -382,6 +393,24 @@ export default function SavedLessons() {
               Save
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Browser Dialog */}
+      <Dialog open={!!lessonForImages} onOpenChange={() => setLessonForImages(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ImageIcon className="h-5 w-5 text-primary" />
+              Images for "{lessonForImages?.lesson_title || 'Lesson'}"
+            </DialogTitle>
+          </DialogHeader>
+          {lessonForImages && (
+            <LessonImageBrowser 
+              lessonId={lessonForImages.id}
+              lessonTitle={lessonForImages.lesson_title || undefined}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
