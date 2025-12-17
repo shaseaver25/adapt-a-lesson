@@ -4,12 +4,15 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import LessonImageFrame from '@/components/LessonImageFrame';
 import { format } from 'date-fns';
+import { getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
+import type { StudentHandout } from '@/types/differentiatedLesson';
 import { 
   ArrowLeft, 
   Printer, 
@@ -19,7 +22,9 @@ import {
   Calendar, 
   Users,
   FileText,
-  CheckCircle
+  CheckCircle,
+  BookOpen,
+  GraduationCap
 } from 'lucide-react';
 
 interface SavedLesson {
@@ -33,6 +38,38 @@ interface SavedLesson {
   created_at: string;
   updated_at: string;
 }
+
+// Language flags mapping
+const LANGUAGE_FLAGS: Record<string, string> = {
+  'English': '🇺🇸',
+  'Spanish': '🇪🇸',
+  'Somali': '🇸🇴',
+  'Vietnamese': '🇻🇳',
+  'Mandarin': '🇨🇳',
+  'Chinese': '🇨🇳',
+  'Arabic': '🇸🇦',
+  'Hmong': '🌏',
+  'Karen': '🌏',
+  'Oromo': '🇪🇹',
+  'Russian': '🇷🇺',
+  'Swahili': '🇰🇪',
+  'French': '🇫🇷',
+  'Portuguese': '🇧🇷',
+  'Tagalog': '🇵🇭',
+  'Korean': '🇰🇷',
+  'Japanese': '🇯🇵',
+  'Hindi': '🇮🇳',
+  'Urdu': '🇵🇰',
+  'Punjabi': '🇮🇳',
+  'Bengali': '🇧🇩',
+  'Nepali': '🇳🇵',
+  'Burmese': '🇲🇲',
+};
+
+const getFlag = (language: string): string => LANGUAGE_FLAGS[language] || '🌐';
+
+// RTL languages for proper text direction
+const RTL_LANGUAGES = ['Arabic', 'Hebrew', 'Urdu', 'Persian', 'Farsi'];
 
 // Custom markdown component mappings for enhanced HTML rendering
 const markdownComponents = {
@@ -109,6 +146,8 @@ export default function LessonView() {
   const { toast } = useToast();
   const { loading: authLoading, user } = useAuthContext();
   const [copied, setCopied] = useState(false);
+  const [printMode, setPrintMode] = useState<'teacher' | 'handouts' | null>(null);
+  const [activeGroupTab, setActiveGroupTab] = useState<string>('');
 
   const { data: lesson, isLoading, error } = useQuery({
     queryKey: ['lesson', id],
@@ -124,21 +163,16 @@ export default function LessonView() {
       if (error) throw error;
       return data as SavedLesson;
     },
-    // CRITICAL: Wait for auth AND require user to be logged in
     enabled: !!id && !authLoading && !!user,
-    retry: false,  // Don't retry on auth failures
+    retry: false,
   });
 
-  // Debug logging
-  console.log('=== LessonView Debug ===');
-  console.log('URL id param:', id);
-  console.log('Auth loading:', authLoading);
-  console.log('User:', user?.id || 'No user');
-  console.log('Query enabled:', !!id && !authLoading && !!user);
-  console.log('Query isLoading:', isLoading);
-  console.log('Query error:', error);
-  console.log('Query data:', lesson);
-  console.log('========================');
+  // Set default active group tab when lesson loads
+  React.useEffect(() => {
+    if (lesson?.student_handouts && Array.isArray(lesson.student_handouts) && lesson.student_handouts.length > 0) {
+      setActiveGroupTab(lesson.student_handouts[0].groupId || '0');
+    }
+  }, [lesson]);
 
   // Handle unauthenticated state
   if (!authLoading && !user) {
@@ -153,6 +187,12 @@ export default function LessonView() {
       </div>
     );
   }
+
+  // Get typed student handouts
+  const getStudentHandouts = (): StudentHandout[] => {
+    if (!lesson?.student_handouts || !Array.isArray(lesson.student_handouts)) return [];
+    return lesson.student_handouts as StudentHandout[];
+  };
 
   // Combine teacher guide and student handouts for full view
   const getFullContent = (lesson: SavedLesson): string => {
@@ -174,6 +214,22 @@ export default function LessonView() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handlePrintTeacher = () => {
+    setPrintMode('teacher');
+    setTimeout(() => {
+      window.print();
+      setPrintMode(null);
+    }, 100);
+  };
+
+  const handlePrintHandouts = () => {
+    setPrintMode('handouts');
+    setTimeout(() => {
+      window.print();
+      setPrintMode(null);
+    }, 100);
   };
 
   const handleCopy = async () => {
@@ -241,7 +297,9 @@ export default function LessonView() {
     );
   }
 
-  const fullContent = getFullContent(lesson);
+  const studentHandouts = getStudentHandouts();
+  const hasTeacherGuide = !!lesson.teacher_guide;
+  const hasHandouts = studentHandouts.length > 0;
 
   return (
     <>
@@ -259,15 +317,19 @@ export default function LessonView() {
           .lesson-content {
             max-width: 100% !important;
             padding: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
           }
           h1 { font-size: 18pt; page-break-after: avoid; }
           h2 { font-size: 14pt; page-break-after: avoid; }
           h3 { font-size: 12pt; page-break-after: avoid; }
           hr { page-break-after: always; }
+          .print-teacher-only .handouts-section { display: none !important; }
+          .print-handouts-only .teacher-section { display: none !important; }
         }
       `}</style>
 
-      <div className="min-h-screen bg-background">
+      <div className={`min-h-screen bg-background ${printMode === 'teacher' ? 'print-teacher-only' : ''} ${printMode === 'handouts' ? 'print-handouts-only' : ''}`}>
         {/* Header - hidden on print */}
         <header className="no-print border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
           <div className="container mx-auto px-4 py-4">
@@ -321,15 +383,6 @@ export default function LessonView() {
                   <Download className="h-4 w-4" />
                   Download
                 </Button>
-                <Button 
-                  variant="default" 
-                  size="sm" 
-                  onClick={handlePrint}
-                  className="gap-2 bg-primary hover:bg-primary/90"
-                >
-                  <Printer className="h-4 w-4" />
-                  Print
-                </Button>
               </div>
             </div>
           </div>
@@ -337,10 +390,10 @@ export default function LessonView() {
 
         {/* Lesson Content */}
         <main className="container mx-auto px-4 py-8">
-          <article className="lesson-content max-w-4xl mx-auto bg-card border border-border rounded-xl p-6 md:p-10 shadow-sm">
+          <article className="lesson-content max-w-5xl mx-auto bg-card border border-border rounded-xl shadow-sm overflow-hidden">
             {/* Differentiation options badges - hidden on print */}
             {lesson.differentiation_options && (
-              <div className="no-print flex flex-wrap gap-2 mb-6 pb-6 border-b border-border">
+              <div className="no-print flex flex-wrap gap-2 p-4 border-b border-border bg-muted/30">
                 {lesson.differentiation_options.includeVocabularyScaffolding && (
                   <Badge variant="secondary">📚 Vocabulary Scaffolding</Badge>
                 )}
@@ -356,15 +409,188 @@ export default function LessonView() {
               </div>
             )}
 
-            {/* Markdown content with custom components */}
-            <div className="max-w-none">
-              <ReactMarkdown 
-                remarkPlugins={[remarkGfm]}
-                components={markdownComponents}
-              >
-                {fullContent}
-              </ReactMarkdown>
-            </div>
+            {/* Main Tabs - Teacher Guide vs Student Handouts */}
+            <Tabs defaultValue="handouts" className="w-full">
+              {/* Tab Navigation - hidden on print */}
+              <div className="no-print border-b border-border px-4 py-3 bg-muted/20">
+                <TabsList className="grid w-full max-w-md grid-cols-2 mx-auto">
+                  <TabsTrigger value="handouts" className="gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Student Handouts
+                  </TabsTrigger>
+                  <TabsTrigger value="teacher" className="gap-2">
+                    <GraduationCap className="h-4 w-4" />
+                    Teacher Guide
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              {/* Student Handouts Tab */}
+              <TabsContent value="handouts" className="handouts-section mt-0">
+                {hasHandouts ? (
+                  <>
+                    {/* Print button for handouts */}
+                    <div className="no-print flex justify-end p-4 border-b border-border">
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        onClick={handlePrintHandouts}
+                        className="gap-2 bg-primary hover:bg-primary/90"
+                      >
+                        <Printer className="h-4 w-4" />
+                        Print Handouts
+                      </Button>
+                    </div>
+
+                    {/* Nested tabs for each student group */}
+                    <Tabs value={activeGroupTab} onValueChange={setActiveGroupTab} className="w-full">
+                      {/* Group tabs - hidden on print */}
+                      <div className="no-print border-b border-border bg-muted/10 px-4 py-2 overflow-x-auto">
+                        <TabsList className="inline-flex h-auto gap-2 bg-transparent p-0">
+                          {studentHandouts.map((handout, index) => {
+                            const levelIcon = getStudentFriendlyIcon(handout.level || 'On Grade');
+                            const flag = getFlag(handout.language);
+                            const levelColor = getReadingLevelColor(handout.level || 'On Grade');
+                            
+                            return (
+                              <TabsTrigger 
+                                key={handout.groupId || index} 
+                                value={handout.groupId || index.toString()}
+                                className={`gap-2 px-3 py-2 rounded-lg border data-[state=active]:border-primary data-[state=active]:bg-primary/5 ${levelColor}`}
+                              >
+                                <span>{levelIcon}</span>
+                                <span className="font-medium">{handout.groupName}</span>
+                                {handout.language !== 'English' && (
+                                  <span>{flag}</span>
+                                )}
+                              </TabsTrigger>
+                            );
+                          })}
+                        </TabsList>
+                      </div>
+
+                      {/* Group content */}
+                      {studentHandouts.map((handout, index) => {
+                        const isNonEnglish = handout.language !== 'English';
+                        const hasBilingual = isNonEnglish && handout.englishContent;
+                        const isRTL = RTL_LANGUAGES.includes(handout.language);
+                        
+                        return (
+                          <TabsContent 
+                            key={handout.groupId || index} 
+                            value={handout.groupId || index.toString()}
+                            className="p-6 md:p-8"
+                          >
+                            {/* Group header for print */}
+                            <div className="mb-6 pb-4 border-b border-border">
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className="text-2xl">{getStudentFriendlyIcon(handout.level || 'On Grade')}</span>
+                                <h2 className="text-xl font-display font-bold text-primary">
+                                  {handout.groupName}
+                                </h2>
+                                {isNonEnglish && (
+                                  <Badge variant="outline" className="gap-1">
+                                    {getFlag(handout.language)} {handout.language}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Bilingual side-by-side layout */}
+                            {hasBilingual ? (
+                              <div className="grid md:grid-cols-2 gap-6">
+                                {/* Home language column */}
+                                <div className={`border border-border rounded-lg p-4 bg-muted/5 ${isRTL ? 'rtl' : ''}`}>
+                                  <div className="flex items-center gap-2 mb-4 pb-2 border-b border-border">
+                                    <span className="text-lg">{getFlag(handout.language)}</span>
+                                    <span className="font-semibold text-foreground">{handout.language}</span>
+                                  </div>
+                                  <div className="max-w-none" dir={isRTL ? 'rtl' : 'ltr'}>
+                                    <ReactMarkdown 
+                                      remarkPlugins={[remarkGfm]}
+                                      components={markdownComponents}
+                                    >
+                                      {handout.content}
+                                    </ReactMarkdown>
+                                  </div>
+                                </div>
+
+                                {/* English column */}
+                                <div className="border border-border rounded-lg p-4 bg-muted/5">
+                                  <div className="flex items-center gap-2 mb-4 pb-2 border-b border-border">
+                                    <span className="text-lg">🇺🇸</span>
+                                    <span className="font-semibold text-foreground">English</span>
+                                  </div>
+                                  <div className="max-w-none">
+                                    <ReactMarkdown 
+                                      remarkPlugins={[remarkGfm]}
+                                      components={markdownComponents}
+                                    >
+                                      {handout.englishContent || ''}
+                                    </ReactMarkdown>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              /* Single column layout for English or non-bilingual */
+                              <div className={`max-w-none ${isRTL ? 'rtl' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                                <ReactMarkdown 
+                                  remarkPlugins={[remarkGfm]}
+                                  components={markdownComponents}
+                                >
+                                  {handout.content}
+                                </ReactMarkdown>
+                              </div>
+                            )}
+                          </TabsContent>
+                        );
+                      })}
+                    </Tabs>
+                  </>
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground">
+                    <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No student handouts available for this lesson.</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Teacher Guide Tab */}
+              <TabsContent value="teacher" className="teacher-section mt-0">
+                {hasTeacherGuide ? (
+                  <>
+                    {/* Print button for teacher guide */}
+                    <div className="no-print flex justify-end p-4 border-b border-border">
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        onClick={handlePrintTeacher}
+                        className="gap-2 bg-primary hover:bg-primary/90"
+                      >
+                        <Printer className="h-4 w-4" />
+                        Print Teacher Guide
+                      </Button>
+                    </div>
+
+                    <div className="p-6 md:p-8">
+                      <div className="max-w-none">
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                          components={markdownComponents}
+                        >
+                          {lesson.teacher_guide || ''}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground">
+                    <GraduationCap className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No teacher guide available for this lesson.</p>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </article>
         </main>
 
