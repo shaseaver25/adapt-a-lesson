@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { 
   ArrowLeft, 
   TableProperties, 
@@ -377,7 +377,7 @@ export default function SavedRubrics() {
             </DialogDescription>
           </DialogHeader>
           
-          <ScrollArea className="flex-1 mt-4 max-h-[calc(90vh-140px)]">
+          <div className="flex-1 mt-4 overflow-y-auto max-h-[calc(90vh-140px)] pr-4">
             <article className="prose prose-sm dark:prose-invert max-w-none">
               {selectedRubric && (
                 <>
@@ -444,7 +444,7 @@ export default function SavedRubrics() {
                 </>
               )}
             </article>
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 
