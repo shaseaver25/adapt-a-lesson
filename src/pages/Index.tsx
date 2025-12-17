@@ -23,9 +23,16 @@ const Index = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { setCachedLessonContent, clearSelection } = useDifferentiation();
-  const { user, signOut } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { isAdmin } = useAdmin();
   
+  // Redirect unauthenticated users to landing page
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/');
+    }
+  }, [user, authLoading, navigate]);
+
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
     return tabParam && ['differentiate', 'assessment', 'rubric'].includes(tabParam) 

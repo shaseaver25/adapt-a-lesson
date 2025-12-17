@@ -71,7 +71,7 @@ export default function Login() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      navigate('/');
+      navigate('/studio');
     }
   }, [user, authLoading, navigate]);
 
@@ -228,7 +228,7 @@ export default function Login() {
         title: t('login.welcomeBack'),
         description: t('login.loginSuccess'),
       });
-      navigate('/');
+      navigate('/studio');
     } catch (error) {
       setIsLoading(false);
       console.error('Login error:', error);

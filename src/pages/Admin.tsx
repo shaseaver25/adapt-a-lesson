@@ -17,7 +17,7 @@ export default function Admin() {
 
   useEffect(() => {
     if (!loading && !isAdmin) {
-      navigate('/');
+      navigate('/studio');
     }
   }, [loading, isAdmin, navigate]);
 
