@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { LoginModal } from '@/components/LoginModal';
 import { Play, Clock, Globe, Shield, BarChart3, Accessibility, Sparkles } from 'lucide-react';
 import shannonPhoto from '@/assets/shannon-seaver.jpg';
+import jenaPhoto from '@/assets/jena-zangs.jpg';
 
 // Video player component for back-to-back videos
 function GettingStartedVideoPlayer() {
@@ -452,7 +453,7 @@ export default function Landing() {
                 role: 'Co-Founder & Data Lead',
                 bio: 'Chief Data & Analytics Officer at University of St. Thomas. Women in AI Minnesota Ambassador. Bringing data science expertise to transform educational outcomes.',
                 email: '',
-                image: null,
+                image: jenaPhoto,
               },
             ].map((member, i) => (
               <div key={i} className="bg-card rounded-3xl overflow-hidden shadow-xl hover:-translate-y-2 hover:shadow-2xl transition-all">
