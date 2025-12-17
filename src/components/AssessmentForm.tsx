@@ -73,6 +73,23 @@ export function AssessmentForm({ onSubmit, isLoading }: AssessmentFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Authentic Assessment Explainer Video */}
+      <div className="space-y-3">
+        <h3 className="font-display font-bold text-lg text-foreground">
+          What is Authentic Assessment?
+        </h3>
+        <div className="rounded-lg overflow-hidden border border-border bg-muted/30">
+          <video
+            controls
+            className="w-full max-h-[400px]"
+            poster="/videos/authentic-assessment-explained.mp4#t=0.1"
+          >
+            <source src="/videos/authentic-assessment-explained.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        </div>
+      </div>
+
       {/* Lesson Info */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-foreground">
