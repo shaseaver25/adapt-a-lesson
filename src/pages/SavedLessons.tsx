@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
   DialogContent,
@@ -36,7 +37,8 @@ import {
   FolderOpen,
   Pencil,
   Image as ImageIcon,
-  Headphones
+  Headphones,
+  Search
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -59,6 +61,7 @@ export default function SavedLessons() {
   const [lessonToEdit, setLessonToEdit] = useState<SavedLesson | null>(null);
   const [lessonForImages, setLessonForImages] = useState<SavedLesson | null>(null);
   const [editName, setEditName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -141,6 +144,15 @@ export default function SavedLessons() {
     }
   };
 
+  // Filter lessons based on search query (case-insensitive, wildcard matching)
+  const filteredLessons = lessons.filter((lesson) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    const title = (lesson.lesson_title || '').toLowerCase();
+    const content = (lesson.original_content || '').toLowerCase();
+    return title.includes(query) || content.includes(query);
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       {/* Header */}
@@ -191,100 +203,207 @@ export default function SavedLessons() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {lessons.map((lesson) => (
-              <Card 
-                key={lesson.id} 
-                className="group hover:border-primary/50 hover:shadow-md transition-all duration-200"
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg font-display truncate">
-                        {lesson.lesson_title || 'Untitled Lesson'}
-                      </CardTitle>
-                      <CardDescription className="flex items-center gap-2 mt-1">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(lesson.created_at), 'MMM d, yyyy')}
-                      </CardDescription>
-                    </div>
-                    <Badge variant="outline" className="shrink-0">
-                      <Users className="h-3 w-3 mr-1" />
-                      {lesson.group_ids?.length || 0}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {/* Preview snippet */}
-                  <div className="text-sm text-muted-foreground line-clamp-3 mb-4 min-h-[4rem]">
-                    {lesson.original_content?.slice(0, 150)}
-                    {lesson.original_content && lesson.original_content.length > 150 ? '...' : ''}
-                  </div>
+          <div className="space-y-6">
+            {/* Search Input */}
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search lessons by title or content..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
 
-                  {/* Differentiation options badges */}
-                  {lesson.differentiation_options && (
-                    <div className="flex flex-wrap gap-1.5 mb-4">
-                      {lesson.differentiation_options.includeVocabularyScaffolding && (
-                        <Badge variant="secondary" className="text-xs">📚 Vocab</Badge>
+            {filteredLessons.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No lessons match your search.
+              </div>
+            ) : filteredLessons.length >= 7 ? (
+              <ScrollArea className="h-[calc(100vh-220px)]">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-4">
+                  {filteredLessons.map((lesson) => (
+                    <Card 
+                      key={lesson.id} 
+                      className="group hover:border-primary/50 hover:shadow-md transition-all duration-200"
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-lg font-display truncate">
+                              {lesson.lesson_title || 'Untitled Lesson'}
+                            </CardTitle>
+                            <CardDescription className="flex items-center gap-2 mt-1">
+                              <Calendar className="h-3 w-3" />
+                              {format(new Date(lesson.created_at), 'MMM d, yyyy')}
+                            </CardDescription>
+                          </div>
+                          <Badge variant="outline" className="shrink-0">
+                            <Users className="h-3 w-3 mr-1" />
+                            {lesson.group_ids?.length || 0}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-sm text-muted-foreground line-clamp-3 mb-4 min-h-[4rem]">
+                          {lesson.original_content?.slice(0, 150)}
+                          {lesson.original_content && lesson.original_content.length > 150 ? '...' : ''}
+                        </div>
+                        {lesson.differentiation_options && (
+                          <div className="flex flex-wrap gap-1.5 mb-4">
+                            {lesson.differentiation_options.includeVocabularyScaffolding && (
+                              <Badge variant="secondary" className="text-xs">📚 Vocab</Badge>
+                            )}
+                            {lesson.differentiation_options.generateComprehensionQuestions && (
+                              <Badge variant="secondary" className="text-xs">❓ Questions</Badge>
+                            )}
+                            {lesson.differentiation_options.includeGraphicOrganizers && (
+                              <Badge variant="secondary" className="text-xs">📊 Organizers</Badge>
+                            )}
+                            {lesson.differentiation_options.includeVisualPlaceholders && (
+                              <Badge variant="secondary" className="text-xs">🖼️ Visuals</Badge>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="flex-1 gap-2"
+                            onClick={() => window.open(`/lesson/${lesson.id}`, '_blank')}
+                          >
+                            <Eye className="h-4 w-4" />
+                            View
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`/lesson/${lesson.id}/audio`, '_blank')}
+                            title="Audio Files"
+                          >
+                            <Headphones className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setLessonForImages(lesson)}
+                            title="View Images"
+                          >
+                            <ImageIcon className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleStartEdit(lesson)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => setLessonToDelete(lesson)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredLessons.map((lesson) => (
+                  <Card 
+                    key={lesson.id} 
+                    className="group hover:border-primary/50 hover:shadow-md transition-all duration-200"
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-lg font-display truncate">
+                            {lesson.lesson_title || 'Untitled Lesson'}
+                          </CardTitle>
+                          <CardDescription className="flex items-center gap-2 mt-1">
+                            <Calendar className="h-3 w-3" />
+                            {format(new Date(lesson.created_at), 'MMM d, yyyy')}
+                          </CardDescription>
+                        </div>
+                        <Badge variant="outline" className="shrink-0">
+                          <Users className="h-3 w-3 mr-1" />
+                          {lesson.group_ids?.length || 0}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-sm text-muted-foreground line-clamp-3 mb-4 min-h-[4rem]">
+                        {lesson.original_content?.slice(0, 150)}
+                        {lesson.original_content && lesson.original_content.length > 150 ? '...' : ''}
+                      </div>
+                      {lesson.differentiation_options && (
+                        <div className="flex flex-wrap gap-1.5 mb-4">
+                          {lesson.differentiation_options.includeVocabularyScaffolding && (
+                            <Badge variant="secondary" className="text-xs">📚 Vocab</Badge>
+                          )}
+                          {lesson.differentiation_options.generateComprehensionQuestions && (
+                            <Badge variant="secondary" className="text-xs">❓ Questions</Badge>
+                          )}
+                          {lesson.differentiation_options.includeGraphicOrganizers && (
+                            <Badge variant="secondary" className="text-xs">📊 Organizers</Badge>
+                          )}
+                          {lesson.differentiation_options.includeVisualPlaceholders && (
+                            <Badge variant="secondary" className="text-xs">🖼️ Visuals</Badge>
+                          )}
+                        </div>
                       )}
-                      {lesson.differentiation_options.generateComprehensionQuestions && (
-                        <Badge variant="secondary" className="text-xs">❓ Questions</Badge>
-                      )}
-                      {lesson.differentiation_options.includeGraphicOrganizers && (
-                        <Badge variant="secondary" className="text-xs">📊 Organizers</Badge>
-                      )}
-                      {lesson.differentiation_options.includeVisualPlaceholders && (
-                        <Badge variant="secondary" className="text-xs">🖼️ Visuals</Badge>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1 gap-2"
-                      onClick={() => window.open(`/lesson/${lesson.id}`, '_blank')}
-                    >
-                      <Eye className="h-4 w-4" />
-                      View
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(`/lesson/${lesson.id}/audio`, '_blank')}
-                      title="Audio Files"
-                    >
-                      <Headphones className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setLessonForImages(lesson)}
-                      title="View Images"
-                    >
-                      <ImageIcon className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleStartEdit(lesson)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setLessonToDelete(lesson)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1 gap-2"
+                          onClick={() => window.open(`/lesson/${lesson.id}`, '_blank')}
+                        >
+                          <Eye className="h-4 w-4" />
+                          View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(`/lesson/${lesson.id}/audio`, '_blank')}
+                          title="Audio Files"
+                        >
+                          <Headphones className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setLessonForImages(lesson)}
+                          title="View Images"
+                        >
+                          <ImageIcon className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleStartEdit(lesson)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setLessonToDelete(lesson)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </main>
