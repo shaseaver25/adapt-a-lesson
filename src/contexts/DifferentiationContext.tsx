@@ -19,7 +19,6 @@ export interface DifferentiationOptions {
   includeVisualPlaceholders: boolean;
   includeGraphicOrganizers: boolean;
   graphicOrganizerType: GraphicOrganizerType;
-  outputFormat: 'markdown' | 'pdf-ready' | 'google-docs';
 }
 
 interface DifferentiationState {
@@ -59,7 +58,6 @@ const defaultOptions: DifferentiationOptions = {
   includeVisualPlaceholders: true,
   includeGraphicOrganizers: false,
   graphicOrganizerType: 'auto',
-  outputFormat: 'markdown',
 };
 
 const DifferentiationContext = createContext<DifferentiationState | undefined>(undefined);
