@@ -29,6 +29,7 @@ export interface RubricExportOptions {
 }
 
 export interface RubricInput {
+  rubricName?: string;
   assessmentDescription: string;
   learningObjectives: string[];
   numCriteria: number;

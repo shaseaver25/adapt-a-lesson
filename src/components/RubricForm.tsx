@@ -21,7 +21,7 @@ import { RubricInput, AIProofSettings, VerificationCheckpoints } from '@/types/r
 import { AIVulnerabilityAnalysis as AnalysisType } from '@/types/vulnerabilityAnalysis';
 import { AIVulnerabilityAnalysis } from './AIVulnerabilityAnalysis';
 import { SavedAssessmentSelector } from './SavedAssessmentSelector';
-import { FileText, GraduationCap, Plus, X, Shield, Loader2, ChevronDown, Settings2, ClipboardCheck, FolderOpen } from 'lucide-react';
+import { FileText, GraduationCap, Plus, X, Shield, Loader2, ChevronDown, Settings2, ClipboardCheck, FolderOpen, TableProperties } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -51,6 +51,7 @@ const DEFAULT_VERIFICATION_CHECKPOINTS: VerificationCheckpoints = {
 };
 
 export function RubricForm({ onSubmit, isLoading }: RubricFormProps) {
+  const [rubricName, setRubricName] = useState('');
   const [assessmentDescription, setAssessmentDescription] = useState('');
   const [objectives, setObjectives] = useState<string[]>(['']);
   const [numCriteria, setNumCriteria] = useState('4');
@@ -199,6 +200,7 @@ ${enhancements.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
 
   const handleGenerateAsIs = () => {
     const input: RubricInput = {
+      rubricName: rubricName.trim() || undefined,
       assessmentDescription,
       learningObjectives: objectives.filter((o) => o.trim() !== ''),
       numCriteria: parseInt(numCriteria, 10),
@@ -232,6 +234,26 @@ ${enhancements.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
       </div>
 
       <form onSubmit={handleAnalyze} className="space-y-8">
+        {/* Rubric Name */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-foreground">
+            <TableProperties className="h-5 w-5 text-primary" />
+            <h3 className="font-display font-bold text-lg">Rubric Name</h3>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="rubricName">
+              Give your rubric a name (optional)
+            </Label>
+            <Input
+              id="rubricName"
+              placeholder="e.g., Food Web Poster Rubric"
+              value={rubricName}
+              onChange={(e) => setRubricName(e.target.value)}
+              disabled={isAnalyzing || isLoading}
+            />
+          </div>
+        </div>
+
         {/* Assessment Description */}
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">

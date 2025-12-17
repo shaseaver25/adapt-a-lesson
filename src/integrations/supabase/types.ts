@@ -442,6 +442,7 @@ export type Database = {
           learning_objectives: string[]
           num_criteria: number
           rubric_content: string
+          rubric_name: string | null
           updated_at: string
           user_id: string | null
           verification_checkpoints: string[] | null
@@ -459,6 +460,7 @@ export type Database = {
           learning_objectives: string[]
           num_criteria?: number
           rubric_content: string
+          rubric_name?: string | null
           updated_at?: string
           user_id?: string | null
           verification_checkpoints?: string[] | null
@@ -476,6 +478,7 @@ export type Database = {
           learning_objectives?: string[]
           num_criteria?: number
           rubric_content?: string
+          rubric_name?: string | null
           updated_at?: string
           user_id?: string | null
           verification_checkpoints?: string[] | null
