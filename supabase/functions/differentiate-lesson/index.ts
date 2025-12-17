@@ -346,10 +346,23 @@ Remember:
       }
     }
 
-    // Validate structure
-    if (!lessonData.teacherGuide || !Array.isArray(lessonData.studentHandouts)) {
-      console.error('Invalid structure:', Object.keys(lessonData));
-      throw new Error('AI response missing required fields');
+    // Validate and fix structure
+    if (!lessonData.teacherGuide) {
+      console.error('Invalid structure - missing teacherGuide:', Object.keys(lessonData));
+      throw new Error('AI response missing teacher guide');
+    }
+
+    // If studentHandouts is missing or not an array, create fallback handouts
+    if (!Array.isArray(lessonData.studentHandouts) || lessonData.studentHandouts.length === 0) {
+      console.warn('studentHandouts missing or empty, creating fallback handouts for each group');
+      lessonData.studentHandouts = sortedGroups.map((g: StudentGroup) => ({
+        groupId: g.id,
+        groupName: g.groupName,
+        level: LEVEL_MAP[g.readingLevelLabel] || 'flames',
+        language: g.homeLanguage,
+        content: `# ${g.groupName} Handout\n\n**Name:** _____ **Date:** _____\n\n🎯 **Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*`,
+        englishContent: g.homeLanguage !== 'English' ? `# ${g.groupName} Handout\n\n**Name:** _____ **Date:** _____\n\n🎯 **Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*` : null
+      }));
     }
 
     console.log(`Generated: teacherGuide (${lessonData.teacherGuide.length} chars), ${lessonData.studentHandouts.length} handouts`);
