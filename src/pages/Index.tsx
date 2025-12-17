@@ -265,7 +265,7 @@ const Index = () => {
               </div>
               <div>
                 <h2 className="font-display font-bold text-xl text-foreground">
-                  Differentiated Lesson Ready
+                  {lastDifferentiateInput?.lessonName || 'Lesson'} Ready
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   Customized for {selectedGroups.length} student group{selectedGroups.length !== 1 ? 's' : ''}
@@ -286,7 +286,7 @@ const Index = () => {
             <DifferentiatedLessonOutput 
               lessonData={differentiatedLesson} 
               selectedGroups={selectedGroups}
-              lessonTitle="Differentiated Lesson"
+              lessonTitle={lastDifferentiateInput?.lessonName || 'Differentiated Lesson'}
               originalContent={originalLessonContent}
               onSaved={handleLessonSaved}
               lessonId={currentLessonId}
