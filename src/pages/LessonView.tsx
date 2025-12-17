@@ -35,7 +35,7 @@ interface SavedLesson {
 export default function LessonView() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const { loading: authLoading } = useAuthContext();
+  const { loading: authLoading, user } = useAuthContext();
   const [copied, setCopied] = useState(false);
 
   const { data: lesson, isLoading, error } = useQuery({
@@ -54,6 +54,17 @@ export default function LessonView() {
     },
     enabled: !!id && !authLoading,
   });
+
+  // Debug logging
+  console.log('=== LessonView Debug ===');
+  console.log('URL id param:', id);
+  console.log('Auth loading:', authLoading);
+  console.log('User:', user?.id || 'No user');
+  console.log('Query enabled:', !!id && !authLoading);
+  console.log('Query isLoading:', isLoading);
+  console.log('Query error:', error);
+  console.log('Query data:', lesson);
+  console.log('========================');
 
   // Combine teacher guide and student handouts for full view
   const getFullContent = (lesson: SavedLesson): string => {
