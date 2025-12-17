@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { LoginModal } from '@/components/LoginModal';
 import { Play, Clock, Globe, Shield, BarChart3, Accessibility, Sparkles } from 'lucide-react';
+import shannonPhoto from '@/assets/shannon-seaver.jpg';
 
 // Video player component for back-to-back videos
 function GettingStartedVideoPlayer() {
@@ -444,20 +445,26 @@ export default function Landing() {
                 role: 'Founder & CEO',
                 bio: 'Tekne Award-winning National Board Certified Teacher with 15+ years in the classroom. Master\'s in Mathematics from Bemidji State University. Building the future of differentiated learning.',
                 email: 'shannon@creatempls.org',
+                image: shannonPhoto,
               },
               {
                 name: 'Jena Zangs',
                 role: 'Co-Founder & Data Lead',
                 bio: 'Chief Data & Analytics Officer at University of St. Thomas. Women in AI Minnesota Ambassador. Bringing data science expertise to transform educational outcomes.',
                 email: '',
+                image: null,
               },
             ].map((member, i) => (
               <div key={i} className="bg-card rounded-3xl overflow-hidden shadow-xl hover:-translate-y-2 hover:shadow-2xl transition-all">
                 <div className="aspect-square bg-gradient-to-br from-accent/50 to-primary/50 relative flex items-center justify-center">
-                  <div className="w-4/5 h-4/5 bg-white/20 rounded-2xl border-2 border-dashed border-white/40 flex flex-col items-center justify-center text-white">
-                    <span className="text-5xl mb-2">📸</span>
-                    <span className="text-sm opacity-80">{member.name.split(' ')[0]}'s Photo</span>
-                  </div>
+                  {member.image ? (
+                    <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-4/5 h-4/5 bg-white/20 rounded-2xl border-2 border-dashed border-white/40 flex flex-col items-center justify-center text-white">
+                      <span className="text-5xl mb-2">📸</span>
+                      <span className="text-sm opacity-80">{member.name.split(' ')[0]}'s Photo</span>
+                    </div>
+                  )}
                 </div>
                 <div className="p-8 text-center">
                   <h3 className="font-display text-2xl font-bold text-foreground mb-1">{member.name}</h3>
