@@ -329,7 +329,7 @@ export function DifferentiatedLessonOutput({
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between flex-wrap gap-4">
             <div>
-              <CardTitle className="font-display text-xl">Differentiated Lesson Plan</CardTitle>
+              <CardTitle className="font-display text-xl">{lessonTitle}</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 Generated for {selectedGroups.length} student group{selectedGroups.length !== 1 ? 's' : ''}
               </p>
