@@ -22,66 +22,90 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build educational diagram prompt - simple and direct for image generation
-    const prompt = `Generate an educational diagram: ${description}
+    // Build educational diagram prompt - explicit image generation request
+    const prompt = `CREATE AN IMAGE NOW. Generate a visual educational diagram showing: ${description}
 
-Requirements:
-- Clean, simple illustration suitable for K-12 students
-- High contrast, printable in black and white
+CRITICAL INSTRUCTIONS:
+- You MUST output an actual image, not just text
+- Create a clean, simple illustration suitable for K-12 students
+- Use high contrast colors that print well in black and white
 - Include all labels mentioned in the description
-- Professional textbook/worksheet quality`;
+- Make it look like a professional textbook diagram
+- DO NOT describe the image - GENERATE IT`;
 
     console.log(`Calling Nano Banana API with prompt: ${prompt.substring(0, 200)}...`);
 
-    // Call Nano Banana via Lovable AI Gateway
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        modalities: ["image", "text"],
-      }),
-    });
+    // Helper function to call API with retry
+    async function callImageAPI(attemptPrompt: string): Promise<string | null> {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image-preview",
+          messages: [
+            {
+              role: "user",
+              content: attemptPrompt,
+            },
+          ],
+          modalities: ["image", "text"],
+        }),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Nano Banana API error:", response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Nano Banana API error:", response.status, errorText);
+        
+        if (response.status === 429) {
+          throw { status: 429, message: "Rate limit exceeded. Please try again later." };
+        }
+        if (response.status === 402) {
+          throw { status: 402, message: "API credits exhausted. Please add credits to continue." };
+        }
+        
+        throw new Error(`Image generation failed: ${response.status}`);
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "API credits exhausted. Please add credits to continue." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+
+      const data = await response.json();
+      console.log("Nano Banana response received, keys:", Object.keys(data));
+      
+      const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (imageData) {
+        console.log("Image data received, length:", imageData.length);
+      } else {
+        console.log("No image in response, got text:", data.choices?.[0]?.message?.content?.substring(0, 100));
       }
       
-      throw new Error(`Image generation failed: ${response.status}`);
+      return imageData || null;
     }
 
-    const data = await response.json();
-    console.log("Nano Banana response received, keys:", Object.keys(data));
-    console.log("Response structure:", JSON.stringify(data).substring(0, 1000));
-
-    // Extract the image from the response
-    const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    // Try up to 2 attempts
+    let imageData: string | null = null;
+    
+    try {
+      imageData = await callImageAPI(prompt);
+      
+      // If first attempt failed, try with stronger prompt
+      if (!imageData) {
+        console.log("First attempt returned no image, retrying with stronger prompt...");
+        const retryPrompt = `OUTPUT IMAGE ONLY. Create a visual diagram image (not text) of: ${description}. This must be an actual generated image file.`;
+        imageData = await callImageAPI(retryPrompt);
+      }
+    } catch (err: any) {
+      if (err.status === 429 || err.status === 402) {
+        return new Response(
+          JSON.stringify({ error: err.message }),
+          { status: err.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      throw err;
+    }
     
     if (!imageData) {
-      console.error("No image in response. Full structure:", JSON.stringify(data, null, 2).substring(0, 2000));
-      console.error("Choices:", JSON.stringify(data.choices?.[0], null, 2).substring(0, 1000));
+      console.error("No image generated after 2 attempts for:", description);
       throw new Error("No image generated in response");
     }
     
