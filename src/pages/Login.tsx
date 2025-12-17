@@ -301,7 +301,7 @@ export default function Login() {
               <span className="text-forest">Let's Get </span>
               <span className="text-gold">REAL</span>
             </h1>
-            <p className="hero-subline">Responsive. Equitable. Adaptive. Learning.</p>
+            <p className="hero-subline">Responsive. Equitable. Adaptive. Learner.</p>
             <p className="hero-support">One lesson. Designed to accommodate every learner.</p>
           </header>
 

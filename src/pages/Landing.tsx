@@ -35,21 +35,21 @@ export default function Landing() {
       <nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-8 py-4 bg-background/80 backdrop-blur-xl border-b border-border/50">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <a href="#" className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg transform -rotate-3">
-              A
+            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg transform -rotate-3">
+              R
             </div>
-            <span className="font-display text-xl font-bold text-foreground">
-              Authentic<span className="text-secondary">Learning</span>
+            <span className="font-display text-xl font-bold text-primary">
+              Let's Get <span className="text-accent">REAL</span>
             </span>
           </a>
           <div className="hidden md:flex items-center gap-8">
-            <button onClick={() => scrollToSection('features')} className="text-foreground/80 hover:text-secondary transition-colors font-medium">Features</button>
-            <button onClick={() => scrollToSection('why')} className="text-foreground/80 hover:text-secondary transition-colors font-medium">Why Us</button>
-            <button onClick={() => scrollToSection('videos')} className="text-foreground/80 hover:text-secondary transition-colors font-medium">Videos</button>
-            <button onClick={() => scrollToSection('team')} className="text-foreground/80 hover:text-secondary transition-colors font-medium">Team</button>
+            <button onClick={() => scrollToSection('features')} className="text-foreground/80 hover:text-primary transition-colors font-medium">Features</button>
+            <button onClick={() => scrollToSection('why')} className="text-foreground/80 hover:text-primary transition-colors font-medium">Why Us</button>
+            <button onClick={() => scrollToSection('videos')} className="text-foreground/80 hover:text-primary transition-colors font-medium">Videos</button>
+            <button onClick={() => scrollToSection('team')} className="text-foreground/80 hover:text-primary transition-colors font-medium">Team</button>
             <button
               onClick={() => setLoginOpen(true)}
-              className="px-6 py-2.5 bg-gradient-to-r from-secondary to-secondary/80 text-white rounded-full font-semibold shadow-lg shadow-secondary/30 hover:shadow-xl hover:shadow-secondary/40 hover:-translate-y-0.5 transition-all"
+              className="px-6 py-2.5 bg-primary text-white rounded-full font-semibold shadow-lg shadow-primary/30 hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/40 hover:-translate-y-0.5 transition-all"
             >
               Get Started
             </button>
@@ -66,14 +66,13 @@ export default function Landing() {
               Built at She Builds Hackathon 2024
             </div>
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-              Let's Get{' '}
-              <span className="bg-gradient-to-r from-secondary via-accent to-primary bg-clip-text text-transparent">
-                REAL
-              </span>
-              {' '}About Learning
+              <span className="text-primary">Let's Get REAL</span>
             </h1>
+            <p className="text-lg md:text-xl text-foreground font-medium mb-2">
+              <span className="text-primary">R</span>esponsive. <span className="text-primary">E</span>quitable. <span className="text-primary">A</span>daptive. <span className="text-primary">L</span>earner.
+            </p>
             <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8 max-w-lg">
-              AI-powered differentiated lessons and authentic assessments generated in 60 seconds. Because every student deserves learning that fits them.
+              Differentiated lessons and authentic assessments generated in 60 seconds. Because every student deserves learning that fits them.
             </p>
             <div className="flex flex-wrap gap-4 mb-10">
               <button
@@ -91,15 +90,15 @@ export default function Landing() {
             </div>
             <div className="flex gap-8 md:gap-12 pt-6 border-t border-border/50">
               <div>
-                <div className="font-display text-3xl md:text-4xl font-bold text-secondary">60s</div>
+                <div className="font-display text-3xl md:text-4xl font-bold text-primary">60s</div>
                 <div className="text-sm text-muted-foreground">Lesson Generation</div>
               </div>
               <div>
-                <div className="font-display text-3xl md:text-4xl font-bold text-secondary">12+</div>
+                <div className="font-display text-3xl md:text-4xl font-bold text-primary">12+</div>
                 <div className="text-sm text-muted-foreground">Languages</div>
               </div>
               <div>
-                <div className="font-display text-3xl md:text-4xl font-bold text-secondary">100%</div>
+                <div className="font-display text-3xl md:text-4xl font-bold text-primary">100%</div>
                 <div className="text-sm text-muted-foreground">Authentic Assessments</div>
               </div>
             </div>
@@ -108,7 +107,7 @@ export default function Landing() {
           {/* Hero Login Card */}
           <div className="bg-card rounded-3xl p-8 shadow-2xl border border-border/50 animate-fade-in" style={{ animationDelay: '0.2s' }}>
             <div className="h-1.5 bg-gradient-to-r from-secondary via-primary to-accent rounded-full -mt-8 mx-[-32px] mb-8" style={{ marginTop: '-32px', marginLeft: '-32px', marginRight: '-32px', borderRadius: '24px 24px 0 0' }} />
-            <h2 className="font-display text-2xl font-bold text-foreground mb-2">Welcome Back</h2>
+            <h2 className="font-display text-2xl font-bold text-primary mb-2">Welcome Back</h2>
             <p className="text-muted-foreground mb-6">Sign in to access your classroom</p>
             
             <div className="space-y-3 mb-4">
@@ -140,14 +139,14 @@ export default function Landing() {
 
             <button
               onClick={() => setLoginOpen(true)}
-              className="w-full py-3 bg-gradient-to-r from-secondary to-secondary/90 text-white rounded-xl font-semibold shadow-lg shadow-secondary/30 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+              className="w-full py-3 bg-primary text-white rounded-xl font-semibold shadow-lg shadow-primary/30 hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all"
             >
               Sign In with Email
             </button>
 
             <p className="mt-4 text-center text-sm text-muted-foreground">
-              New to Authentic Learning?{' '}
-              <Link to="/register" className="text-secondary font-semibold hover:underline">
+              New here?{' '}
+              <Link to="/register" className="text-primary font-semibold hover:underline">
                 Create an account
               </Link>
             </p>
@@ -156,8 +155,8 @@ export default function Landing() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 px-4 md:px-8 bg-foreground relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-secondary/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
+      <section id="features" className="py-24 px-4 md:px-8 bg-primary relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-white/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
         
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center mb-16">
@@ -166,24 +165,24 @@ export default function Landing() {
               Transform Your Classroom in Minutes
             </h2>
             <p className="text-white/70 text-lg max-w-2xl mx-auto">
-              Our AI-powered platform creates differentiated, accessible, and authentic learning experiences tailored to your unique classroom needs.
+              Our platform creates differentiated, accessible, and authentic learning experiences tailored to your unique classroom needs.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { icon: Clock, color: 'from-secondary to-secondary/70', title: '60-Second Lessons', desc: 'Input your topic and class profile. Get complete, differentiated lesson packages instantly—no more hours of prep work.' },
-              { icon: Shield, color: 'from-primary to-primary/70', title: 'Smart Differentiation', desc: 'Automatically generates multiple reading levels, visual supports, and IEP accommodations for every learner in your room.' },
-              { icon: Globe, color: 'from-accent to-accent/70', title: '12+ Languages', desc: 'Multilingual audio and translations for ELL students. Support for Spanish, Hmong, Somali, and more built right in.' },
-              { icon: Sparkles, color: 'from-accent to-secondary', title: 'Authentic Assessments', desc: 'Authentic assessments that require real thinking—process checkpoints, artifacts, and reflection that ChatGPT can\'t fake.' },
-              { icon: BarChart3, color: 'from-primary/80 to-accent/80', title: 'Real-Time Analytics', desc: 'Track engagement, identify struggling students, and see exactly where your class needs support—instantly.' },
-              { icon: Accessibility, color: 'from-secondary/80 to-primary/80', title: 'Accessibility First', desc: 'WCAG 2.1 AA compliant. Text-to-speech, dyslexia fonts, keyboard navigation, and extended time—all built in.' },
+              { icon: Clock, color: 'bg-accent', title: '60-Second Lessons', desc: 'Input your topic and class profile. Get complete, differentiated lesson packages instantly—no more hours of prep work.' },
+              { icon: Shield, color: 'bg-white/20', title: 'Smart Differentiation', desc: 'Automatically generates multiple reading levels, visual supports, and IEP accommodations for every learner in your room.' },
+              { icon: Globe, color: 'bg-accent', title: '12+ Languages', desc: 'Multilingual audio and translations for ELL students. Support for Spanish, Hmong, Somali, and more built right in.' },
+              { icon: Sparkles, color: 'bg-white/20', title: 'Authentic Assessments', desc: 'Authentic assessments that require real thinking—process checkpoints, artifacts, and reflection.' },
+              { icon: BarChart3, color: 'bg-accent', title: 'Real-Time Analytics', desc: 'Track engagement, identify struggling students, and see exactly where your class needs support—instantly.' },
+              { icon: Accessibility, color: 'bg-white/20', title: 'Accessibility First', desc: 'WCAG 2.1 AA compliant. Text-to-speech, dyslexia fonts, keyboard navigation, and extended time—all built in.' },
             ].map((feature, i) => (
               <div
                 key={i}
                 className="bg-white/5 border border-white/10 rounded-2xl p-8 hover:-translate-y-2 hover:border-transparent transition-all duration-300 group"
               >
-                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6 shadow-lg`}>
+                <div className={`w-16 h-16 rounded-2xl ${feature.color} flex items-center justify-center mb-6 shadow-lg`}>
                   <feature.icon className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="font-display text-xl font-bold text-white mb-3">{feature.title}</h3>
@@ -247,12 +246,12 @@ export default function Landing() {
                   </li>
                 ))}
               </ul>
-              <button
-                onClick={() => setLoginOpen(true)}
-                className="px-8 py-3 bg-gradient-to-r from-secondary to-secondary/90 text-white rounded-full font-semibold shadow-lg shadow-secondary/30 hover:shadow-xl hover:-translate-y-0.5 transition-all"
-              >
-                Try It Free
-              </button>
+            <button
+              onClick={() => setLoginOpen(true)}
+              className="px-8 py-3 bg-primary text-white rounded-full font-semibold shadow-lg shadow-primary/30 hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+            >
+              Try It Free
+            </button>
             </div>
           </div>
         </div>

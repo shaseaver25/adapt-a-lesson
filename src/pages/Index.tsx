@@ -118,11 +118,11 @@ const Index = () => {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <h1 className="font-display font-bold text-xl text-foreground">
-              Authentic Learning Studio
+            <h1 className="font-display font-bold text-xl text-primary">
+              Let's Get REAL
             </h1>
             <p className="text-xs text-muted-foreground">
-              Let's get <span className="font-semibold text-primary">REAL</span>
+              Responsive. Equitable. Adaptive. <span className="font-semibold">Learner.</span>
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -207,15 +207,15 @@ const Index = () => {
           <div className="max-w-3xl mx-auto">
             {/* Hero section */}
             <div className="text-center mb-8 animate-fade-in">
-              <h2 className="font-display font-extrabold text-3xl md:text-4xl text-foreground mb-3">
-                Let's Get <span className="text-primary">REAL</span>
+              <h2 className="font-display font-extrabold text-3xl md:text-4xl text-primary mb-3">
+                Let's Get REAL
               </h2>
               <p className="text-lg text-muted-foreground mb-2">
-                <span className="font-semibold">R</span>esponsive. <span className="font-semibold">E</span>quitable. <span className="font-semibold">A</span>daptive. <span className="font-semibold">L</span>earning.
+                <span className="font-semibold text-primary">R</span>esponsive. <span className="font-semibold text-primary">E</span>quitable. <span className="font-semibold text-primary">A</span>daptive. <span className="font-semibold text-primary">L</span>earner.
               </p>
               <p className="text-muted-foreground max-w-xl mx-auto">
-                Create personalized lessons for every learner and design authentic, 
-                AI-resistant assessments that reveal genuine student thinking.
+                Create personalized lessons for every learner and design authentic 
+                assessments that reveal genuine student thinking.
               </p>
             </div>
 
