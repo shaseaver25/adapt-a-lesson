@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -598,7 +599,7 @@ export function DifferentiatedLessonOutput({
                                 <span>{handout.language}</span>
                               </div>
                               <div className="prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown components={createMarkdownComponents(imageMap)}>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(imageMap)}>
                                   {processContentWithImages(handout.content, imageMap)}
                                 </ReactMarkdown>
                               </div>
@@ -611,7 +612,7 @@ export function DifferentiatedLessonOutput({
                                 <span>English</span>
                               </div>
                               <div className="prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown components={createMarkdownComponents(imageMap)}>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(imageMap)}>
                                   {processContentWithImages(handout.englishContent || '', imageMap)}
                                 </ReactMarkdown>
                               </div>
@@ -620,7 +621,7 @@ export function DifferentiatedLessonOutput({
                         ) : (
                           // Single column for English-only
                           <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <ReactMarkdown components={createMarkdownComponents(imageMap)}>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(imageMap)}>
                               {processContentWithImages(handout.content, imageMap)}
                             </ReactMarkdown>
                           </div>
@@ -639,7 +640,7 @@ export function DifferentiatedLessonOutput({
             {/* Teacher Guide */}
             <TabsContent value="teacher" className="mt-0 p-4">
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown components={createMarkdownComponents(imageMap)}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(imageMap)}>
                   {processContentWithImages(teacherGuide, imageMap)}
                 </ReactMarkdown>
               </div>
