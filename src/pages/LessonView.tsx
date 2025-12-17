@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import LessonImageFrame from '@/components/LessonImageFrame';
 import { format } from 'date-fns';
 import { 
   ArrowLeft, 
@@ -31,6 +33,76 @@ interface SavedLesson {
   created_at: string;
   updated_at: string;
 }
+
+// Custom markdown component mappings for enhanced HTML rendering
+const markdownComponents = {
+  img: ({ src, alt }: { src?: string; alt?: string }) => (
+    <LessonImageFrame src={src || ''} alt={alt || ''} />
+  ),
+  h1: ({ children }: { children?: React.ReactNode }) => (
+    <h1 className="text-2xl font-display font-bold text-primary mt-6 mb-4 pb-2 border-b border-border">{children}</h1>
+  ),
+  h2: ({ children }: { children?: React.ReactNode }) => (
+    <h2 className="text-xl font-display font-semibold text-primary/90 mt-5 mb-3">{children}</h2>
+  ),
+  h3: ({ children }: { children?: React.ReactNode }) => (
+    <h3 className="text-lg font-display font-medium text-primary/80 mt-4 mb-2">{children}</h3>
+  ),
+  h4: ({ children }: { children?: React.ReactNode }) => (
+    <h4 className="text-base font-semibold text-foreground mt-3 mb-2">{children}</h4>
+  ),
+  p: ({ children }: { children?: React.ReactNode }) => (
+    <p className="text-foreground/90 leading-relaxed mb-3">{children}</p>
+  ),
+  ul: ({ children }: { children?: React.ReactNode }) => (
+    <ul className="list-disc list-inside space-y-1.5 mb-4 ml-2">{children}</ul>
+  ),
+  ol: ({ children }: { children?: React.ReactNode }) => (
+    <ol className="list-decimal list-inside space-y-1.5 mb-4 ml-2">{children}</ol>
+  ),
+  li: ({ children }: { children?: React.ReactNode }) => (
+    <li className="text-foreground/90">{children}</li>
+  ),
+  strong: ({ children }: { children?: React.ReactNode }) => (
+    <strong className="font-semibold text-foreground">{children}</strong>
+  ),
+  em: ({ children }: { children?: React.ReactNode }) => (
+    <em className="italic text-foreground/80">{children}</em>
+  ),
+  blockquote: ({ children }: { children?: React.ReactNode }) => (
+    <blockquote className="border-l-4 border-primary/50 pl-4 py-2 my-4 bg-primary/5 rounded-r-md italic">{children}</blockquote>
+  ),
+  hr: () => <hr className="my-6 border-border" />,
+  table: ({ children }: { children?: React.ReactNode }) => (
+    <div className="overflow-x-auto my-4">
+      <table className="w-full border-collapse border border-border rounded-lg">{children}</table>
+    </div>
+  ),
+  thead: ({ children }: { children?: React.ReactNode }) => (
+    <thead className="bg-muted/50">{children}</thead>
+  ),
+  tbody: ({ children }: { children?: React.ReactNode }) => (
+    <tbody className="divide-y divide-border">{children}</tbody>
+  ),
+  tr: ({ children }: { children?: React.ReactNode }) => (
+    <tr className="hover:bg-muted/30 transition-colors">{children}</tr>
+  ),
+  th: ({ children }: { children?: React.ReactNode }) => (
+    <th className="px-4 py-2 text-left font-semibold text-foreground border border-border">{children}</th>
+  ),
+  td: ({ children }: { children?: React.ReactNode }) => (
+    <td className="px-4 py-2 text-foreground/90 border border-border">{children}</td>
+  ),
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
+    <a href={href} className="text-primary hover:text-primary/80 underline underline-offset-2" target="_blank" rel="noopener noreferrer">{children}</a>
+  ),
+  code: ({ children }: { children?: React.ReactNode }) => (
+    <code className="px-1.5 py-0.5 bg-muted rounded text-sm font-mono">{children}</code>
+  ),
+  pre: ({ children }: { children?: React.ReactNode }) => (
+    <pre className="p-4 bg-muted rounded-lg overflow-x-auto my-4">{children}</pre>
+  ),
+};
 
 export default function LessonView() {
   const { id } = useParams<{ id: string }>();
@@ -284,21 +356,14 @@ export default function LessonView() {
               </div>
             )}
 
-            {/* Markdown content */}
-            <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none 
-              prose-headings:font-display prose-headings:text-foreground
-              prose-h1:text-2xl prose-h1:border-b prose-h1:border-border prose-h1:pb-3 prose-h1:mb-6 prose-h1:text-primary
-              prose-h2:text-xl prose-h2:mt-8 prose-h2:mb-4 prose-h2:text-primary/90
-              prose-h3:text-lg prose-h3:text-primary/80
-              prose-p:leading-relaxed prose-p:text-foreground/90
-              prose-ul:my-3 prose-li:my-1
-              prose-strong:text-foreground
-              prose-hr:border-border prose-hr:my-8
-              prose-table:border-collapse prose-table:w-full
-              prose-th:border prose-th:border-border prose-th:p-2 prose-th:bg-muted
-              prose-td:border prose-td:border-border prose-td:p-2
-            ">
-              <ReactMarkdown>{fullContent}</ReactMarkdown>
+            {/* Markdown content with custom components */}
+            <div className="max-w-none">
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]}
+                components={markdownComponents}
+              >
+                {fullContent}
+              </ReactMarkdown>
             </div>
           </article>
         </main>
