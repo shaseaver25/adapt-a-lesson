@@ -52,7 +52,9 @@ export default function LessonView() {
       if (error) throw error;
       return data as SavedLesson;
     },
-    enabled: !!id && !authLoading,
+    // CRITICAL: Wait for auth AND require user to be logged in
+    enabled: !!id && !authLoading && !!user,
+    retry: false,  // Don't retry on auth failures
   });
 
   // Debug logging
@@ -60,11 +62,25 @@ export default function LessonView() {
   console.log('URL id param:', id);
   console.log('Auth loading:', authLoading);
   console.log('User:', user?.id || 'No user');
-  console.log('Query enabled:', !!id && !authLoading);
+  console.log('Query enabled:', !!id && !authLoading && !!user);
   console.log('Query isLoading:', isLoading);
   console.log('Query error:', error);
   console.log('Query data:', lesson);
   console.log('========================');
+
+  // Handle unauthenticated state
+  if (!authLoading && !user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">Please log in to view this lesson</p>
+          <Button onClick={() => window.location.href = `/?redirect=/lesson/${id}`}>
+            Log In
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Combine teacher guide and student handouts for full view
   const getFullContent = (lesson: SavedLesson): string => {
