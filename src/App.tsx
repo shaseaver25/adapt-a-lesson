@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import StudentGroups from "./pages/StudentGroups";
 import SavedLessons from "./pages/SavedLessons";
 import SavedRubrics from "./pages/SavedRubrics";
+import SavedAssessments from "./pages/SavedAssessments";
 import AudioUsage from "./pages/AudioUsage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -47,6 +48,7 @@ const App = () => (
                 <Route path="/lesson/:id" element={<LessonView />} />
                 <Route path="/lesson/:id/audio" element={<LessonAudioView />} />
                 <Route path="/saved-rubrics" element={<SavedRubrics />} />
+                <Route path="/saved-assessments" element={<SavedAssessments />} />
                 <Route path="/audio-usage" element={<AudioUsage />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />

@@ -13,6 +13,7 @@ export interface AssessmentInput {
 
 interface UseAssessmentGeneratorReturn {
   generatedAssessment: string | null;
+  lastAssessmentInput: AssessmentInput | null;
   isGeneratingAssessment: boolean;
   handleGenerateAssessment: (input: AssessmentInput) => Promise<void>;
   handleResetAssessment: () => void;
@@ -20,10 +21,12 @@ interface UseAssessmentGeneratorReturn {
 
 export function useAssessmentGenerator(): UseAssessmentGeneratorReturn {
   const [generatedAssessment, setGeneratedAssessment] = useState<string | null>(null);
+  const [lastAssessmentInput, setLastAssessmentInput] = useState<AssessmentInput | null>(null);
   const [isGeneratingAssessment, setIsGeneratingAssessment] = useState(false);
 
   const handleGenerateAssessment = async (input: AssessmentInput) => {
     setIsGeneratingAssessment(true);
+    setLastAssessmentInput(input);
 
     try {
       const assessmentInput = {
@@ -68,10 +71,12 @@ export function useAssessmentGenerator(): UseAssessmentGeneratorReturn {
 
   const handleResetAssessment = () => {
     setGeneratedAssessment(null);
+    setLastAssessmentInput(null);
   };
 
   return {
     generatedAssessment,
+    lastAssessmentInput,
     isGeneratingAssessment,
     handleGenerateAssessment,
     handleResetAssessment,

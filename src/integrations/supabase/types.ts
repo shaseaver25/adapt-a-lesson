@@ -263,6 +263,69 @@ export type Database = {
         }
         Relationships: []
       }
+      generated_assessments: {
+        Row: {
+          assessment_content: string
+          city: string | null
+          created_at: string
+          grade_level: string | null
+          id: string
+          learning_objectives: string[] | null
+          lesson_title: string | null
+          local_context_details: string | null
+          method_category: string | null
+          method_name: string | null
+          method_outputs: Json | null
+          school_name: string | null
+          state: string | null
+          storage_path: string | null
+          subject: string | null
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          assessment_content: string
+          city?: string | null
+          created_at?: string
+          grade_level?: string | null
+          id?: string
+          learning_objectives?: string[] | null
+          lesson_title?: string | null
+          local_context_details?: string | null
+          method_category?: string | null
+          method_name?: string | null
+          method_outputs?: Json | null
+          school_name?: string | null
+          state?: string | null
+          storage_path?: string | null
+          subject?: string | null
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          assessment_content?: string
+          city?: string | null
+          created_at?: string
+          grade_level?: string | null
+          id?: string
+          learning_objectives?: string[] | null
+          lesson_title?: string | null
+          local_context_details?: string | null
+          method_category?: string | null
+          method_name?: string | null
+          method_outputs?: Json | null
+          school_name?: string | null
+          state?: string | null
+          storage_path?: string | null
+          subject?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       generated_audio: {
         Row: {
           audio_url: string
