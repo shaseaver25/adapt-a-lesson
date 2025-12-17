@@ -60,7 +60,6 @@ export interface DifferentiateInput {
     includeVisualPlaceholders: boolean;
     includeGraphicOrganizers: boolean;
     graphicOrganizerType: GraphicOrganizerType;
-    outputFormat: 'markdown' | 'pdf-ready' | 'google-docs';
   };
 }
 
@@ -460,22 +459,6 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
             )}
           </div>
 
-          <div className="p-3 rounded-lg border border-border bg-background">
-            <Label htmlFor="outputFormat" className="text-sm font-medium text-foreground">📄 Output Format</Label>
-            <Select 
-              value={options.outputFormat} 
-              onValueChange={(v) => setOptions({ outputFormat: v as typeof options.outputFormat })}
-            >
-              <SelectTrigger className="mt-2">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="markdown">Markdown</SelectItem>
-                <SelectItem value="pdf-ready">PDF-Ready</SelectItem>
-                <SelectItem value="google-docs">Google Docs Format</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
       </div>
 
