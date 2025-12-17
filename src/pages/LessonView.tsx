@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthContext } from '@/contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import { format } from 'date-fns';
 import { 
@@ -34,6 +35,7 @@ interface SavedLesson {
 export default function LessonView() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const { loading: authLoading } = useAuthContext();
   const [copied, setCopied] = useState(false);
 
   const { data: lesson, isLoading, error } = useQuery({
@@ -50,7 +52,7 @@ export default function LessonView() {
       if (error) throw error;
       return data as SavedLesson;
     },
-    enabled: !!id,
+    enabled: !!id && !authLoading,
   });
 
   // Combine teacher guide and student handouts for full view
@@ -109,7 +111,7 @@ export default function LessonView() {
     toast({ title: 'Downloaded!', description: 'Lesson saved as markdown file.' });
   };
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
