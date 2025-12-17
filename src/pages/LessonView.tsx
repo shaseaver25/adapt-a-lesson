@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +13,7 @@ import LessonImageFrame from '@/components/LessonImageFrame';
 import { format } from 'date-fns';
 import { getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentHandout } from '@/types/differentiatedLesson';
+import { useLessonImagesDB } from '@/hooks/useLessonImagesDB';
 import { 
   ArrowLeft, 
   Printer, 
@@ -167,12 +168,62 @@ export default function LessonView() {
     retry: false,
   });
 
+  // Image fetching
+  const { fetchImages } = useLessonImagesDB();
+  const [imageMap, setImageMap] = useState<Map<string, string>>(new Map());
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+
+  // Process content to replace [VISUAL:] and [NANOBANANA:] tags with actual images
+  const processContentWithImages = useCallback((content: string): string => {
+    if (!content || imageMap.size === 0) return content;
+    
+    let processed = content;
+    
+    // Replace [VISUAL: description] with markdown image
+    processed = processed.replace(/\[VISUAL:\s*(.+?)\]/gi, (match, description) => {
+      const desc = description.trim();
+      const imageUrl = imageMap.get(desc);
+      if (imageUrl) {
+        return `\n\n![${desc}](${imageUrl})\n\n*${desc}*\n\n`;
+      }
+      return match;
+    });
+    
+    // Also handle [NANOBANANA: "..."] format
+    processed = processed.replace(/\[NANOBANANA:\s*"(.+?)"\]/gi, (match, description) => {
+      const desc = description.trim();
+      const imageUrl = imageMap.get(desc);
+      if (imageUrl) {
+        return `\n\n![${desc}](${imageUrl})\n\n*${desc}*\n\n`;
+      }
+      return match;
+    });
+    
+    return processed;
+  }, [imageMap]);
+
   // Set default active group tab when lesson loads
-  React.useEffect(() => {
+  useEffect(() => {
     if (lesson?.student_handouts && Array.isArray(lesson.student_handouts) && lesson.student_handouts.length > 0) {
       setActiveGroupTab(lesson.student_handouts[0].groupId || '0');
     }
   }, [lesson]);
+
+  // Fetch images when lesson loads
+  useEffect(() => {
+    if (lesson?.id) {
+      fetchImages(lesson.id).then((images) => {
+        const map = new Map<string, string>();
+        images.forEach((img) => {
+          if (img.description && img.signedUrl) {
+            map.set(img.description, img.signedUrl);
+          }
+        });
+        setImageMap(map);
+        setImagesLoaded(true);
+      });
+    }
+  }, [lesson?.id, fetchImages]);
 
   // Handle unauthenticated state
   if (!authLoading && !user) {
@@ -510,7 +561,7 @@ export default function LessonView() {
                                       remarkPlugins={[remarkGfm]}
                                       components={markdownComponents}
                                     >
-                                      {handout.content}
+                                      {processContentWithImages(handout.content)}
                                     </ReactMarkdown>
                                   </div>
                                 </div>
@@ -526,7 +577,7 @@ export default function LessonView() {
                                       remarkPlugins={[remarkGfm]}
                                       components={markdownComponents}
                                     >
-                                      {handout.englishContent || ''}
+                                      {processContentWithImages(handout.englishContent || '')}
                                     </ReactMarkdown>
                                   </div>
                                 </div>
@@ -538,7 +589,7 @@ export default function LessonView() {
                                   remarkPlugins={[remarkGfm]}
                                   components={markdownComponents}
                                 >
-                                  {handout.content}
+                                  {processContentWithImages(handout.content)}
                                 </ReactMarkdown>
                               </div>
                             )}
@@ -578,7 +629,7 @@ export default function LessonView() {
                           remarkPlugins={[remarkGfm]}
                           components={markdownComponents}
                         >
-                          {lesson.teacher_guide || ''}
+                          {processContentWithImages(lesson.teacher_guide || '')}
                         </ReactMarkdown>
                       </div>
                     </div>
