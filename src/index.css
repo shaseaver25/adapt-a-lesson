@@ -7,62 +7,62 @@
 @layer base {
   :root {
     /* REAL Authentic Learning Studio Brand Colors */
-    --forest: 142 76% 24%;      /* #166534 - Primary buttons, links */
-    --gold: 32 90% 44%;          /* #D97706 - Accents, "REAL" text */
-    --clay: 21 91% 40%;          /* #C2410C - Secondary accent */
-    --sand: 40 43% 96%;          /* #FAF7F2 - Background */
-    --espresso: 25 29% 12%;      /* #2A1E17 - Body text */
+    --forest: 143 64% 24%;       /* #166534 - Primary: Forest Green */
+    --gold: 32 95% 44%;          /* #D97706 - Accent: Soft Gold */
+    --clay: 17 88% 40%;          /* #C2410C - Secondary: Clay */
+    --sand: 38 53% 96%;          /* #FAF7F2 - Background: Warm Sand */
+    --espresso: 22 29% 13%;      /* #2A1E17 - Text: Espresso */
     
     /* Map to semantic tokens */
-    --background: 40 43% 96%;
-    --foreground: 25 29% 12%;
+    --background: 38 53% 96%;
+    --foreground: 22 29% 13%;
 
     --card: 0 0% 100%;
-    --card-foreground: 25 29% 12%;
+    --card-foreground: 22 29% 13%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 25 29% 12%;
+    --popover-foreground: 22 29% 13%;
 
     /* Forest green as primary */
-    --primary: 142 76% 24%;
+    --primary: 143 64% 24%;
     --primary-foreground: 0 0% 100%;
 
-    /* Sage secondary */
-    --secondary: 150 25% 92%;
-    --secondary-foreground: 142 76% 24%;
+    /* Clay as secondary */
+    --secondary: 17 88% 40%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 40 20% 94%;
-    --muted-foreground: 25 20% 45%;
+    --muted: 38 30% 94%;
+    --muted-foreground: 22 20% 45%;
 
     /* Gold accent */
-    --accent: 32 90% 44%;
+    --accent: 32 95% 44%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 40 20% 88%;
-    --input: 40 20% 88%;
-    --ring: 142 76% 24%;
+    --border: 38 25% 88%;
+    --input: 38 25% 88%;
+    --ring: 143 64% 24%;
 
     --radius: 0.75rem;
 
     /* Custom semantic tokens */
-    --success: 142 70% 45%;
+    --success: 143 70% 45%;
     --success-foreground: 0 0% 100%;
-    --warning: 32 90% 44%;
+    --warning: 32 95% 44%;
     --info: 200 80% 50%;
 
     /* Gradients */
-    --gradient-warm: linear-gradient(135deg, hsl(32 90% 44%) 0%, hsl(21 91% 40%) 100%);
-    --gradient-sage: linear-gradient(135deg, hsl(150 30% 95%) 0%, hsl(168 40% 92%) 100%);
-    --gradient-hero: linear-gradient(180deg, hsl(40 43% 96%) 0%, hsl(40 30% 93%) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(32 95% 44%) 0%, hsl(17 88% 40%) 100%);
+    --gradient-sage: linear-gradient(135deg, hsl(143 30% 95%) 0%, hsl(143 40% 92%) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(38 53% 96%) 0%, hsl(38 40% 93%) 100%);
     
     /* Shadows */
-    --shadow-soft: 0 2px 8px -2px hsl(25 29% 12% / 0.08), 0 4px 16px -4px hsl(25 29% 12% / 0.06);
-    --shadow-medium: 0 4px 12px -2px hsl(25 29% 12% / 0.12), 0 8px 24px -4px hsl(25 29% 12% / 0.08);
-    --shadow-glow: 0 0 24px hsl(32 90% 44% / 0.25);
-    --shadow-card: 0 8px 32px hsl(25 29% 12% / 0.12);
+    --shadow-soft: 0 2px 8px -2px hsl(22 29% 13% / 0.08), 0 4px 16px -4px hsl(22 29% 13% / 0.06);
+    --shadow-medium: 0 4px 12px -2px hsl(22 29% 13% / 0.12), 0 8px 24px -4px hsl(22 29% 13% / 0.08);
+    --shadow-glow: 0 0 24px hsl(32 95% 44% / 0.25);
+    --shadow-card: 0 8px 32px hsl(22 29% 13% / 0.12);
 
     /* Typography */
     --font-display: 'Nunito', system-ui, sans-serif;
@@ -79,23 +79,23 @@
   }
 
   .dark {
-    --background: 25 20% 8%;
-    --foreground: 40 30% 95%;
+    --background: 22 20% 8%;
+    --foreground: 38 30% 95%;
 
-    --card: 25 15% 12%;
-    --card-foreground: 40 30% 95%;
+    --card: 22 15% 12%;
+    --card-foreground: 38 30% 95%;
 
-    --popover: 25 15% 12%;
-    --popover-foreground: 40 30% 95%;
+    --popover: 22 15% 12%;
+    --popover-foreground: 38 30% 95%;
 
-    --primary: 142 70% 35%;
+    --primary: 143 70% 35%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 150 15% 18%;
-    --secondary-foreground: 150 25% 85%;
+    --secondary: 17 70% 30%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 25 10% 18%;
-    --muted-foreground: 40 15% 60%;
+    --muted: 22 10% 18%;
+    --muted-foreground: 38 15% 60%;
 
     --accent: 32 85% 50%;
     --accent-foreground: 0 0% 100%;
@@ -103,9 +103,9 @@
     --destructive: 0 62.8% 40%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 25 10% 22%;
-    --input: 25 10% 22%;
-    --ring: 142 70% 35%;
+    --border: 22 10% 22%;
+    --input: 22 10% 22%;
+    --ring: 143 70% 35%;
 
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
@@ -393,7 +393,7 @@
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: hsl(142 76% 20%);
+  background: hsl(143 64% 20%);
 }
 
 .btn-primary:focus-visible {
