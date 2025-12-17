@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Copy, Check, BookOpen, GraduationCap, Save, Loader2, Volume2, Languages, LayoutTemplate, FileText, ImageIcon, RefreshCw } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Copy, Check, BookOpen, GraduationCap, Save, Loader2, Volume2, Languages, LayoutTemplate, FileText, ImageIcon, RefreshCw, Headphones } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import { OUTPUT_SECTION_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
@@ -20,6 +21,7 @@ import { ExportForLMSButton } from '@/components/export/ExportForLMSButton';
 import { useLessonImages } from '@/hooks/useLessonImages';
 import { extractVisualDescriptions } from '@/lib/imageGeneration';
 import LessonImageFrame from '@/components/LessonImageFrame';
+import { LessonImageBrowser } from '@/components/LessonImageBrowser';
 
 interface PreGeneratedAudioRecord {
   id: string;
@@ -148,6 +150,7 @@ export function DifferentiatedLessonOutput({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  const [showImageBrowser, setShowImageBrowser] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const { options } = useDifferentiation();
@@ -408,13 +411,48 @@ export function DifferentiatedLessonOutput({
             </div>
           )}
           
-          {/* Audio Ready indicator */}
-          {hasExistingAudio && (
-            <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-600" />
-              <span className="text-sm text-green-700 dark:text-green-300">
-                Audio ready ({preGeneratedAudio.length} files)
-              </span>
+          {/* Audio & Images Review Section */}
+          {(hasExistingAudio || imageMap.size > 0) && lessonId && (
+            <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-full bg-green-100 dark:bg-green-900">
+                    <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-green-700 dark:text-green-300">✅ Media Ready</p>
+                    <p className="text-xs text-muted-foreground">
+                      {hasExistingAudio && `${preGeneratedAudio.length} audio file(s)`}
+                      {hasExistingAudio && imageMap.size > 0 && ' • '}
+                      {imageMap.size > 0 && `${imageMap.size} image(s)`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {hasExistingAudio && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => window.open(`/lesson/${lessonId}/audio`, '_blank')}
+                    >
+                      <Headphones className="h-4 w-4" />
+                      Review Audio
+                    </Button>
+                  )}
+                  {imageMap.size > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setShowImageBrowser(true)}
+                    >
+                      <ImageIcon className="h-4 w-4" />
+                      Review Images
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
           
@@ -583,6 +621,17 @@ export function DifferentiatedLessonOutput({
           </Tabs>
         </CardContent>
       </Card>
+      {/* Image Browser Dialog */}
+      {lessonId && (
+        <Dialog open={showImageBrowser} onOpenChange={setShowImageBrowser}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Lesson Images</DialogTitle>
+            </DialogHeader>
+            <LessonImageBrowser lessonId={lessonId} />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
