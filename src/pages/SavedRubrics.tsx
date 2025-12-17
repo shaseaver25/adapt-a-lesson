@@ -364,8 +364,8 @@ export default function SavedRubrics() {
 
       {/* View Rubric Dialog */}
       <Dialog open={!!selectedRubric} onOpenChange={() => setSelectedRubric(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="font-display">
               {selectedRubric?.rubric_name || 'Rubric Details'}
             </DialogTitle>
@@ -377,7 +377,7 @@ export default function SavedRubrics() {
             </DialogDescription>
           </DialogHeader>
           
-          <ScrollArea className="flex-1 mt-4">
+          <ScrollArea className="flex-1 mt-4 max-h-[calc(90vh-140px)]">
             <article className="prose prose-sm dark:prose-invert max-w-none">
               {selectedRubric && (
                 <>
