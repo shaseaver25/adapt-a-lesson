@@ -355,7 +355,7 @@ export default function SavedLessons() {
 
       {/* Image Browser Dialog */}
       <Dialog open={!!lessonForImages} onOpenChange={() => setLessonForImages(null)}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ImageIcon className="h-5 w-5 text-primary" />

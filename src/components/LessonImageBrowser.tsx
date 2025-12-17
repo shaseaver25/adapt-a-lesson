@@ -127,7 +127,7 @@ export function LessonImageBrowser({ lessonId, lessonTitle, onClose }: LessonIma
           )}
         </CardHeader>
         <CardContent>
-          <ScrollArea className="max-h-[400px]">
+          <ScrollArea className="max-h-[60vh]">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {images.map((img) => (
                 <div 
