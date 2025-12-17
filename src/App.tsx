@@ -20,6 +20,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
+import LessonView from "./pages/LessonView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
                 <Route path="/sessions" element={<SessionManagement />} />
                 <Route path="/student-groups" element={<StudentGroups />} />
                 <Route path="/saved-lessons" element={<SavedLessons />} />
+                <Route path="/lesson/:id" element={<LessonView />} />
                 <Route path="/saved-rubrics" element={<SavedRubrics />} />
                 <Route path="/audio-usage" element={<AudioUsage />} />
                 <Route path="/terms" element={<Terms />} />

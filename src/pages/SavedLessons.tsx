@@ -25,7 +25,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   ArrowLeft, 
   BookOpen, 
@@ -39,7 +38,6 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import ReactMarkdown from 'react-markdown';
 import { format } from 'date-fns';
 import { LessonImageBrowser } from '@/components/LessonImageBrowser';
 
@@ -56,7 +54,6 @@ interface SavedLesson {
 }
 
 export default function SavedLessons() {
-  const [selectedLesson, setSelectedLesson] = useState<SavedLesson | null>(null);
   const [lessonToDelete, setLessonToDelete] = useState<SavedLesson | null>(null);
   const [lessonToEdit, setLessonToEdit] = useState<SavedLesson | null>(null);
   const [lessonForImages, setLessonForImages] = useState<SavedLesson | null>(null);
@@ -141,24 +138,6 @@ export default function SavedLessons() {
     if (lessonToEdit && editName.trim()) {
       renameMutation.mutate({ id: lessonToEdit.id, name: editName.trim() });
     }
-  };
-
-  // Combine teacher guide and student handouts for full view
-  const getFullContent = (lesson: SavedLesson): string => {
-    let content = '';
-    
-    if (lesson.teacher_guide) {
-      content += lesson.teacher_guide + '\n\n';
-    }
-    
-    if (lesson.student_handouts && Array.isArray(lesson.student_handouts)) {
-      content += '# STUDENT HANDOUTS\n\n';
-      lesson.student_handouts.forEach((handout: any) => {
-        content += `## ${handout.groupName}\n\n${handout.content}\n\n---\n\n`;
-      });
-    }
-    
-    return content || lesson.original_content;
   };
 
   return (
@@ -265,7 +244,7 @@ export default function SavedLessons() {
                       variant="outline" 
                       size="sm" 
                       className="flex-1 gap-2"
-                      onClick={() => setSelectedLesson(lesson)}
+                      onClick={() => window.open(`/lesson/${lesson.id}`, '_blank')}
                     >
                       <Eye className="h-4 w-4" />
                       View
@@ -300,37 +279,6 @@ export default function SavedLessons() {
           </div>
         )}
       </main>
-
-      {/* View Lesson Dialog */}
-      <Dialog open={!!selectedLesson} onOpenChange={() => setSelectedLesson(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="font-display">
-              {selectedLesson?.lesson_title || 'Lesson Details'}
-            </DialogTitle>
-            <DialogDescription>
-              Created on {selectedLesson && format(new Date(selectedLesson.created_at), 'MMMM d, yyyy')}
-              {' · '}
-              {selectedLesson?.group_ids?.length || 0} student group{(selectedLesson?.group_ids?.length || 0) !== 1 ? 's' : ''}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <ScrollArea className="flex-1 mt-4">
-            <article className="prose prose-sm dark:prose-invert max-w-none 
-              prose-headings:font-display
-              prose-h1:text-xl prose-h1:border-b prose-h1:border-border prose-h1:pb-2 prose-h1:mb-4
-              prose-h2:text-lg prose-h2:mt-6 prose-h2:mb-3
-              prose-h3:text-base prose-h3:text-primary
-              prose-p:leading-relaxed
-              prose-ul:my-2 prose-li:my-0.5
-            ">
-              {selectedLesson && (
-                <ReactMarkdown>{getFullContent(selectedLesson)}</ReactMarkdown>
-              )}
-            </article>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!lessonToDelete} onOpenChange={() => setLessonToDelete(null)}>
