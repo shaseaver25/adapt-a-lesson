@@ -19,6 +19,7 @@ import { AudioGenerationButton } from '@/components/AudioGenerationButton';
 import { ExportForLMSButton } from '@/components/export/ExportForLMSButton';
 import { useLessonImages } from '@/hooks/useLessonImages';
 import { extractVisualDescriptions } from '@/lib/imageGeneration';
+import LessonImageFrame from '@/components/LessonImageFrame';
 
 interface PreGeneratedAudioRecord {
   id: string;
@@ -532,8 +533,10 @@ export function DifferentiatedLessonOutput({
                                 <span>🌍</span>
                                 <span>{handout.language}</span>
                               </div>
-                              <div className="prose prose-sm dark:prose-invert max-w-none [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_img]:mx-auto [&_img]:block [&_img]:shadow-md">
-                                <ReactMarkdown>{processContentWithImages(handout.content, imageMap)}</ReactMarkdown>
+                              <div className="prose prose-sm dark:prose-invert max-w-none">
+                                <ReactMarkdown components={{ img: ({ src, alt }) => <LessonImageFrame src={src || ''} alt={alt || ''} /> }}>
+                                  {processContentWithImages(handout.content, imageMap)}
+                                </ReactMarkdown>
                               </div>
                             </div>
                             
@@ -543,15 +546,19 @@ export function DifferentiatedLessonOutput({
                                 <span>🇺🇸</span>
                                 <span>English</span>
                               </div>
-                              <div className="prose prose-sm dark:prose-invert max-w-none [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_img]:mx-auto [&_img]:block [&_img]:shadow-md">
-                                <ReactMarkdown>{processContentWithImages(handout.englishContent || '', imageMap)}</ReactMarkdown>
+                              <div className="prose prose-sm dark:prose-invert max-w-none">
+                                <ReactMarkdown components={{ img: ({ src, alt }) => <LessonImageFrame src={src || ''} alt={alt || ''} /> }}>
+                                  {processContentWithImages(handout.englishContent || '', imageMap)}
+                                </ReactMarkdown>
                               </div>
                             </div>
                           </div>
                         ) : (
                           // Single column for English-only
-                          <div className="prose prose-sm dark:prose-invert max-w-none [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_img]:mx-auto [&_img]:block [&_img]:shadow-md">
-                            <ReactMarkdown>{processContentWithImages(handout.content, imageMap)}</ReactMarkdown>
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <ReactMarkdown components={{ img: ({ src, alt }) => <LessonImageFrame src={src || ''} alt={alt || ''} /> }}>
+                              {processContentWithImages(handout.content, imageMap)}
+                            </ReactMarkdown>
                           </div>
                         )}
                       </TabsContent>
@@ -567,8 +574,10 @@ export function DifferentiatedLessonOutput({
             
             {/* Teacher Guide */}
             <TabsContent value="teacher" className="mt-0 p-4">
-              <div className="prose prose-sm dark:prose-invert max-w-none [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_img]:mx-auto [&_img]:block [&_img]:shadow-md">
-                <ReactMarkdown>{processContentWithImages(teacherGuide, imageMap)}</ReactMarkdown>
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown components={{ img: ({ src, alt }) => <LessonImageFrame src={src || ''} alt={alt || ''} /> }}>
+                  {processContentWithImages(teacherGuide, imageMap)}
+                </ReactMarkdown>
               </div>
             </TabsContent>
           </Tabs>
