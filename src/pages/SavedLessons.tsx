@@ -35,7 +35,8 @@ import {
   Loader2,
   FolderOpen,
   Pencil,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Headphones
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -248,6 +249,14 @@ export default function SavedLessons() {
                     >
                       <Eye className="h-4 w-4" />
                       View
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`/lesson/${lesson.id}/audio`, '_blank')}
+                      title="Audio Files"
+                    >
+                      <Headphones className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
