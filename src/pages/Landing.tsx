@@ -1,8 +1,75 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { LoginModal } from '@/components/LoginModal';
 import { Play, Clock, Globe, Shield, BarChart3, Accessibility, Sparkles } from 'lucide-react';
+
+// Video player component for back-to-back videos
+function GettingStartedVideoPlayer() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [currentVideo, setCurrentVideo] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  
+  const videos = [
+    '/videos/getting-started-1.mp4',
+    '/videos/getting-started-2.mp4'
+  ];
+
+  const handleVideoEnd = () => {
+    if (currentVideo < videos.length - 1) {
+      setCurrentVideo(prev => prev + 1);
+    } else {
+      setCurrentVideo(0);
+      setIsPlaying(false);
+    }
+  };
+
+  useEffect(() => {
+    if (videoRef.current && isPlaying) {
+      videoRef.current.play();
+    }
+  }, [currentVideo, isPlaying]);
+
+  const handlePlay = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        videoRef.current.play();
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  return (
+    <div className="aspect-video bg-foreground relative">
+      <video
+        ref={videoRef}
+        src={videos[currentVideo]}
+        onEnded={handleVideoEnd}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        className="w-full h-full object-cover"
+        controls
+        playsInline
+      />
+      {!isPlaying && (
+        <button
+          onClick={handlePlay}
+          className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors"
+        >
+          <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform">
+            <Play className="w-8 h-8 text-secondary ml-1" fill="currentColor" />
+          </div>
+        </button>
+      )}
+      <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium">
+        {currentVideo + 1} / {videos.length}
+      </div>
+    </div>
+  );
+}
 
 export default function Landing() {
   const { user, loading } = useAuth();
@@ -270,9 +337,19 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          {/* Getting Started Video Player - with two videos back to back */}
+          <div className="max-w-3xl mx-auto mb-12">
+            <div className="bg-background rounded-2xl overflow-hidden shadow-xl">
+              <GettingStartedVideoPlayer />
+              <div className="p-6">
+                <h3 className="font-display text-xl font-bold text-foreground mb-2">Getting Started in 60 Seconds</h3>
+                <p className="text-muted-foreground text-sm">Watch how quickly you can generate a complete differentiated lesson package.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {[
-              { title: 'Getting Started in 60 Seconds', desc: 'Watch how quickly you can generate a complete differentiated lesson package.', duration: '3:24' },
               { title: 'Authentic Assessments Explained', desc: 'Learn how our authentic assessments ensure real learning, not AI shortcuts.', duration: '5:12' },
               { title: 'Multilingual Support Demo', desc: 'See how we support 12+ languages with automatic audio generation.', duration: '4:08' },
               { title: 'Our Story: Why We Built This', desc: 'Hear from Shannon and Jena about the mission behind Authentic Learning.', duration: '6:45' },
@@ -282,13 +359,13 @@ export default function Landing() {
                   <div className="absolute inset-0 opacity-30">
                     <div className="absolute w-full h-full bg-gradient-to-br from-secondary/50 to-primary/50" />
                   </div>
-                  <button className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 hover:bg-secondary hover:text-white transition-all group z-10">
-                    <Play className="w-8 h-8 text-secondary group-hover:text-white ml-1" fill="currentColor" />
+                  <button className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 hover:bg-secondary hover:text-white transition-all group z-10">
+                    <Play className="w-6 h-6 text-secondary group-hover:text-white ml-1" fill="currentColor" />
                   </button>
                 </div>
-                <div className="p-6">
-                  <h3 className="font-display text-xl font-bold text-foreground mb-2">{video.title}</h3>
-                  <p className="text-muted-foreground text-sm mb-3">{video.desc}</p>
+                <div className="p-5">
+                  <h3 className="font-display text-lg font-bold text-foreground mb-2">{video.title}</h3>
+                  <p className="text-muted-foreground text-sm mb-2">{video.desc}</p>
                   <span className="inline-flex items-center gap-2 text-secondary font-semibold text-sm">
                     🎬 {video.duration}
                   </span>
