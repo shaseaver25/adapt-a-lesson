@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
     const sanitizedFailureReason = failureReason ? String(failureReason).slice(0, 500) : null;
     const sanitizedUserAgent = userAgent ? String(userAgent).slice(0, 500) : null;
 
-    console.log(`Tracking login attempt for ${email}: success=${success}`);
+    // Login attempt tracking (silent in production)
 
     // Insert login attempt record
     const { error: insertError } = await supabase
@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
 
       if (!countError && recentAttempts) {
         const failedCount = recentAttempts.length;
-        console.log(`Failed attempts for ${email} in last 15 minutes: ${failedCount}`);
+        // Check if approaching lockout threshold
         
         // Return warning if approaching lockout threshold
         if (failedCount >= 5) {
