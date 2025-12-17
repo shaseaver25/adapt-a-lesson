@@ -203,7 +203,7 @@ export function SavedAssessmentSelector({
                     <div className="flex flex-col gap-0.5">
                       <span className="font-medium">{assessment.title}</span>
                       <span className="text-xs text-muted-foreground line-clamp-1">
-                        {assessment.assessment_description.slice(0, 60)}...
+                        {(assessment.assessment_description || '').slice(0, 60)}...
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {format(new Date(assessment.created_at), 'MMM d, yyyy')}
