@@ -353,7 +353,8 @@ export default function Landing() {
                 />
               </div>
               <div className="p-6">
-                <h3 className="font-display text-xl font-bold text-foreground mb-2">Getting Started in 60 Seconds</h3>
+                <h3 className="font-display text-xl font-bold text-foreground mb-1">Our Submission Video for Lovable</h3>
+                <p className="text-muted-foreground text-xs mb-2">Video credits: Erica Hanna</p>
                 <p className="text-muted-foreground text-sm mb-3">Watch how quickly you can generate a complete differentiated lesson package.</p>
                 <a
                   href="/examples/getting-started-example.md"
