@@ -360,7 +360,7 @@ export default function Landing() {
 
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {[
-              { title: 'Example', desc: 'Learn how our authentic assessments ensure real learning, not AI shortcuts.', duration: '5:12', exampleUrl: '/examples/authentic-assessment-example.md', exampleLabel: 'View Example Assessment' },
+              { title: 'Authentic Assessment Example', desc: 'Learn how our authentic assessments ensure real learning, not AI shortcuts.', duration: '5:12', exampleUrl: '/examples/authentic-assessment-example.md', exampleLabel: 'View Example Assessment' },
               { title: 'Multilingual Support Demo', desc: 'See how we support 12+ languages with automatic audio generation.', duration: '4:08', exampleUrl: '/examples/multilingual-support-example.md', exampleLabel: 'View Multilingual Example' },
               { title: 'Our Story: Why We Built This', desc: 'Hear from Shannon and Jena about the mission behind Authentic Learning.', duration: '6:45', exampleUrl: null, exampleLabel: null },
             ].map((video, i) => (
