@@ -371,7 +371,7 @@ export default function Landing() {
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {[
               { title: 'Authentic Assessment Example', desc: 'Learn how our authentic assessments ensure real learning, not AI shortcuts.', duration: '5:12', exampleUrl: '/examples/authentic-assessment-example.doc', exampleLabel: 'View Example Assessment', videoUrl: '/videos/authentic-assessment.mp4' },
-              { title: 'Multilingual Support Demo', desc: 'See how we support 12+ languages with automatic audio generation.', duration: '4:08', exampleUrl: '/examples/multilingual-support-example.md', exampleLabel: 'View Multilingual Example', videoUrl: null },
+              { title: 'Multilingual Support Demo', desc: 'See how we support 12+ languages with automatic audio generation.', duration: '4:08', exampleUrl: '/examples/multilingual-support-example.md', exampleLabel: 'View Multilingual Example', videoUrl: '/videos/multilingual-support.mp4' },
               { title: 'Our Story: Why We Built This', desc: 'Hear from Shannon and Jena about the mission behind Authentic Learning.', duration: '6:45', exampleUrl: null, exampleLabel: null, videoUrl: null },
             ].map((video, i) => (
               <div key={i} className="bg-background rounded-2xl overflow-hidden shadow-xl hover:-translate-y-2 hover:shadow-2xl transition-all">
