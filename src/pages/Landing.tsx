@@ -339,10 +339,19 @@ export default function Landing() {
             </p>
           </div>
 
-          {/* Getting Started Video Player - with two videos back to back */}
+          {/* Getting Started Video - Vimeo embed */}
           <div className="max-w-3xl mx-auto mb-12">
             <div className="bg-background rounded-2xl overflow-hidden shadow-xl">
-              <GettingStartedVideoPlayer />
+              <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
+                <iframe
+                  src="https://player.vimeo.com/video/1147251547?h=1d0d9465af&badge=0&autopause=0&player_id=0&app_id=58479"
+                  frameBorder="0"
+                  allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  className="absolute top-0 left-0 w-full h-full"
+                  title="Getting Started with Authentic Learning Studio"
+                />
+              </div>
               <div className="p-6">
                 <h3 className="font-display text-xl font-bold text-foreground mb-2">Getting Started in 60 Seconds</h3>
                 <p className="text-muted-foreground text-sm mb-3">Watch how quickly you can generate a complete differentiated lesson package.</p>
