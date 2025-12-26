@@ -120,7 +120,7 @@ export default function Landing() {
           <div className="animate-fade-in">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-accent/20 to-primary/20 text-accent px-4 py-2 rounded-full text-sm font-semibold mb-6 animate-pulse">
               <Sparkles className="w-4 h-4" />
-              Built at Lovable SheBuilds 48-Hour Buildathon 2025
+              Season 2 Winners - Built at Lovable SheBuilds 48-Hour Buildathon 2025
             </div>
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
               <span className="text-primary">Let's Get REAL</span>
