@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { LoginModal } from '@/components/LoginModal';
-import { Play, Clock, Globe, Shield, BarChart3, Accessibility, Sparkles } from 'lucide-react';
+import { Play, Clock, Globe, Shield, BarChart3, Accessibility, Sparkles, FileDown } from 'lucide-react';
 import shannonPhoto from '@/assets/shannon-seaver.jpg';
 import jenaPhoto from '@/assets/jena-zangs.jpg';
 
@@ -345,16 +345,24 @@ export default function Landing() {
               <GettingStartedVideoPlayer />
               <div className="p-6">
                 <h3 className="font-display text-xl font-bold text-foreground mb-2">Getting Started in 60 Seconds</h3>
-                <p className="text-muted-foreground text-sm">Watch how quickly you can generate a complete differentiated lesson package.</p>
+                <p className="text-muted-foreground text-sm mb-3">Watch how quickly you can generate a complete differentiated lesson package.</p>
+                <a
+                  href="/examples/getting-started-example.md"
+                  download
+                  className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium text-sm transition-colors"
+                >
+                  <FileDown className="w-4 h-4" />
+                  View Example Lesson
+                </a>
               </div>
             </div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {[
-              { title: 'Authentic Assessments Explained', desc: 'Learn how our authentic assessments ensure real learning, not AI shortcuts.', duration: '5:12' },
-              { title: 'Multilingual Support Demo', desc: 'See how we support 12+ languages with automatic audio generation.', duration: '4:08' },
-              { title: 'Our Story: Why We Built This', desc: 'Hear from Shannon and Jena about the mission behind Authentic Learning.', duration: '6:45' },
+              { title: 'Authentic Assessments Explained', desc: 'Learn how our authentic assessments ensure real learning, not AI shortcuts.', duration: '5:12', exampleUrl: '/examples/authentic-assessment-example.md', exampleLabel: 'View Example Assessment' },
+              { title: 'Multilingual Support Demo', desc: 'See how we support 12+ languages with automatic audio generation.', duration: '4:08', exampleUrl: '/examples/multilingual-support-example.md', exampleLabel: 'View Multilingual Example' },
+              { title: 'Our Story: Why We Built This', desc: 'Hear from Shannon and Jena about the mission behind Authentic Learning.', duration: '6:45', exampleUrl: null, exampleLabel: null },
             ].map((video, i) => (
               <div key={i} className="bg-background rounded-2xl overflow-hidden shadow-xl hover:-translate-y-2 hover:shadow-2xl transition-all">
                 <div className="aspect-video bg-gradient-to-br from-foreground to-foreground/80 relative flex items-center justify-center">
@@ -368,9 +376,21 @@ export default function Landing() {
                 <div className="p-5">
                   <h3 className="font-display text-lg font-bold text-foreground mb-2">{video.title}</h3>
                   <p className="text-muted-foreground text-sm mb-2">{video.desc}</p>
-                  <span className="inline-flex items-center gap-2 text-secondary font-semibold text-sm">
-                    🎬 {video.duration}
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-2 text-secondary font-semibold text-sm">
+                      🎬 {video.duration}
+                    </span>
+                    {video.exampleUrl && (
+                      <a
+                        href={video.exampleUrl}
+                        download
+                        className="inline-flex items-center gap-1.5 text-primary hover:text-primary/80 font-medium text-sm transition-colors"
+                      >
+                        <FileDown className="w-4 h-4" />
+                        {video.exampleLabel}
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
