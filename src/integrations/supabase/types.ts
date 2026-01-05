@@ -870,7 +870,9 @@ export type Database = {
           id: string
           ip_address: string | null
           last_active_at: string
+          session_duration_seconds: number | null
           session_id: string
+          session_started_at: string | null
           user_id: string
         }
         Insert: {
@@ -879,7 +881,9 @@ export type Database = {
           id?: string
           ip_address?: string | null
           last_active_at?: string
+          session_duration_seconds?: number | null
           session_id: string
+          session_started_at?: string | null
           user_id: string
         }
         Update: {
@@ -888,7 +892,36 @@ export type Database = {
           id?: string
           ip_address?: string | null
           last_active_at?: string
+          session_duration_seconds?: number | null
           session_id?: string
+          session_started_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_time_stats: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_session_duration_seconds: number | null
+          last_updated: string | null
+          total_time_seconds: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_session_duration_seconds?: number | null
+          last_updated?: string | null
+          total_time_seconds?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_session_duration_seconds?: number | null
+          last_updated?: string | null
+          total_time_seconds?: number
           user_id?: string
         }
         Relationships: []
@@ -997,6 +1030,10 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       reset_failed_login: { Args: { p_user_id: string }; Returns: undefined }
       update_login_stats: { Args: { p_user_id: string }; Returns: undefined }
+      update_user_time_stats: {
+        Args: { p_duration_seconds: number; p_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "super_admin" | "admin" | "moderator" | "user"
