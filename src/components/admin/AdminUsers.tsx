@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, Shield, User, RefreshCw, UserPlus, Pencil, Trash2, KeyRound } from 'lucide-react';
+import { Search, Shield, User, RefreshCw, UserPlus, Pencil, Trash2, KeyRound, Clock } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useAdmin } from '@/hooks/useAdmin';
 import { toast } from 'sonner';
+import { UserExportFilters, UserFilters } from './UserExportFilters';
 
 interface UserData {
   id: string;
@@ -48,6 +49,19 @@ interface UserData {
   lesson_count: number;
   group_count: number;
   role: string;
+  total_time_seconds: number;
+}
+
+function formatTimeOnPlatform(seconds: number): string {
+  if (seconds === 0) return '—';
+  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
 }
 
 export function AdminUsers() {
@@ -55,6 +69,17 @@ export function AdminUsers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const { isSuperAdmin, userId } = useAdmin();
+  
+  // Filter state
+  const [filters, setFilters] = useState<UserFilters>({
+    dateFrom: undefined,
+    dateTo: undefined,
+    minLogins: undefined,
+    maxLogins: undefined,
+    minTimeHours: undefined,
+    maxTimeHours: undefined
+  });
+  const [isExporting, setIsExporting] = useState(false);
   
   // Add user modal state
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
@@ -127,7 +152,19 @@ export function AdminUsers() {
         }
       });
 
-      // Map profiles with roles and counts
+      // Get time stats per user - use type assertion since table is new
+      const { data: timeStats } = await supabase
+        .from('user_time_stats' as any)
+        .select('user_id, total_time_seconds');
+
+      const timeStatsMap: Record<string, number> = {};
+      (timeStats as any[])?.forEach(row => {
+        if (row.user_id) {
+          timeStatsMap[row.user_id] = row.total_time_seconds || 0;
+        }
+      });
+
+      // Map profiles with roles, counts, and time stats
       const usersWithData = (profiles || []).map(profile => ({
         id: profile.id,
         email: profile.email,
@@ -139,6 +176,7 @@ export function AdminUsers() {
         lesson_count: lessonCounts[profile.id] || 0,
         group_count: groupCounts[profile.id] || 0,
         role: roles?.find(r => r.user_id === profile.id)?.role || 'user',
+        total_time_seconds: timeStatsMap[profile.id] || 0,
       }));
 
       setUsers(usersWithData);
@@ -388,11 +426,95 @@ export function AdminUsers() {
     }
   }
 
-  const filteredUsers = users.filter(user =>
-    (user.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-    (user.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-    user.id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Apply all filters
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      // Text search filter
+      const matchesSearch = 
+        (user.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (user.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        user.id.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      if (!matchesSearch) return false;
+
+      // Date range filter
+      if (filters.dateFrom) {
+        const userDate = new Date(user.created_at);
+        if (userDate < filters.dateFrom) return false;
+      }
+      if (filters.dateTo) {
+        const userDate = new Date(user.created_at);
+        const endOfDay = new Date(filters.dateTo);
+        endOfDay.setHours(23, 59, 59, 999);
+        if (userDate > endOfDay) return false;
+      }
+
+      // Login count filter
+      const loginCount = user.login_count || 0;
+      if (filters.minLogins !== undefined && loginCount < filters.minLogins) return false;
+      if (filters.maxLogins !== undefined && loginCount > filters.maxLogins) return false;
+
+      // Time on platform filter (convert hours to seconds)
+      const timeHours = user.total_time_seconds / 3600;
+      if (filters.minTimeHours !== undefined && timeHours < filters.minTimeHours) return false;
+      if (filters.maxTimeHours !== undefined && timeHours > filters.maxTimeHours) return false;
+
+      return true;
+    });
+  }, [users, searchQuery, filters]);
+
+  // Count active filters
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.dateFrom || filters.dateTo) count++;
+    if (filters.minLogins !== undefined || filters.maxLogins !== undefined) count++;
+    if (filters.minTimeHours !== undefined || filters.maxTimeHours !== undefined) count++;
+    return count;
+  }, [filters]);
+
+  // Export to CSV
+  async function handleExportCSV() {
+    setIsExporting(true);
+    try {
+      const csvRows = [
+        ['Name', 'Email', 'Role', 'Registration Date', 'Last Login', 'Login Count', 'Total Time (hours)', 'Groups', 'Lessons'].join(',')
+      ];
+
+      for (const user of filteredUsers) {
+        const timeHours = (user.total_time_seconds / 3600).toFixed(2);
+        const row = [
+          `"${(user.full_name || 'No name').replace(/"/g, '""')}"`,
+          `"${(user.email || 'No email').replace(/"/g, '""')}"`,
+          user.role,
+          new Date(user.created_at).toLocaleDateString(),
+          user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : 'Never',
+          user.login_count || 0,
+          timeHours,
+          user.group_count,
+          user.lesson_count
+        ].join(',');
+        csvRows.push(row);
+      }
+
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `users-export-${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Exported ${filteredUsers.length} users to CSV`);
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      toast.error('Failed to export users');
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
@@ -561,7 +683,7 @@ export function AdminUsers() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 mb-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -576,6 +698,21 @@ export function AdminUsers() {
               Refresh
             </Button>
           </div>
+          
+          {/* Export Filters */}
+          <UserExportFilters
+            filters={filters}
+            onFiltersChange={setFilters}
+            onExport={handleExportCSV}
+            isExporting={isExporting}
+            activeFilterCount={activeFilterCount}
+          />
+          
+          {filteredUsers.length !== users.length && (
+            <p className="text-sm text-muted-foreground">
+              Showing {filteredUsers.length} of {users.length} users
+            </p>
+          )}
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -594,6 +731,12 @@ export function AdminUsers() {
                     <TableHead>Groups</TableHead>
                     <TableHead>Lessons</TableHead>
                     <TableHead>Logins</TableHead>
+                    <TableHead>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        Time
+                      </div>
+                    </TableHead>
                     <TableHead>Last Active</TableHead>
                     <TableHead>Joined</TableHead>
                     {isSuperAdmin && <TableHead>Actions</TableHead>}
@@ -602,8 +745,8 @@ export function AdminUsers() {
                 <TableBody>
                   {filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        {searchQuery ? 'No users match your search' : 'No users found'}
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                        {searchQuery || activeFilterCount > 0 ? 'No users match your filters' : 'No users found'}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -634,6 +777,9 @@ export function AdminUsers() {
                         <TableCell>{user.group_count}</TableCell>
                         <TableCell>{user.lesson_count}</TableCell>
                         <TableCell>{user.login_count || 0}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatTimeOnPlatform(user.total_time_seconds)}
+                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {user.last_login_at
                             ? new Date(user.last_login_at).toLocaleDateString()

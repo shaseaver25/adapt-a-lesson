@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useSessionDuration } from '@/hooks/useSessionDuration';
 
 interface AuthContextType {
   user: User | null;
@@ -15,31 +16,33 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
+function AuthProviderContent({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);  // Start true
+  const [loading, setLoading] = useState(true);
+
+  // Track session duration for analytics
+  const { endSession } = useSessionDuration({ 
+    userId: user?.id ?? null, 
+    enabled: !!user 
+  });
 
   useEffect(() => {
     console.log('Auth: Starting session check...');
     
-    // CRITICAL: Get existing session on mount FIRST
-    // This restores the session from localStorage in new tabs
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       console.log('Auth: Session from localStorage:', currentSession ? 'Found' : 'Not found');
       console.log('Auth: User ID:', currentSession?.user?.id || 'none');
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
-      setLoading(false);  // Only set false AFTER we have the result
+      setLoading(false);
     });
 
-    // Listen for auth changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         console.log('Auth: onAuthStateChange', event, currentSession?.user?.id || 'no session');
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
-        // Don't set loading here - getSession handles initial load
       }
     );
 
@@ -49,6 +52,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const signOut = async () => {
+    // End session tracking before signing out
+    await endSession();
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
@@ -59,6 +64,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  return <AuthProviderContent>{children}</AuthProviderContent>;
 }
 
 export function useAuthContext(): AuthContextType {
