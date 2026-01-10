@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
+import { Check, Sparkles, ArrowRight, Loader2, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -137,9 +137,14 @@ export default function Pricing() {
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {/* Monthly Plan */}
           <Card className={`relative ${currentTier === 'monthly' ? 'border-primary ring-2 ring-primary/20' : ''}`}>
-            {currentTier === 'monthly' && (
+            {currentTier === 'monthly' ? (
               <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">
                 Your Plan
+              </Badge>
+            ) : (
+              <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-secondary text-secondary-foreground">
+                <Gift className="w-3 h-3 mr-1" />
+                7-Day Free Trial
               </Badge>
             )}
             <CardHeader>
@@ -160,23 +165,28 @@ export default function Pricing() {
                 ))}
               </ul>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex-col gap-2">
               {isSubscribed && currentTier === 'monthly' ? (
                 <Button className="w-full" variant="outline" onClick={handleManageSubscription}>
                   Manage Subscription
                 </Button>
               ) : (
-                <Button 
-                  className="w-full" 
-                  onClick={() => handleCheckout('monthly')}
-                  disabled={loading || checkoutLoading !== null}
-                >
-                  {checkoutLoading === 'monthly' ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : null}
-                  {isSubscribed ? 'Switch to Monthly' : 'Subscribe Monthly'}
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
+                <>
+                  <Button 
+                    className="w-full" 
+                    onClick={() => handleCheckout('monthly')}
+                    disabled={loading || checkoutLoading !== null}
+                  >
+                    {checkoutLoading === 'monthly' ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : null}
+                    {isSubscribed ? 'Switch to Monthly' : 'Start Free Trial'}
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    No charge for 7 days. Cancel anytime.
+                  </p>
+                </>
               )}
             </CardFooter>
           </Card>

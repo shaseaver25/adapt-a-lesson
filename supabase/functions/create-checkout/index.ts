@@ -66,8 +66,8 @@ serve(async (req) => {
 
     const origin = req.headers.get("origin") || "http://localhost:3000";
 
-    // Create checkout session
-    const session = await stripe.checkout.sessions.create({
+    // Create checkout session with trial for subscriptions
+    const sessionConfig: Parameters<typeof stripe.checkout.sessions.create>[0] = {
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       line_items: [
@@ -76,13 +76,23 @@ serve(async (req) => {
           quantity: 1,
         },
       ],
-      mode: mode, // "subscription" or "payment"
+      mode: mode,
       success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/pricing`,
       metadata: {
         user_id: user.id,
       },
-    });
+    };
+
+    // Add 7-day free trial for subscriptions
+    if (mode === "subscription") {
+      sessionConfig.subscription_data = {
+        trial_period_days: 7,
+      };
+      logStep("Adding 7-day free trial to subscription");
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     logStep("Checkout session created", { sessionId: session.id, url: session.url });
 
