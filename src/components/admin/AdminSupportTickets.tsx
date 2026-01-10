@@ -53,13 +53,21 @@ export default function AdminSupportTickets() {
     if (!replyMessage.trim() || !selectedTicket || !user) return;
 
     await createReply.mutateAsync({
-      ticket_id: selectedTicket.id,
-      message: replyMessage,
-      is_internal_note: isInternalNote,
-      author_id: user.id,
-      author_name: user.user_metadata?.full_name || user.email || 'Admin',
-      is_admin: true,
-      attachments: null,
+      reply: {
+        ticket_id: selectedTicket.id,
+        message: replyMessage,
+        is_internal_note: isInternalNote,
+        author_id: user.id,
+        author_name: user.user_metadata?.full_name || user.email || 'Admin',
+        is_admin: true,
+        attachments: null,
+      },
+      ticketDetails: isInternalNote ? undefined : {
+        userEmail: selectedTicket.user_email,
+        userName: selectedTicket.user_name,
+        ticketNumber: selectedTicket.ticket_number,
+        ticketSubject: selectedTicket.subject,
+      },
     });
 
     setReplyMessage('');
