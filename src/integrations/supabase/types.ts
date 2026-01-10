@@ -485,6 +485,104 @@ export type Database = {
         }
         Relationships: []
       }
+      help_article_feedback: {
+        Row: {
+          article_id: string | null
+          created_at: string | null
+          feedback_comment: string | null
+          id: string
+          is_helpful: boolean
+          user_id: string | null
+        }
+        Insert: {
+          article_id?: string | null
+          created_at?: string | null
+          feedback_comment?: string | null
+          id?: string
+          is_helpful: boolean
+          user_id?: string | null
+        }
+        Update: {
+          article_id?: string | null
+          created_at?: string | null
+          feedback_comment?: string | null
+          id?: string
+          is_helpful?: boolean
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "help_article_feedback_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "help_articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      help_articles: {
+        Row: {
+          category: string
+          content: string
+          created_at: string | null
+          created_by: string | null
+          display_order: number | null
+          excerpt: string | null
+          helpful_count: number | null
+          id: string
+          is_featured: boolean | null
+          is_published: boolean | null
+          not_helpful_count: number | null
+          search_keywords: string | null
+          slug: string
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          updated_by: string | null
+          view_count: number | null
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          display_order?: number | null
+          excerpt?: string | null
+          helpful_count?: number | null
+          id?: string
+          is_featured?: boolean | null
+          is_published?: boolean | null
+          not_helpful_count?: number | null
+          search_keywords?: string | null
+          slug: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          updated_by?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          display_order?: number | null
+          excerpt?: string | null
+          helpful_count?: number | null
+          id?: string
+          is_featured?: boolean | null
+          is_published?: boolean | null
+          not_helpful_count?: number | null
+          search_keywords?: string | null
+          slug?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          view_count?: number | null
+        }
+        Relationships: []
+      }
       lesson_audio_status: {
         Row: {
           completed_at: string | null
@@ -848,6 +946,125 @@ export type Database = {
         }
         Relationships: []
       }
+      support_ticket_replies: {
+        Row: {
+          attachments: string[] | null
+          author_id: string | null
+          author_name: string
+          created_at: string | null
+          id: string
+          is_admin: boolean | null
+          is_internal_note: boolean | null
+          message: string
+          ticket_id: string | null
+        }
+        Insert: {
+          attachments?: string[] | null
+          author_id?: string | null
+          author_name: string
+          created_at?: string | null
+          id?: string
+          is_admin?: boolean | null
+          is_internal_note?: boolean | null
+          message: string
+          ticket_id?: string | null
+        }
+        Update: {
+          attachments?: string[] | null
+          author_id?: string | null
+          author_name?: string
+          created_at?: string | null
+          id?: string
+          is_admin?: boolean | null
+          is_internal_note?: boolean | null
+          message?: string
+          ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_replies_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          browser_info: string | null
+          category: string
+          created_at: string | null
+          description: string
+          error_messages: string | null
+          id: string
+          last_admin_reply_at: string | null
+          last_user_reply_at: string | null
+          page_url: string | null
+          priority: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          screenshots: string[] | null
+          status: string | null
+          subject: string
+          ticket_number: string
+          updated_at: string | null
+          user_email: string
+          user_id: string | null
+          user_name: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          browser_info?: string | null
+          category: string
+          created_at?: string | null
+          description: string
+          error_messages?: string | null
+          id?: string
+          last_admin_reply_at?: string | null
+          last_user_reply_at?: string | null
+          page_url?: string | null
+          priority?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          screenshots?: string[] | null
+          status?: string | null
+          subject: string
+          ticket_number: string
+          updated_at?: string | null
+          user_email: string
+          user_id?: string | null
+          user_name: string
+        }
+        Update: {
+          assigned_to?: string | null
+          browser_info?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string
+          error_messages?: string | null
+          id?: string
+          last_admin_reply_at?: string | null
+          last_user_reply_at?: string | null
+          page_url?: string | null
+          priority?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          screenshots?: string[] | null
+          status?: string | null
+          subject?: string
+          ticket_number?: string
+          updated_at?: string | null
+          user_email?: string
+          user_id?: string | null
+          user_name?: string
+        }
+        Relationships: []
+      }
       usage_analytics: {
         Row: {
           created_at: string | null
@@ -1130,6 +1347,7 @@ export type Database = {
         Returns: undefined
       }
       count_active_sessions: { Args: { p_user_id: string }; Returns: number }
+      generate_ticket_number: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

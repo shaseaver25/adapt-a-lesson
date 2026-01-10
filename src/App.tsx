@@ -27,6 +27,11 @@ import NotFound from "./pages/NotFound";
 import Pricing from "./pages/Pricing";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import Feedback from "./pages/Feedback";
+import HelpCenter from "./pages/HelpCenter";
+import HelpArticle from "./pages/HelpArticle";
+import SubmitTicket from "./pages/SubmitTicket";
+import MyTickets from "./pages/MyTickets";
+import TicketDetail from "./pages/TicketDetail";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +65,12 @@ const App = () => (
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/payment-success" element={<PaymentSuccess />} />
                 <Route path="/feedback" element={<Feedback />} />
+                <Route path="/help" element={<HelpCenter />} />
+                <Route path="/help/articles" element={<HelpCenter />} />
+                <Route path="/help/article/:slug" element={<HelpArticle />} />
+                <Route path="/help/tickets" element={<MyTickets />} />
+                <Route path="/help/tickets/new" element={<SubmitTicket />} />
+                <Route path="/help/tickets/:ticketId" element={<TicketDetail />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
