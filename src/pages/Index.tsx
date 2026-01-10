@@ -7,9 +7,11 @@ import { AssessmentOutput } from '@/components/AssessmentOutput';
 import { RubricForm } from '@/components/RubricForm';
 import { RubricOutput } from '@/components/RubricOutput';
 import { ProfileModal } from '@/components/ProfileModal';
+import { SubscriptionBanner } from '@/components/SubscriptionBanner';
+import { UpgradePromptModal } from '@/components/UpgradePromptModal';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, LogIn, LogOut, Settings, UserCircle } from 'lucide-react';
+import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, LogIn, LogOut, Settings, UserCircle, Loader2 } from 'lucide-react';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
 import { DifferentiationProgressModal, createInitialProgressState } from '@/components/DifferentiationProgressModal';
@@ -18,6 +20,8 @@ import { useDifferentiationGenerator } from '@/hooks/useDifferentiationGenerator
 import { useAssessmentGenerator } from '@/hooks/useAssessmentGenerator';
 import { useRubricGenerator } from '@/hooks/useRubricGenerator';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
+import { PRICING_TIERS } from '@/lib/pricing';
 
 const Index = () => {
   const [searchParams] = useSearchParams();
@@ -26,12 +30,36 @@ const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const { isAdmin } = useAdmin();
   
+  // Subscription hook
+  const { 
+    isSubscribed, 
+    tier, 
+    subscriptionEnd, 
+    isTrialing, 
+    trialEnd, 
+    daysRemaining,
+    loading: subscriptionLoading,
+    createCheckout,
+  } = useSubscription();
+
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
   // Redirect unauthenticated users to landing page
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/');
     }
   }, [user, authLoading, navigate]);
+
+  // Check subscription status and show upgrade modal if needed
+  useEffect(() => {
+    if (!authLoading && !subscriptionLoading && user) {
+      // If user exists but has no subscription, show upgrade modal
+      if (!isSubscribed) {
+        setShowUpgradeModal(true);
+      }
+    }
+  }, [authLoading, subscriptionLoading, user, isSubscribed]);
 
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
@@ -111,10 +139,37 @@ const Index = () => {
     else if (generatedRubric) handleResetRubric();
   };
 
+  const handleUpgradeCheckout = async (selectedTier: 'monthly' | 'yearly') => {
+    const tierInfo = PRICING_TIERS[selectedTier];
+    await createCheckout(tierInfo.priceId, tierInfo.mode);
+  };
+
   const showResults = differentiatedLesson || generatedAssessment || generatedRubric;
+
+  // Show loading while checking auth and subscription
+  if (authLoading || (user && subscriptionLoading)) {
+    return (
+      <div className="min-h-screen gradient-hero flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen gradient-hero">
+      {/* Subscription Banner */}
+      {isSubscribed && (
+        <SubscriptionBanner 
+          isTrialing={isTrialing}
+          daysRemaining={daysRemaining}
+          tier={tier}
+          subscriptionEnd={subscriptionEnd}
+        />
+      )}
+
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -381,6 +436,14 @@ const Index = () => {
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
         user={user}
+      />
+
+      {/* Upgrade Prompt Modal */}
+      <UpgradePromptModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        reason="no_subscription"
+        onCheckout={handleUpgradeCheckout}
       />
 
       {/* Footer */}

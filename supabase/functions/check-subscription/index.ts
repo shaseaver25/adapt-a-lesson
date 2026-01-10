@@ -66,6 +66,9 @@ serve(async (req) => {
         subscribed: false,
         tier: null,
         subscriptionEnd: null,
+        isTrialing: false,
+        trialEnd: null,
+        daysRemaining: null,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -75,28 +78,47 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    // Check for active subscriptions (monthly plan)
+    // Check for active OR trialing subscriptions (monthly plan)
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      status: "active",
-      limit: 1,
+      limit: 10,
     });
 
-    if (subscriptions.data.length > 0) {
-      const subscription = subscriptions.data[0];
+    // Find subscription that is active or trialing
+    const validSubscription = subscriptions.data.find(
+      (sub: { status: string }) => sub.status === "active" || sub.status === "trialing"
+    );
+
+    if (validSubscription) {
+      const subscription = validSubscription;
       const productId = subscription.items.data[0]?.price.product as string;
-      const subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      const isTrialing = subscription.status === "trialing";
       
-      let tier = "monthly";
+      // For trialing, use trial_end; for active, use current_period_end
+      const endTimestamp = isTrialing && subscription.trial_end 
+        ? subscription.trial_end 
+        : subscription.current_period_end;
+      const subscriptionEnd = new Date(endTimestamp * 1000).toISOString();
+      
+      // Calculate days remaining
+      const now = new Date();
+      const endDate = new Date(endTimestamp * 1000);
+      const diffTime = endDate.getTime() - now.getTime();
+      const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      
+      let tier: "monthly" | "yearly" = "monthly";
       if (productId === PRODUCT_IDS.yearly) {
         tier = "yearly";
       }
 
-      logStep("Active subscription found", { 
+      logStep("Valid subscription found", { 
         subscriptionId: subscription.id, 
         productId,
         tier,
-        endDate: subscriptionEnd 
+        status: subscription.status,
+        isTrialing,
+        endDate: subscriptionEnd,
+        daysRemaining,
       });
 
       return new Response(JSON.stringify({
@@ -104,6 +126,9 @@ serve(async (req) => {
         tier,
         productId,
         subscriptionEnd,
+        isTrialing,
+        trialEnd: isTrialing ? subscriptionEnd : null,
+        daysRemaining,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -125,9 +150,14 @@ serve(async (req) => {
 
         // Check if still valid
         if (expiryDate > new Date()) {
+          const now = new Date();
+          const diffTime = expiryDate.getTime() - now.getTime();
+          const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
           logStep("Valid yearly payment found", {
             paymentIntentId: intent.id,
             expiryDate: expiryDate.toISOString(),
+            daysRemaining,
           });
 
           return new Response(JSON.stringify({
@@ -135,6 +165,9 @@ serve(async (req) => {
             tier: "yearly",
             productId: PRODUCT_IDS.yearly,
             subscriptionEnd: expiryDate.toISOString(),
+            isTrialing: false,
+            trialEnd: null,
+            daysRemaining,
           }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,
@@ -157,9 +190,14 @@ serve(async (req) => {
 
         // Check if still valid
         if (expiryDate > new Date()) {
+          const now = new Date();
+          const diffTime = expiryDate.getTime() - now.getTime();
+          const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
           logStep("Valid yearly checkout session found", {
             sessionId: session.id,
             expiryDate: expiryDate.toISOString(),
+            daysRemaining,
           });
 
           return new Response(JSON.stringify({
@@ -167,6 +205,9 @@ serve(async (req) => {
             tier: "yearly",
             productId: PRODUCT_IDS.yearly,
             subscriptionEnd: expiryDate.toISOString(),
+            isTrialing: false,
+            trialEnd: null,
+            daysRemaining,
           }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,
@@ -180,6 +221,9 @@ serve(async (req) => {
       subscribed: false,
       tier: null,
       subscriptionEnd: null,
+      isTrialing: false,
+      trialEnd: null,
+      daysRemaining: null,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +15,9 @@ import {
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Eye, EyeOff, User, Lock, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, User, Lock, Loader2, CreditCard, Sparkles, Clock, ExternalLink } from 'lucide-react';
+import { useSubscription } from '@/hooks/useSubscription';
+import { PRICING_TIERS } from '@/lib/pricing';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -33,6 +37,19 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+
+  // Subscription state
+  const { 
+    isSubscribed, 
+    tier, 
+    subscriptionEnd, 
+    isTrialing, 
+    trialEnd, 
+    daysRemaining,
+    loading: subscriptionLoading,
+    openCustomerPortal,
+  } = useSubscription();
+  const [openingPortal, setOpeningPortal] = useState(false);
 
   useEffect(() => {
     if (isOpen && user) {
@@ -120,19 +137,47 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     }
   }
 
+  async function handleManageSubscription() {
+    setOpeningPortal(true);
+    try {
+      await openCustomerPortal();
+    } catch (error: any) {
+      console.error('Error opening portal:', error);
+      toast.error(error.message || 'Failed to open subscription management');
+    } finally {
+      setOpeningPortal(false);
+    }
+  }
+
   const passwordsMatch = newPassword === confirmPassword;
   const passwordValid = newPassword.length >= 8;
 
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const getPlanName = () => {
+    if (!isSubscribed) return 'No Active Plan';
+    if (tier === 'monthly') return PRICING_TIERS.monthly.name;
+    if (tier === 'yearly') return PRICING_TIERS.yearly.name;
+    return 'Active Plan';
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
             Your Profile
           </DialogTitle>
           <DialogDescription>
-            Update your profile information and password.
+            Update your profile information and manage your subscription.
           </DialogDescription>
         </DialogHeader>
 
@@ -142,6 +187,78 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
           </div>
         ) : (
           <div className="space-y-6 py-4">
+            {/* Subscription Section */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-medium">Subscription</h3>
+              </div>
+
+              {subscriptionLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Checking subscription...
+                </div>
+              ) : isSubscribed ? (
+                <div className="space-y-3 p-3 rounded-lg bg-success/5 border border-success/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-success" />
+                      <span className="font-medium">{getPlanName()}</span>
+                    </div>
+                    {isTrialing && (
+                      <Badge variant="secondary" className="text-xs">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Trial
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {isTrialing && trialEnd ? (
+                    <p className="text-sm text-muted-foreground">
+                      Trial ends: {formatDate(trialEnd)}
+                      {daysRemaining !== null && (
+                        <span className="ml-1">({daysRemaining} day{daysRemaining !== 1 ? 's' : ''} left)</span>
+                      )}
+                    </p>
+                  ) : subscriptionEnd ? (
+                    <p className="text-sm text-muted-foreground">
+                      {tier === 'monthly' ? 'Renews' : 'Expires'}: {formatDate(subscriptionEnd)}
+                    </p>
+                  ) : null}
+
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleManageSubscription}
+                    disabled={openingPortal}
+                    className="w-full"
+                  >
+                    {openingPortal ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                    )}
+                    Manage Subscription
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3 p-3 rounded-lg bg-muted/50 border">
+                  <p className="text-sm text-muted-foreground">
+                    No active subscription
+                  </p>
+                  <Link to="/pricing" onClick={onClose}>
+                    <Button size="sm" className="w-full">
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      View Plans
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
             {/* Profile Section */}
             <div className="space-y-4">
               <div className="space-y-2">
