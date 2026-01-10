@@ -1,18 +1,24 @@
 # Educator Tools Suite - Architecture Documentation
 
-> **Last Updated:** December 2024  
-> **Version:** 1.0
+> **Last Updated:** January 2026  
+> **Version:** 2.0
 
 ---
 
 ## Project Overview
 
-The **Educator Tools Suite** is a web application designed to help teachers differentiate instruction and create AI-resistant assessments. It provides four AI-powered tools:
+The **Let's Get REAL** (Responsive. Equitable. Adaptive. Learner.) Educator Tools Suite is a comprehensive web application designed to help teachers differentiate instruction, create AI-resistant assessments, and support diverse learners. Built as a Season 2 Winner of the Lovable SheBuilds 48-Hour Buildathon 2025.
 
-1. **Lesson Differentiator** - Adapts lessons to different student reading levels and needs
-2. **AI-Resistant Assessment Generator** - Creates assessments that can't be easily completed by AI
-3. **Analytic Rubric Generator** - Builds detailed rubrics for assessment criteria
-4. **Audio Script Generator** - Converts lessons to text-to-speech ready scripts
+### Core Features
+
+1. **Lesson Differentiator** - Adapts lessons to different student reading levels, languages, and accommodations
+2. **AI-Resistant Assessment Generator** - Creates assessments with local context that can't be easily completed by AI
+3. **Analytic Rubric Generator** - Builds detailed rubrics with AI-proof verification criteria
+4. **Audio Generation System** - Multilingual text-to-speech for all content
+5. **Graphic Organizer Generator** - Creates visual learning aids
+6. **Student Group Management** - Organizes learners by reading level, language, and accommodations
+7. **Admin Dashboard** - User management, analytics, support tickets, and feature flags
+8. **Help Center** - Self-service documentation and support ticket system
 
 ---
 
@@ -21,107 +27,230 @@ The **Educator Tools Suite** is a web application designed to help teachers diff
 ```
 project-root/
 ├── docs/
-│   └── ARCHITECTURE.md          # This documentation file
+│   ├── ARCHITECTURE.md           # This documentation file
+│   └── PRODUCT_REPORT.md         # Product & technical report
 ├── src/
+│   ├── assets/
+│   │   ├── real-logo.png         # Application logo
+│   │   ├── jena-zangs.jpg        # Team member photo
+│   │   └── shannon-seaver.jpg    # Team member photo
 │   ├── components/
-│   │   ├── ui/                  # shadcn/ui component library
-│   │   │   ├── accordion.tsx
-│   │   │   ├── alert-dialog.tsx
-│   │   │   ├── button.tsx
-│   │   │   ├── card.tsx
-│   │   │   ├── checkbox.tsx
-│   │   │   ├── dialog.tsx
-│   │   │   ├── input.tsx
-│   │   │   ├── label.tsx
-│   │   │   ├── select.tsx
-│   │   │   ├── tabs.tsx
-│   │   │   ├── textarea.tsx
-│   │   │   ├── toast.tsx
-│   │   │   └── ... (40+ components)
-│   │   ├── AssessmentForm.tsx   # Form for AI-resistant assessments
-│   │   ├── AssessmentOutput.tsx # Display generated assessments
-│   │   ├── AudioScriptForm.tsx  # Form for audio script generation
-│   │   ├── AudioScriptOutput.tsx# Display generated audio scripts
-│   │   ├── LessonOutput.tsx     # Display differentiated lessons
-│   │   ├── NavLink.tsx          # Navigation component
-│   │   ├── RubricForm.tsx       # Form for rubric generation
-│   │   ├── RubricOutput.tsx     # Display generated rubrics
-│   │   └── StudentGroupForm.tsx # Form for student group profiles
+│   │   ├── admin/                # Admin dashboard components
+│   │   │   ├── AdminActivityLog.tsx
+│   │   │   ├── AdminAnalytics.tsx
+│   │   │   ├── AdminCosts.tsx
+│   │   │   ├── AdminErrorLogs.tsx
+│   │   │   ├── AdminFeatureFlags.tsx
+│   │   │   ├── AdminFeedback.tsx
+│   │   │   ├── AdminHelpArticles.tsx
+│   │   │   ├── AdminOverview.tsx
+│   │   │   ├── AdminSupportTickets.tsx
+│   │   │   ├── AdminUsers.tsx
+│   │   │   └── UserExportFilters.tsx
+│   │   ├── assessment/           # Assessment method components
+│   │   │   ├── AssessmentMethodSelector.tsx
+│   │   │   ├── CategoryCard.tsx
+│   │   │   ├── LocalContextCard.tsx
+│   │   │   └── MethodOption.tsx
+│   │   ├── export/               # Export functionality
+│   │   │   └── ExportForLMSButton.tsx
+│   │   ├── feedback/             # User feedback components
+│   │   │   ├── FeedbackProgress.tsx
+│   │   │   └── StarRating.tsx
+│   │   ├── ui/                   # shadcn/ui component library (40+ components)
+│   │   ├── AIVulnerabilityAnalysis.tsx
+│   │   ├── AssessmentForm.tsx
+│   │   ├── AssessmentOutput.tsx
+│   │   ├── AudioEnabledSection.tsx
+│   │   ├── AudioGenerationButton.tsx
+│   │   ├── AudioUsageDashboard.tsx
+│   │   ├── BilingualAudioPlayer.tsx
+│   │   ├── BilingualSideBySideLayout.tsx
+│   │   ├── BilingualVocabularyCard.tsx
+│   │   ├── BilingualVocabularyPlayer.tsx
+│   │   ├── ClassFolderCard.tsx
+│   │   ├── CreateFolderModal.tsx
+│   │   ├── DifferentiateForm.tsx
+│   │   ├── DifferentiatedLessonOutput.tsx
+│   │   ├── DifferentiationProgress.tsx
+│   │   ├── DifferentiationProgressModal.tsx
+│   │   ├── DraggableStudentGroupCard.tsx
+│   │   ├── GraphicOrganizerGenerator.tsx
+│   │   ├── LanguageSelector.tsx
+│   │   ├── LessonAudioPlayer.tsx
+│   │   ├── LessonImageBrowser.tsx
+│   │   ├── LessonImageFrame.tsx
+│   │   ├── LessonOutput.tsx
+│   │   ├── LoginModal.tsx
+│   │   ├── NavLink.tsx
+│   │   ├── ProfileModal.tsx
+│   │   ├── RubricForm.tsx
+│   │   ├── RubricOutput.tsx
+│   │   ├── SavedAssessmentSelector.tsx
+│   │   ├── StudentGroupCard.tsx
+│   │   ├── StudentGroupFormModal.tsx
+│   │   ├── SubscriptionBanner.tsx
+│   │   └── UpgradePromptModal.tsx
+│   ├── contexts/
+│   │   ├── AuthContext.tsx       # Authentication state
+│   │   └── DifferentiationContext.tsx
 │   ├── hooks/
-│   │   ├── use-mobile.tsx       # Mobile detection hook
-│   │   └── use-toast.ts         # Toast notification hook
+│   │   ├── use-mobile.tsx        # Mobile detection
+│   │   ├── use-toast.ts          # Toast notifications
+│   │   ├── useAdmin.ts           # Admin functionality
+│   │   ├── useAssessmentGenerator.ts
+│   │   ├── useAudioUsage.ts
+│   │   ├── useAuth.ts            # Authentication hook
+│   │   ├── useDifferentiationGenerator.ts
+│   │   ├── useFeedbackForm.ts
+│   │   ├── useGraphicOrganizer.ts
+│   │   ├── useHelpArticles.ts
+│   │   ├── useLessonAudio.ts
+│   │   ├── useLessonImages.ts
+│   │   ├── useLessonImagesDB.ts
+│   │   ├── useRubricGenerator.ts
+│   │   ├── useSessionDuration.ts
+│   │   ├── useSessionManagement.ts
+│   │   ├── useSubscription.ts
+│   │   └── useSupportTickets.ts
+│   ├── i18n/
+│   │   ├── index.tsx             # Internationalization setup
+│   │   └── translations/         # Language files (en, es, so, vi, zh)
 │   ├── integrations/
 │   │   └── supabase/
-│   │       ├── client.ts        # Supabase client (auto-generated)
-│   │       └── types.ts         # Database types (auto-generated)
+│   │       ├── client.ts         # Supabase client (auto-generated)
+│   │       └── types.ts          # Database types (auto-generated)
 │   ├── lib/
-│   │   ├── differentiation.ts   # Differentiation helper functions
-│   │   └── utils.ts             # Utility functions (cn, etc.)
+│   │   ├── authValidation.ts     # Auth validation utilities
+│   │   ├── differentiation.ts    # Differentiation helpers
+│   │   ├── export/
+│   │   │   └── htmlExporter.ts   # HTML export for LMS
+│   │   ├── imageGeneration.ts
+│   │   ├── pricing.ts            # Subscription pricing
+│   │   ├── readingLevelNames.ts
+│   │   ├── tooltipDescriptions.ts
+│   │   └── utils.ts              # Utility functions
 │   ├── pages/
-│   │   ├── Index.tsx            # Main application page
-│   │   └── NotFound.tsx         # 404 page
+│   │   ├── Admin.tsx             # Admin dashboard
+│   │   ├── AudioUsage.tsx        # Audio usage tracking
+│   │   ├── Feedback.tsx          # User feedback form
+│   │   ├── ForgotPassword.tsx    # Password reset
+│   │   ├── HelpArticle.tsx       # Individual help article
+│   │   ├── HelpCenter.tsx        # Help center hub
+│   │   ├── Index.tsx             # Main application page
+│   │   ├── Landing.tsx           # Marketing landing page
+│   │   ├── LessonAudioView.tsx   # Audio playback view
+│   │   ├── LessonView.tsx        # Saved lesson view
+│   │   ├── Login.tsx             # Login page
+│   │   ├── MyTickets.tsx         # User's support tickets
+│   │   ├── NotFound.tsx          # 404 page
+│   │   ├── PaymentSuccess.tsx    # Stripe success page
+│   │   ├── Pricing.tsx           # Subscription pricing
+│   │   ├── Privacy.tsx           # Privacy policy
+│   │   ├── Profile.tsx           # User profile
+│   │   ├── Register.tsx          # Registration page
+│   │   ├── SavedAssessments.tsx  # Saved assessments list
+│   │   ├── SavedLessons.tsx      # Saved lessons list
+│   │   ├── SavedRubrics.tsx      # Saved rubrics list
+│   │   ├── SessionManagement.tsx # Active sessions
+│   │   ├── StudentGroups.tsx     # Student group management
+│   │   ├── SubmitTicket.tsx      # Submit support ticket
+│   │   ├── Terms.tsx             # Terms of service
+│   │   └── TicketDetail.tsx      # Support ticket detail
 │   ├── types/
-│   │   ├── assessment.ts        # Assessment type definitions
-│   │   ├── audioScript.ts       # Audio script type definitions
-│   │   ├── rubric.ts            # Rubric type definitions
-│   │   └── studentGroup.ts      # Student group type definitions
-│   ├── App.tsx                  # Root app component with routing
-│   ├── App.css                  # Global app styles
-│   ├── index.css                # Tailwind + design system tokens
-│   └── main.tsx                 # React entry point
+│   │   ├── assessment.ts
+│   │   ├── assessmentMethods.ts
+│   │   ├── audioRequirements.ts
+│   │   ├── audioScript.ts
+│   │   ├── differentiatedLesson.ts
+│   │   ├── helpCenter.ts
+│   │   ├── rubric.ts
+│   │   ├── studentGroup.ts
+│   │   └── vulnerabilityAnalysis.ts
+│   ├── App.tsx                   # Root app with routing
+│   ├── App.css                   # Global styles
+│   ├── index.css                 # Tailwind + design tokens
+│   └── main.tsx                  # React entry point
 ├── supabase/
 │   ├── functions/
+│   │   ├── admin-create-user/    # Admin user creation
+│   │   ├── analyze-assessment-vulnerability/
+│   │   ├── check-subscription/   # Stripe subscription check
+│   │   ├── create-checkout/      # Stripe checkout
+│   │   ├── customer-portal/      # Stripe portal
 │   │   ├── differentiate-lesson/
-│   │   │   └── index.ts         # Lesson differentiation AI endpoint
+│   │   ├── elevenlabs-tts/       # Text-to-speech
 │   │   ├── generate-assessment/
-│   │   │   └── index.ts         # Assessment generation AI endpoint
-│   │   ├── generate-audio-script/
-│   │   │   └── index.ts         # Audio script AI endpoint
-│   │   └── generate-rubric/
-│   │       └── index.ts         # Rubric generation AI endpoint
-│   └── config.toml              # Supabase configuration
+│   │   ├── generate-graphic-organizer/
+│   │   ├── generate-group-audio/
+│   │   ├── generate-lesson-audio/
+│   │   ├── generate-lesson-diagram/
+│   │   ├── generate-rubric/
+│   │   ├── get-lesson-audio-status/
+│   │   ├── get-lesson-with-audio/
+│   │   ├── retry-audio-generation/
+│   │   ├── send-ticket-reply-notification/
+│   │   ├── track-login-attempt/
+│   │   └── translate-content/
+│   └── config.toml               # Supabase configuration
 ├── public/
+│   ├── examples/                 # Example files for demos
+│   ├── videos/                   # Tutorial videos
+│   ├── real-logo.png
 │   ├── favicon.ico
-│   ├── placeholder.svg
 │   └── robots.txt
-├── index.html                   # HTML entry point
-├── tailwind.config.ts           # Tailwind configuration
-├── vite.config.ts               # Vite bundler configuration
-└── package.json                 # Dependencies
+├── index.html
+├── tailwind.config.ts
+├── vite.config.ts
+└── package.json
 ```
 
 ---
 
 ## Core Components
 
-### Main Page (`src/pages/Index.tsx`)
+### Pages Overview
 
-The central hub with a tabbed interface containing all four tools:
+| Page | Route | Purpose |
+|------|-------|---------|
+| Landing | `/` | Marketing page with feature overview |
+| Index | `/app` | Main application with tabbed tools |
+| Login | `/login` | User authentication |
+| Register | `/register` | User registration |
+| Profile | `/profile` | User settings and profile |
+| Student Groups | `/student-groups` | Manage learner profiles |
+| Saved Lessons | `/saved-lessons` | View differentiated lessons |
+| Saved Assessments | `/saved-assessments` | View generated assessments |
+| Saved Rubrics | `/saved-rubrics` | View generated rubrics |
+| Audio Usage | `/audio-usage` | TTS usage and costs |
+| Help Center | `/help` | Self-service documentation |
+| Submit Ticket | `/submit-ticket` | Support ticket submission |
+| My Tickets | `/my-tickets` | User's support tickets |
+| Admin | `/admin` | Admin dashboard |
+| Pricing | `/pricing` | Subscription plans |
+
+### Main Application Tools (Index.tsx)
 
 | Tab | Form Component | Output Component |
 |-----|----------------|------------------|
-| Differentiate | `StudentGroupForm` | `LessonOutput` |
+| Differentiate | `DifferentiateForm` | `DifferentiatedLessonOutput` |
 | Assessment | `AssessmentForm` | `AssessmentOutput` |
 | Rubric | `RubricForm` | `RubricOutput` |
-| Audio | `AudioScriptForm` | `AudioScriptOutput` |
 
-### Form Components
+### Admin Dashboard Components
 
-| Component | Purpose | Key Inputs |
-|-----------|---------|------------|
-| `StudentGroupForm` | Captures student group profile for differentiation | Group name, reading level, ELL status, accommodations, lesson content |
-| `AssessmentForm` | Collects assessment parameters | Lesson title, subject, grade, objectives, AI policy, local context |
-| `RubricForm` | Gathers rubric requirements | Assessment description, learning objectives, number of criteria |
-| `AudioScriptForm` | Prepares content for TTS conversion | Lesson content, target language, reading level |
-
-### Output Components
-
-| Component | Features |
-|-----------|----------|
-| `LessonOutput` | Displays differentiated lesson, copy/download buttons |
-| `AssessmentOutput` | Renders assessment markdown, copy/download as .md |
-| `RubricOutput` | Shows rubric tables, copy/download functionality |
-| `AudioScriptOutput` | Displays script with word count and reading time estimate |
+| Component | Purpose |
+|-----------|---------|
+| `AdminOverview` | Key metrics and summary |
+| `AdminUsers` | User management and export |
+| `AdminAnalytics` | Usage analytics |
+| `AdminCosts` | AI cost tracking |
+| `AdminFeedback` | User feedback review |
+| `AdminSupportTickets` | Ticket management |
+| `AdminHelpArticles` | Help content management |
+| `AdminFeatureFlags` | Feature toggle management |
+| `AdminActivityLog` | Audit trail |
+| `AdminErrorLogs` | Error tracking |
 
 ---
 
@@ -159,165 +288,94 @@ The central hub with a tabbed interface containing all four tools:
 - **Font Family:** Nunito (Google Fonts)
 - **Weights:** 400 (regular), 600 (semibold), 700 (bold)
 
-### Custom CSS Utilities
-
-```css
-.shadow-soft        /* Subtle elevation */
-.shadow-glow        /* Accent glow effect */
-.animate-fade-in    /* Fade in animation */
-.animate-slide-in   /* Slide in animation */
-.prose-lesson       /* Lesson content typography */
-```
-
 ---
 
 ## Backend Architecture
 
-### Edge Functions
+### Edge Functions (19 total)
 
-All AI functionality is powered by Supabase Edge Functions that connect to the **Lovable AI Gateway**.
+| Function | Purpose | AI Model |
+|----------|---------|----------|
+| `admin-create-user` | Admin user creation | - |
+| `analyze-assessment-vulnerability` | AI vulnerability scoring | Gemini 2.5 Flash |
+| `check-subscription` | Stripe subscription check | - |
+| `create-checkout` | Stripe checkout session | - |
+| `customer-portal` | Stripe customer portal | - |
+| `differentiate-lesson` | Lesson differentiation | Gemini 2.5 Flash |
+| `elevenlabs-tts` | Text-to-speech generation | ElevenLabs |
+| `generate-assessment` | Assessment creation | Gemini 2.5 Flash |
+| `generate-graphic-organizer` | Visual organizers | Gemini 2.5 Flash |
+| `generate-group-audio` | Group-specific audio | ElevenLabs |
+| `generate-lesson-audio` | Full lesson audio | ElevenLabs |
+| `generate-lesson-diagram` | Diagram generation | Gemini 2.5 Flash |
+| `generate-rubric` | Rubric generation | Gemini 2.5 Flash |
+| `get-lesson-audio-status` | Audio generation status | - |
+| `get-lesson-with-audio` | Lesson + audio retrieval | - |
+| `retry-audio-generation` | Retry failed audio | ElevenLabs |
+| `send-ticket-reply-notification` | Email notifications | Resend |
+| `track-login-attempt` | Login tracking | - |
+| `translate-content` | Content translation | Gemini 2.5 Flash |
 
-| Function | Endpoint | AI Model | Purpose |
-|----------|----------|----------|---------|
-| `differentiate-lesson` | `/differentiate-lesson` | `google/gemini-2.5-flash` | Adapt lessons to student needs |
-| `generate-assessment` | `/generate-assessment` | `google/gemini-2.5-flash` | Create AI-resistant assessments |
-| `generate-rubric` | `/generate-rubric` | `google/gemini-2.5-flash` | Build analytic rubrics |
-| `generate-audio-script` | `/generate-audio-script` | `google/gemini-2.5-flash` | Convert to TTS-ready text |
+### Database Tables (20+ tables)
 
-### AI Integration Pattern
-
-All edge functions follow this pattern:
-
-```typescript
-// 1. CORS handling
-if (req.method === 'OPTIONS') {
-  return new Response(null, { headers: corsHeaders });
-}
-
-// 2. Parse request body
-const { param1, param2 } = await req.json();
-
-// 3. Get API key from environment
-const apiKey = Deno.env.get("LOVABLE_API_KEY");
-
-// 4. Call Lovable AI Gateway
-const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-  method: "POST",
-  headers: {
-    "Authorization": `Bearer ${apiKey}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    model: "google/gemini-2.5-flash",
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: userPrompt },
-    ],
-  }),
-});
-
-// 5. Return generated content
-const data = await response.json();
-return new Response(JSON.stringify({ content: data.choices[0].message.content }));
-```
-
----
-
-## Data Flow
-
-### Component Interaction Flow
-
-```mermaid
-graph TD
-    A[Index.tsx] --> B[Tabs Component]
-    B --> C[StudentGroupForm]
-    B --> D[AssessmentForm]
-    B --> E[RubricForm]
-    B --> F[AudioScriptForm]
-    
-    C --> G[LessonOutput]
-    D --> H[AssessmentOutput]
-    E --> I[RubricOutput]
-    F --> J[AudioScriptOutput]
-```
-
-### AI Generation Workflow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Form
-    participant Index
-    participant EdgeFn as Edge Function
-    participant AI as Lovable AI Gateway
-
-    User->>Form: Fill form & submit
-    Form->>Index: onSubmit(formData)
-    Index->>EdgeFn: POST /function-name
-    EdgeFn->>AI: Chat completion request
-    AI-->>EdgeFn: Generated content
-    EdgeFn-->>Index: JSON response
-    Index->>Index: setOutput(content)
-    Index-->>User: Display in Output component
-```
+| Table | Purpose |
+|-------|---------|
+| `profiles` | User information, login tracking |
+| `user_roles` | Role-based access (super_admin, admin, moderator, user) |
+| `student_groups` | Learner profiles with reading levels, languages |
+| `class_folders` | Organization for student groups |
+| `generated_lessons` | Saved differentiated lessons |
+| `generated_rubrics` | Saved rubrics with AI-proof criteria |
+| `generated_assessments` | Saved assessments with local context |
+| `generated_audio` | Audio files metadata |
+| `vocabulary_audio` | Bilingual vocabulary pronunciation |
+| `lesson_images` | Lesson image attachments |
+| `lesson_audio_status` | Audio generation progress |
+| `audio_usage` | TTS cost tracking |
+| `ai_cost_logs` | API cost tracking |
+| `audio_cache` | Cached audio for reuse |
+| `help_articles` | Help center content |
+| `help_article_feedback` | Article feedback |
+| `support_tickets` | Support ticket data |
+| `support_ticket_replies` | Ticket replies |
+| `user_feedback` | User survey responses |
+| `user_sessions` | Active session tracking |
+| `user_time_stats` | Usage time tracking |
+| `subscription_overrides` | Admin subscription overrides |
+| `feature_flags` | Feature toggles |
+| `activity_logs` | Audit trail |
+| `error_logs` | Error tracking |
+| `login_attempts` | Security logging |
+| `usage_analytics` | Aggregate analytics |
+| `rubric_verifications` | Rubric verification records |
+| `saved_assessments` | Assessment templates |
 
 ---
 
-## Type Definitions
+## Authentication & Authorization
 
-### StudentGroup (`src/types/studentGroup.ts`)
+### Auth Flow
+- Supabase Auth with email/password
+- Auto-confirm email enabled for development
+- Session management with active session tracking
+- Account lockout after failed attempts
 
-```typescript
-interface StudentGroup {
-  groupName: string;
-  numberOfStudents: number;
-  readingLevel: 'below' | 'on' | 'above' | 'advanced';
-  lexileLevel: string;
-  homeLanguage: string;
-  ellStatus: string;
-  iepStatus: string;
-  accommodations: string[];
-  notes: string;
-}
-```
+### Role System
+- `super_admin` - Full system access
+- `admin` - User and content management
+- `moderator` - Limited admin capabilities
+- `user` - Standard user access
 
-### AssessmentInput (`src/types/assessment.ts`)
+---
 
-```typescript
-interface AssessmentInput {
-  lessonTitle: string;
-  subject: string;
-  gradeLevel: string;
-  learningObjectives: string[];
-  aiPolicy: 'prohibited' | 'limited_assist' | 'encouraged_with_citation';
-  localContext: {
-    schoolName: string;
-    city: string;
-    state: string;
-    additionalDetails: string;
-  };
-}
-```
+## Third-Party Integrations
 
-### RubricInput (`src/types/rubric.ts`)
-
-```typescript
-interface RubricInput {
-  assessmentDescription: string;
-  learningObjectives: string[];
-  numCriteria: number;
-}
-```
-
-### AudioScriptInput (`src/types/audioScript.ts`)
-
-```typescript
-interface AudioScriptInput {
-  lessonContent: string;
-  language: string;
-  readingLevel: string;
-}
-```
+| Service | Purpose | Secret Key |
+|---------|---------|------------|
+| Lovable AI Gateway | AI text generation | `LOVABLE_API_KEY` (automatic) |
+| ElevenLabs | Text-to-speech | `ELEVENLABS_API_KEY` |
+| Stripe | Payments & subscriptions | `STRIPE_SECRET_KEY` |
+| Resend | Email notifications | `RESEND_API_KEY` |
 
 ---
 
@@ -325,8 +383,9 @@ interface AudioScriptInput {
 
 ### Core Framework
 - **React 18** - UI library
-- **React Router DOM** - Client-side routing
+- **React Router DOM 6** - Client-side routing
 - **Vite** - Build tool and dev server
+- **TypeScript** - Type safety
 
 ### UI Components
 - **shadcn/ui** - Component library (40+ components)
@@ -334,13 +393,16 @@ interface AudioScriptInput {
 - **Lucide React** - Icon library
 - **TailwindCSS** - Utility-first CSS
 - **tailwindcss-animate** - Animation utilities
+- **Framer Motion** - Advanced animations
 
 ### Backend Integration
 - **@supabase/supabase-js** - Supabase client
 - **@tanstack/react-query** - Server state management
 
 ### Content Rendering
-- **react-markdown** - Markdown to React components
+- **react-markdown** - Markdown to React
+- **remark-gfm** - GitHub Flavored Markdown
+- **marked** - Markdown parsing
 
 ### Forms & Validation
 - **react-hook-form** - Form management
@@ -348,52 +410,65 @@ interface AudioScriptInput {
 - **zod** - Schema validation
 
 ### Utilities
+- **date-fns** - Date utilities
 - **clsx** - Conditional classnames
 - **tailwind-merge** - Merge Tailwind classes
 - **class-variance-authority** - Component variants
-- **date-fns** - Date utilities
+- **jszip** - File compression for exports
+- **canvas-confetti** - Celebration effects
+
+---
+
+## Internationalization
+
+### Supported Languages
+- English (en)
+- Spanish (es)
+- Vietnamese (vi)
+- Mandarin Chinese (zh)
+- Somali (so)
+
+### Content Translation Languages (for lessons)
+- Spanish, Vietnamese, Mandarin Chinese, Somali, Arabic, Hmong, Korean, Tagalog, Portuguese, Russian, French, Swahili, Haitian Creole, Karen, Oromo
 
 ---
 
 ## Key Patterns
 
 ### 1. Form → API → Output Pattern
-
-Each tool follows the same pattern:
+Each tool follows a consistent pattern:
 1. User fills form component
-2. Form calls `onSubmit` with typed input
-3. Index.tsx invokes edge function
+2. Form calls mutation hook
+3. Hook invokes edge function
 4. Response updates state
 5. Output component renders result
 
-### 2. Markdown Rendering
+### 2. Real-time Updates
+- Supabase Realtime for live data sync
+- React Query for cache invalidation
 
-All generated content is rendered using `react-markdown` with custom component styling:
+### 3. Role-Based Access Control
+- RLS policies on all tables
+- Client-side role checks
+- Edge function authorization
 
-```tsx
-<ReactMarkdown
-  components={{
-    h1: ({ children }) => <h1 className="text-2xl font-bold">{children}</h1>,
-    table: ({ children }) => <table className="border-collapse">{children}</table>,
-    // ... other customizations
-  }}
->
-  {content}
-</ReactMarkdown>
-```
-
-### 3. Copy/Download Actions
-
-All output components include:
-- **Copy to Clipboard** - Uses `navigator.clipboard.writeText()`
-- **Download as File** - Creates Blob and triggers download
+### 4. Audio Generation Pipeline
+1. Content preparation
+2. Section-by-section TTS generation
+3. Storage in Supabase Storage
+4. Progress tracking via `lesson_audio_status`
+5. Caching for reuse
 
 ---
 
-## Future Considerations
+## Performance Considerations
 
-- **Authentication** - Add teacher login to save student groups and generated content
-- **Database Storage** - Persist student groups and generated materials
-- **Text-to-Speech** - Integrate ElevenLabs for actual audio generation
-- **History/Versioning** - Track previously generated content
-- **Sharing** - Allow teachers to share materials with colleagues
+- Lazy loading of routes
+- Audio caching to reduce API calls
+- Optimistic updates with React Query
+- Debounced form submissions
+- Virtualized lists for large datasets
+
+---
+
+*Last updated: January 2026*
