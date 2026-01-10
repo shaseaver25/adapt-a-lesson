@@ -875,6 +875,87 @@ export type Database = {
         }
         Relationships: []
       }
+      user_feedback: {
+        Row: {
+          comparison_to_other_tools: string | null
+          created_at: string | null
+          ease_of_use: number | null
+          favorite_features: string | null
+          feature_completeness: number | null
+          feedback_type: string | null
+          grade_levels: string[] | null
+          id: string
+          improvement_suggestions: string | null
+          incentive_claim_date: string | null
+          incentive_claimed: boolean | null
+          missing_features: string | null
+          overall_satisfaction: number | null
+          pain_points: string | null
+          recommendation_reason: string | null
+          subject_areas: string[] | null
+          success_stories: string | null
+          updated_at: string | null
+          usage_frequency: string
+          use_cases: string | null
+          user_id: string
+          user_role: string | null
+          would_recommend: boolean | null
+          years_teaching: number | null
+        }
+        Insert: {
+          comparison_to_other_tools?: string | null
+          created_at?: string | null
+          ease_of_use?: number | null
+          favorite_features?: string | null
+          feature_completeness?: number | null
+          feedback_type?: string | null
+          grade_levels?: string[] | null
+          id?: string
+          improvement_suggestions?: string | null
+          incentive_claim_date?: string | null
+          incentive_claimed?: boolean | null
+          missing_features?: string | null
+          overall_satisfaction?: number | null
+          pain_points?: string | null
+          recommendation_reason?: string | null
+          subject_areas?: string[] | null
+          success_stories?: string | null
+          updated_at?: string | null
+          usage_frequency: string
+          use_cases?: string | null
+          user_id: string
+          user_role?: string | null
+          would_recommend?: boolean | null
+          years_teaching?: number | null
+        }
+        Update: {
+          comparison_to_other_tools?: string | null
+          created_at?: string | null
+          ease_of_use?: number | null
+          favorite_features?: string | null
+          feature_completeness?: number | null
+          feedback_type?: string | null
+          grade_levels?: string[] | null
+          id?: string
+          improvement_suggestions?: string | null
+          incentive_claim_date?: string | null
+          incentive_claimed?: boolean | null
+          missing_features?: string | null
+          overall_satisfaction?: number | null
+          pain_points?: string | null
+          recommendation_reason?: string | null
+          subject_areas?: string[] | null
+          success_stories?: string | null
+          updated_at?: string | null
+          usage_frequency?: string
+          use_cases?: string | null
+          user_id?: string
+          user_role?: string | null
+          would_recommend?: boolean | null
+          years_teaching?: number | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
