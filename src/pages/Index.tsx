@@ -161,14 +161,13 @@ const Index = () => {
   return (
     <div className="min-h-screen gradient-hero">
       {/* Subscription Banner */}
-      {isSubscribed && (
-        <SubscriptionBanner 
-          isTrialing={isTrialing}
-          daysRemaining={daysRemaining}
-          tier={tier}
-          subscriptionEnd={subscriptionEnd}
-        />
-      )}
+      <SubscriptionBanner 
+        isTrialing={isTrialing}
+        daysRemaining={daysRemaining}
+        tier={tier}
+        subscriptionEnd={subscriptionEnd}
+        isSubscribed={isSubscribed}
+      />
 
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
