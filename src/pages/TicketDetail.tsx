@@ -26,13 +26,15 @@ export default function TicketDetail() {
     if (!replyMessage.trim() || !ticket || !user) return;
 
     await createReply.mutateAsync({
-      ticket_id: ticket.id,
-      message: replyMessage,
-      is_internal_note: false,
-      author_id: user.id,
-      author_name: user.user_metadata?.full_name || user.email || 'User',
-      is_admin: false,
-      attachments: null,
+      reply: {
+        ticket_id: ticket.id,
+        message: replyMessage,
+        is_internal_note: false,
+        author_id: user.id,
+        author_name: user.user_metadata?.full_name || user.email || 'User',
+        is_admin: false,
+        attachments: null,
+      },
     });
 
     setReplyMessage('');

@@ -130,6 +130,16 @@ export default function SubmitTicket() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* User Email Confirmation */}
+              <div className="mb-6 p-4 bg-muted/50 rounded-lg border">
+                <p className="text-sm text-muted-foreground mb-2">Submitting as:</p>
+                <p className="font-medium">{user.user_metadata?.full_name || user.email}</p>
+                <p className="text-sm text-muted-foreground">{user.email}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  📧 Replies will be sent to this email address
+                </p>
+              </div>
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Category */}
                 <div className="space-y-2">

@@ -131,12 +131,22 @@ export function useUpdateTicket() {
   });
 }
 
+interface CreateTicketReplyOptions {
+  reply: Omit<SupportTicketReply, 'id' | 'created_at'>;
+  ticketDetails?: {
+    userEmail: string;
+    userName: string;
+    ticketNumber: string;
+    ticketSubject: string;
+  };
+}
+
 export function useCreateTicketReply() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (reply: Omit<SupportTicketReply, 'id' | 'created_at'>) => {
+    mutationFn: async ({ reply, ticketDetails }: CreateTicketReplyOptions) => {
       const { data, error } = await supabase
         .from('support_ticket_replies')
         .insert(reply)
@@ -151,6 +161,26 @@ export function useCreateTicketReply() {
         .from('support_tickets')
         .update({ [updateField]: new Date().toISOString() })
         .eq('id', reply.ticket_id);
+
+      // Send email notification for admin replies (not internal notes)
+      if (reply.is_admin && !reply.is_internal_note && ticketDetails) {
+        try {
+          await supabase.functions.invoke('send-ticket-reply-notification', {
+            body: {
+              userEmail: ticketDetails.userEmail,
+              userName: ticketDetails.userName,
+              ticketNumber: ticketDetails.ticketNumber,
+              ticketSubject: ticketDetails.ticketSubject,
+              replyMessage: reply.message,
+              ticketId: reply.ticket_id,
+            },
+          });
+          console.log('Email notification sent successfully');
+        } catch (emailError) {
+          console.error('Failed to send email notification:', emailError);
+          // Don't throw - the reply was saved successfully
+        }
+      }
 
       return data;
     },
