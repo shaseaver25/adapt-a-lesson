@@ -1,10 +1,11 @@
 import { useState, FormEvent, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, Loader2, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Loader2, CheckCircle, User, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { signUpSchema, getAuthErrorMessage } from '@/lib/authValidation';
@@ -37,12 +38,17 @@ function calculatePasswordStrength(password: string): {
   return { score: Math.max(score, 5), label: 'weak', color: 'bg-destructive' };
 }
 
+type OrganizationType = 'school' | 'non_profit' | 'home_school' | 'other';
+
 export default function Register() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { signUpWithEmail, loading: authLoading } = useAuth();
   const { t } = useTranslation();
 
+  const [fullName, setFullName] = useState('');
+  const [company, setCompany] = useState('');
+  const [organizationType, setOrganizationType] = useState<OrganizationType>('school');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -50,6 +56,9 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{
+    fullName?: string;
+    company?: string;
+    organizationType?: string;
     email?: string;
     password?: string;
     confirmPassword?: string;
@@ -65,16 +74,26 @@ export default function Register() {
   const meetsMinLength = password.length >= 12;
 
   const validateForm = (): boolean => {
-    const result = signUpSchema.safeParse({ email, password, confirmPassword });
+    const result = signUpSchema.safeParse({ 
+      email, 
+      password, 
+      confirmPassword, 
+      fullName, 
+      company, 
+      organizationType 
+    });
 
     if (!result.success) {
-      const fieldErrors: { email?: string; password?: string; confirmPassword?: string } = {};
+      const fieldErrors: typeof errors = {};
       result.error.errors.forEach((err) => {
-        const field = err.path[0] as 'email' | 'password' | 'confirmPassword';
+        const field = err.path[0] as keyof typeof errors;
         if (!fieldErrors[field]) {
           if (field === 'email') fieldErrors.email = t('errors.invalidEmail');
           else if (field === 'password') fieldErrors.password = t('errors.passwordTooShort');
           else if (field === 'confirmPassword') fieldErrors.confirmPassword = t('errors.passwordsDoNotMatch');
+          else if (field === 'fullName') fieldErrors.fullName = 'Please enter your full name';
+          else if (field === 'company') fieldErrors.company = 'Please enter your organization name';
+          else if (field === 'organizationType') fieldErrors.organizationType = 'Please select an organization type';
         }
       });
       setErrors(fieldErrors);
@@ -98,7 +117,11 @@ export default function Register() {
     // Normalize email to lowercase for case-insensitive login
     const normalizedEmail = email.toLowerCase().trim();
     
-    const { error } = await signUpWithEmail(normalizedEmail, password);
+    const { error } = await signUpWithEmail(normalizedEmail, password, {
+      fullName: fullName.trim(),
+      company: company.trim(),
+      organizationType,
+    });
 
     setIsLoading(false);
 
@@ -120,6 +143,13 @@ export default function Register() {
   };
 
   const isFormDisabled = isLoading || authLoading || !!successMessage;
+
+  const organizationOptions = [
+    { value: 'school', label: 'School / District' },
+    { value: 'non_profit', label: 'Non-Profit Organization' },
+    { value: 'home_school', label: 'Home School' },
+    { value: 'other', label: 'Other' },
+  ] as const;
 
   return (
     <div className="min-h-screen min-h-[100dvh] gradient-hero flex items-center justify-center p-4 sm:p-6">
@@ -182,6 +212,115 @@ export default function Register() {
 
           {/* Registration Form */}
           <form onSubmit={handleRegister} className="space-y-4" noValidate>
+            {/* Full Name Field */}
+            <div className="space-y-2">
+              <Label htmlFor="fullName" className="text-sm font-medium text-foreground">
+                Full Name <span className="text-destructive" aria-hidden="true">*</span>
+                <span className="sr-only">(required)</span>
+              </Label>
+              <div className="relative">
+                <User
+                  className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none"
+                  aria-hidden="true"
+                />
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className={`pl-10 min-h-[48px] h-12 text-base transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                    errors.fullName ? 'border-destructive focus-visible:ring-destructive' : ''
+                  }`}
+                  disabled={isFormDisabled}
+                  autoComplete="name"
+                  required
+                  aria-invalid={!!errors.fullName}
+                  aria-describedby={errors.fullName ? 'fullName-error' : undefined}
+                />
+              </div>
+              <div className={`transition-all duration-200 ${errors.fullName ? 'opacity-100 max-h-8' : 'opacity-0 max-h-0 overflow-hidden'}`}>
+                {errors.fullName && (
+                  <p id="fullName-error" className="text-sm text-destructive" role="alert">
+                    {errors.fullName}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Organization Name Field */}
+            <div className="space-y-2">
+              <Label htmlFor="company" className="text-sm font-medium text-foreground">
+                Organization Name <span className="text-destructive" aria-hidden="true">*</span>
+                <span className="sr-only">(required)</span>
+              </Label>
+              <div className="relative">
+                <Building2
+                  className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none"
+                  aria-hidden="true"
+                />
+                <Input
+                  id="company"
+                  type="text"
+                  placeholder="School, organization, or family name"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  className={`pl-10 min-h-[48px] h-12 text-base transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                    errors.company ? 'border-destructive focus-visible:ring-destructive' : ''
+                  }`}
+                  disabled={isFormDisabled}
+                  autoComplete="organization"
+                  required
+                  aria-invalid={!!errors.company}
+                  aria-describedby={errors.company ? 'company-error' : undefined}
+                />
+              </div>
+              <div className={`transition-all duration-200 ${errors.company ? 'opacity-100 max-h-8' : 'opacity-0 max-h-0 overflow-hidden'}`}>
+                {errors.company && (
+                  <p id="company-error" className="text-sm text-destructive" role="alert">
+                    {errors.company}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Organization Type Field */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-foreground">
+                Organization Type <span className="text-destructive" aria-hidden="true">*</span>
+                <span className="sr-only">(required)</span>
+              </Label>
+              <RadioGroup
+                value={organizationType}
+                onValueChange={(value) => setOrganizationType(value as OrganizationType)}
+                className="grid grid-cols-2 gap-2"
+                disabled={isFormDisabled}
+              >
+                {organizationOptions.map((option) => (
+                  <div key={option.value} className="flex items-center">
+                    <RadioGroupItem
+                      value={option.value}
+                      id={`org-${option.value}`}
+                      className="peer sr-only"
+                    />
+                    <Label
+                      htmlFor={`org-${option.value}`}
+                      className="flex items-center justify-center w-full px-3 py-2.5 text-sm font-medium border rounded-lg cursor-pointer transition-all duration-200 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 peer-data-[state=checked]:text-primary hover:bg-muted/50"
+                    >
+                      {option.label}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+              <div className={`transition-all duration-200 ${errors.organizationType ? 'opacity-100 max-h-8' : 'opacity-0 max-h-0 overflow-hidden'}`}>
+                {errors.organizationType && (
+                  <p id="organizationType-error" className="text-sm text-destructive" role="alert">
+                    {errors.organizationType}
+                  </p>
+                )}
+              </div>
+            </div>
+
             {/* Email Field */}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium text-foreground">
@@ -401,28 +540,34 @@ export default function Register() {
 
           {/* Login Link */}
           <p className="text-center text-sm text-muted-foreground">
-            {t('register.hasAccount')}{' '}
+            {t('register.haveAccount')}{' '}
             <Link
               to="/login"
-              className="text-primary hover:text-primary/80 font-medium py-1 px-1 -mx-1 rounded-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              className="font-medium text-primary underline-offset-4 hover:underline transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm"
             >
-              {t('register.logIn')}
+              {t('register.signIn')}
             </Link>
           </p>
 
-          {/* Legal Text */}
-          <p className="text-center text-xs text-muted-foreground mt-4">
-            {t('login.legalText')}{' '}
-            <a href="/terms" className="text-primary hover:underline">{t('login.terms')}</a> {t('common.and')}{' '}
-            <a href="/privacy" className="text-primary hover:underline">{t('login.privacy')}</a>.
+          {/* Terms and Privacy */}
+          <p className="text-center text-xs text-muted-foreground">
+            {t('register.termsPrefix')}{' '}
+            <Link
+              to="/terms"
+              className="underline underline-offset-4 hover:text-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm"
+            >
+              {t('register.terms')}
+            </Link>{' '}
+            {t('register.and')}{' '}
+            <Link
+              to="/privacy"
+              className="underline underline-offset-4 hover:text-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm"
+            >
+              {t('register.privacy')}
+            </Link>
           </p>
         </CardContent>
       </Card>
-
-      {/* Screen reader announcements */}
-      <div className="sr-only" aria-live="assertive" aria-atomic="true">
-        {successMessage}
-      </div>
     </div>
   );
 }
