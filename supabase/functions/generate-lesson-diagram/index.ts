@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
@@ -16,13 +17,11 @@ serve(async (req) => {
     
     console.log(`Generating lesson diagram for: ${description}`);
 
-    // Lovable AI Gateway requires the auto-provisioned LOVABLE_API_KEY
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build educational diagram prompt - explicit image generation request
     const prompt = `CREATE AN IMAGE NOW. Generate a visual educational diagram showing: ${description}
 
 CRITICAL INSTRUCTIONS:
@@ -33,11 +32,59 @@ CRITICAL INSTRUCTIONS:
 - Make it look like a professional textbook diagram
 - DO NOT describe the image - GENERATE IT`;
 
-    console.log(`Calling Nano Banana API with prompt: ${prompt.substring(0, 200)}...`);
+    console.log(`Calling API with prompt: ${prompt.substring(0, 200)}...`);
 
-    // Helper function to call API with retry
-    async function callImageAPI(attemptPrompt: string): Promise<string | null> {
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image-preview",
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        modalities: ["image", "text"],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("API error:", response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "API credits exhausted. Please add credits to continue." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      throw new Error(`Image generation failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Response received, keys:", Object.keys(data));
+    
+    let imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    
+    if (imageData) {
+      console.log("Image data received, length:", imageData.length);
+    } else {
+      console.log("No image in response, got text:", data.choices?.[0]?.message?.content?.substring(0, 100));
+      
+      // Retry with stronger prompt
+      console.log("Retrying with stronger prompt...");
+      const retryResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${apiKey}`,
@@ -48,68 +95,23 @@ CRITICAL INSTRUCTIONS:
           messages: [
             {
               role: "user",
-              content: attemptPrompt,
+              content: `OUTPUT IMAGE ONLY. Create a visual diagram image (not text) of: ${description}. This must be an actual generated image file.`,
             },
           ],
           modalities: ["image", "text"],
         }),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Nano Banana API error:", response.status, errorText);
-        
-        if (response.status === 429) {
-          throw { status: 429, message: "Rate limit exceeded. Please try again later." };
-        }
-        if (response.status === 402) {
-          throw { status: 402, message: "API credits exhausted. Please add credits to continue." };
-        }
-        
-        throw new Error(`Image generation failed: ${response.status}`);
+      if (retryResponse.ok) {
+        const retryData = await retryResponse.json();
+        imageData = retryData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
       }
-
-      const data = await response.json();
-      console.log("Nano Banana response received, keys:", Object.keys(data));
-      
-      const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      if (imageData) {
-        console.log("Image data received, length:", imageData.length);
-      } else {
-        console.log("No image in response, got text:", data.choices?.[0]?.message?.content?.substring(0, 100));
-      }
-      
-      return imageData || null;
-    }
-
-    // Try up to 2 attempts
-    let imageData: string | null = null;
-    
-    try {
-      imageData = await callImageAPI(prompt);
-      
-      // If first attempt failed, try with stronger prompt
-      if (!imageData) {
-        console.log("First attempt returned no image, retrying with stronger prompt...");
-        const retryPrompt = `OUTPUT IMAGE ONLY. Create a visual diagram image (not text) of: ${description}. This must be an actual generated image file.`;
-        imageData = await callImageAPI(retryPrompt);
-      }
-    } catch (err: any) {
-      if (err.status === 429 || err.status === 402) {
-        return new Response(
-          JSON.stringify({ error: err.message }),
-          { status: err.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      throw err;
     }
     
     if (!imageData) {
       console.error("No image generated after 2 attempts for:", description);
       throw new Error("No image generated in response");
     }
-    
-    console.log("Image data received, length:", imageData.length);
 
     // If we have a lessonId, save to Supabase Storage
     let storedUrl = imageData;
@@ -123,7 +125,7 @@ CRITICAL INSTRUCTIONS:
         const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
         const imageBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
 
-        // Generate storage path with hash of description for uniqueness
+        // Generate storage path with hash of description
         const descHash = description.split('').reduce((a: number, b: string) => {
           a = ((a << 5) - a) + b.charCodeAt(0);
           return a & a;
@@ -132,8 +134,8 @@ CRITICAL INSTRUCTIONS:
         const storagePath = `lesson-diagrams/${lessonId}/${groupId || 'default'}/${descHash}-${timestamp}.png`;
 
         // Upload to storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('lesson-audio') // Reuse existing bucket
+        const { error: uploadError } = await supabase.storage
+          .from('lesson-audio')
           .upload(storagePath, imageBuffer, {
             contentType: 'image/png',
             upsert: true,
@@ -141,9 +143,8 @@ CRITICAL INSTRUCTIONS:
 
         if (uploadError) {
           console.error("Storage upload error:", uploadError);
-          // Return base64 as fallback
         } else {
-          // Get signed URL (bucket is private)
+          // Get signed URL
           const { data: signedUrlData, error: signedUrlError } = await supabase.storage
             .from('lesson-audio')
             .createSignedUrl(storagePath, 604800); // 7 days
@@ -165,10 +166,7 @@ CRITICAL INSTRUCTIONS:
               });
             
             if (trackError) {
-              console.error("Failed to track image in database:", trackError);
-              // Don't fail the request, image is still usable
-            } else {
-              console.log("Image tracked in lesson_images table");
+              console.error("Failed to track image:", trackError);
             }
           } else {
             console.error("Failed to create signed URL:", signedUrlError);
@@ -176,7 +174,6 @@ CRITICAL INSTRUCTIONS:
         }
       } catch (storageError) {
         console.error("Storage error, returning base64:", storageError);
-        // Return base64 as fallback
       }
     }
 
