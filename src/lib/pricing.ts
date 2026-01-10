@@ -7,6 +7,7 @@ export const PRICING_TIERS = {
     interval: "month" as const,
     mode: "subscription" as const,
     description: "Full access to all features, billed monthly",
+    trialDays: 7,
   },
   yearly: {
     priceId: "price_1So0xWDnqCVCwtRqa5VSqMH1",
@@ -16,6 +17,7 @@ export const PRICING_TIERS = {
     interval: "year" as const,
     mode: "payment" as const,
     description: "Full access for one year — save $21!",
+    trialDays: 0,
   },
 } as const;
 
