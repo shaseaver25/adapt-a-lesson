@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import confetti from "canvas-confetti";
-import { ArrowLeft, ArrowRight, Loader2, CheckCircle, MessageSquare } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, CheckCircle, MessageSquare, Gift, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,12 +37,17 @@ const SUBJECT_AREAS = [
   { value: "other", label: "Other" },
 ];
 
+const FREE_EXTENSION_DAYS = 30;
+
 export default function Feedback() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [hasAlreadyClaimed, setHasAlreadyClaimed] = useState(false);
+  const [checkingClaim, setCheckingClaim] = useState(true);
+  const [extensionEndDate, setExtensionEndDate] = useState<string | null>(null);
 
   const {
     formData,
@@ -55,6 +61,37 @@ export default function Feedback() {
     isStep2Valid,
     isStep3Valid,
   } = useFeedbackForm();
+
+  // Check if user has already claimed the feedback incentive
+  useEffect(() => {
+    const checkIncentiveClaim = async () => {
+      if (!user) {
+        setCheckingClaim(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user_feedback')
+          .select('incentive_claimed, incentive_claim_date')
+          .eq('user_id', user.id)
+          .eq('incentive_claimed', true)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error checking incentive claim:', error);
+        } else if (data?.incentive_claimed) {
+          setHasAlreadyClaimed(true);
+        }
+      } catch (err) {
+        console.error('Error:', err);
+      } finally {
+        setCheckingClaim(false);
+      }
+    };
+
+    checkIncentiveClaim();
+  }, [user]);
 
   const triggerConfetti = () => {
     const duration = 3 * 1000;
@@ -101,7 +138,11 @@ export default function Feedback() {
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.from("user_feedback").insert({
+      // Insert feedback with incentive claim
+      const shouldClaimIncentive = !hasAlreadyClaimed;
+      const claimDate = shouldClaimIncentive ? new Date().toISOString() : null;
+
+      const { error: feedbackError } = await supabase.from("user_feedback").insert({
         user_id: user.id,
         usage_frequency: formData.usage_frequency,
         overall_satisfaction: formData.overall_satisfaction,
@@ -118,9 +159,73 @@ export default function Feedback() {
         subject_areas: formData.subject_areas.length > 0 ? formData.subject_areas : null,
         use_cases: formData.use_cases || null,
         feedback_type: "general",
+        incentive_claimed: shouldClaimIncentive,
+        incentive_claim_date: claimDate,
       });
 
-      if (error) throw error;
+      if (feedbackError) throw feedbackError;
+
+      // If claiming incentive, create/update subscription override
+      if (shouldClaimIncentive) {
+        // Check if user already has an override
+        const { data: existingOverride } = await supabase
+          .from('subscription_overrides')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        let newTrialEndDate: Date;
+
+        if (existingOverride?.trial_end_date) {
+          // Extend existing trial
+          const currentEnd = new Date(existingOverride.trial_end_date);
+          const now = new Date();
+          // If trial already expired, extend from now; otherwise extend from current end
+          const baseDate = currentEnd > now ? currentEnd : now;
+          newTrialEndDate = new Date(baseDate);
+          newTrialEndDate.setDate(newTrialEndDate.getDate() + FREE_EXTENSION_DAYS);
+        } else {
+          // Create new trial
+          newTrialEndDate = new Date();
+          newTrialEndDate.setDate(newTrialEndDate.getDate() + FREE_EXTENSION_DAYS);
+        }
+
+        if (existingOverride) {
+          // Update existing override
+          const { error: updateError } = await supabase
+            .from('subscription_overrides')
+            .update({
+              trial_end_date: newTrialEndDate.toISOString(),
+              notes: `Extended ${FREE_EXTENSION_DAYS} days for feedback submission on ${new Date().toLocaleDateString()}`,
+            })
+            .eq('user_id', user.id);
+
+          if (updateError) {
+            console.error('Error updating subscription override:', updateError);
+          }
+        } else {
+          // Create new override
+          const { error: insertError } = await supabase
+            .from('subscription_overrides')
+            .insert({
+              user_id: user.id,
+              override_type: 'trial',
+              trial_end_date: newTrialEndDate.toISOString(),
+              notes: `${FREE_EXTENSION_DAYS}-day free access for feedback submission`,
+            });
+
+          if (insertError) {
+            console.error('Error creating subscription override:', insertError);
+          }
+        }
+
+        setExtensionEndDate(newTrialEndDate.toLocaleDateString('en-US', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        }));
+      }
 
       clearDraft();
       setIsSubmitted(true);
@@ -137,6 +242,14 @@ export default function Feedback() {
     }
   };
 
+  if (checkingClaim) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
@@ -147,11 +260,21 @@ export default function Feedback() {
             </div>
             <CardTitle className="text-2xl">Thank You!</CardTitle>
             <CardDescription className="text-base">
-              Your feedback has been submitted successfully. Check your email for details on claiming your free month extension!
+              Your feedback has been submitted successfully.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button onClick={() => navigate("/studio")} className="w-full">
+          <CardContent className="space-y-4">
+            {extensionEndDate && (
+              <Alert className="bg-accent/10 border-accent text-left">
+                <Gift className="h-4 w-4" />
+                <AlertTitle>Free Access Extended!</AlertTitle>
+                <AlertDescription>
+                  Your free access has been extended by {FREE_EXTENSION_DAYS} days. 
+                  You now have access until <strong>{extensionEndDate}</strong>.
+                </AlertDescription>
+              </Alert>
+            )}
+            <Button onClick={() => navigate("/app")} className="w-full">
               Return to Dashboard
             </Button>
           </CardContent>
@@ -173,6 +296,28 @@ export default function Feedback() {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
+        {/* Incentive Banner */}
+        {!hasAlreadyClaimed && (
+          <Alert className="mb-6 bg-accent/10 border-accent">
+            <Gift className="h-4 w-4" />
+            <AlertTitle>Get {FREE_EXTENSION_DAYS} Days Free!</AlertTitle>
+            <AlertDescription>
+              Complete this feedback form to receive {FREE_EXTENSION_DAYS} days of free access to all premium features. 
+              Your insights help us build a better platform for educators.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {hasAlreadyClaimed && (
+          <Alert className="mb-6">
+            <CheckCircle className="h-4 w-4" />
+            <AlertTitle>Thanks for your previous feedback!</AlertTitle>
+            <AlertDescription>
+              You've already claimed your free extension. You can still submit additional feedback to help us improve.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card>
           <CardHeader>
             <FeedbackProgress currentStep={currentStep} totalSteps={3} />

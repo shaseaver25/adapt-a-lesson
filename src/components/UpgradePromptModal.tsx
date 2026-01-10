@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, Check, Loader2 } from 'lucide-react';
+import { Sparkles, Check, Loader2, MessageSquare, Gift } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { PRICING_TIERS } from '@/lib/pricing';
 
 interface UpgradePromptModalProps {
@@ -69,6 +70,33 @@ export function UpgradePromptModal({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Free Access Option */}
+          <div className="bg-accent/10 border border-accent/30 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-accent/20 rounded-full">
+                <Gift className="h-5 w-5 text-accent-foreground" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-foreground">Get 30 Days Free!</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Share your feedback to help us improve and receive 30 days of free access.
+                </p>
+                <Link to="/feedback" onClick={onClose}>
+                  <Button variant="outline" size="sm" className="mt-3 gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Give Feedback
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Separator className="flex-1" />
+            <span className="text-xs text-muted-foreground uppercase">or subscribe</span>
+            <Separator className="flex-1" />
+          </div>
+
           {/* Features */}
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">What you'll get:</p>
