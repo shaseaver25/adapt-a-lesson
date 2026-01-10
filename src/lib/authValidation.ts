@@ -18,8 +18,16 @@ export const fullNameSchema = z
   .string()
   .min(2, 'Name must be at least 2 characters')
   .max(100, 'Name must be less than 100 characters')
-  .regex(/^[a-zA-Z\s'-]+$/, 'Name can only contain letters, spaces, hyphens, and apostrophes')
-  .optional();
+  .regex(/^[a-zA-Z\s'-]+$/, 'Name can only contain letters, spaces, hyphens, and apostrophes');
+
+// Company validation schema
+export const companySchema = z
+  .string()
+  .min(2, 'Organization name must be at least 2 characters')
+  .max(200, 'Organization name must be less than 200 characters');
+
+// Organization type validation
+export const organizationTypeSchema = z.enum(['school', 'non_profit', 'home_school', 'other']);
 
 // Sign in form schema
 export const signInSchema = z.object({
@@ -33,6 +41,8 @@ export const signUpSchema = z.object({
   password: passwordSchema,
   confirmPassword: z.string().min(1, 'Please confirm your password'),
   fullName: fullNameSchema,
+  company: companySchema,
+  organizationType: organizationTypeSchema,
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],

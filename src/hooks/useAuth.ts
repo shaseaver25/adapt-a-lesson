@@ -15,9 +15,15 @@ export interface AuthState {
   error: AuthError | null;
 }
 
+export interface SignUpOptions {
+  fullName: string;
+  company: string;
+  organizationType: 'school' | 'non_profit' | 'home_school' | 'other';
+}
+
 export interface AuthActions {
   signInWithEmail: (email: string, password: string) => Promise<{ error: AuthError | null; data?: { user: User | null } }>;
-  signUpWithEmail: (email: string, password: string, fullName?: string) => Promise<{ error: AuthError | null }>;
+  signUpWithEmail: (email: string, password: string, options: SignUpOptions) => Promise<{ error: AuthError | null }>;
   signInWithOAuth: (provider: 'google' | 'azure' | 'canvas') => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<{ error: AuthError | null }>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
@@ -122,7 +128,7 @@ export function useAuth(): AuthState & AuthActions {
   const signUpWithEmail = useCallback(async (
     email: string, 
     password: string, 
-    fullName?: string
+    options: SignUpOptions
   ) => {
     setError(null);
     
@@ -132,7 +138,9 @@ export function useAuth(): AuthState & AuthActions {
       options: {
         emailRedirectTo: getRedirectUrl(),
         data: {
-          full_name: fullName,
+          full_name: options.fullName,
+          company: options.company,
+          organization_type: options.organizationType,
         },
       },
     });

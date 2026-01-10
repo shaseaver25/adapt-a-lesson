@@ -620,6 +620,7 @@ export type Database = {
         Row: {
           account_locked: boolean | null
           avatar_url: string | null
+          company: string | null
           created_at: string
           email: string | null
           failed_login_attempts: number | null
@@ -628,12 +629,14 @@ export type Database = {
           last_login_at: string | null
           locked_at: string | null
           login_count: number | null
+          organization_type: string | null
           provider: string | null
           updated_at: string
         }
         Insert: {
           account_locked?: boolean | null
           avatar_url?: string | null
+          company?: string | null
           created_at?: string
           email?: string | null
           failed_login_attempts?: number | null
@@ -642,12 +645,14 @@ export type Database = {
           last_login_at?: string | null
           locked_at?: string | null
           login_count?: number | null
+          organization_type?: string | null
           provider?: string | null
           updated_at?: string
         }
         Update: {
           account_locked?: boolean | null
           avatar_url?: string | null
+          company?: string | null
           created_at?: string
           email?: string | null
           failed_login_attempts?: number | null
@@ -656,6 +661,7 @@ export type Database = {
           last_login_at?: string | null
           locked_at?: string | null
           login_count?: number | null
+          organization_type?: string | null
           provider?: string | null
           updated_at?: string
         }
