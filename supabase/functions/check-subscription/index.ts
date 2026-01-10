@@ -55,6 +55,67 @@ serve(async (req) => {
     }
     logStep("User authenticated", { userId: user.id, email: user.email });
 
+    // FIRST: Check for database subscription overrides
+    const { data: override, error: overrideError } = await supabaseClient
+      .from('subscription_overrides')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (overrideError) {
+      logStep("Error checking override", { error: overrideError.message });
+    }
+
+    if (override) {
+      logStep("Found subscription override", { type: override.override_type, trialEnd: override.trial_end_date });
+
+      if (override.override_type === 'permanent') {
+        // Permanent access - always subscribed
+        return new Response(JSON.stringify({
+          subscribed: true,
+          tier: "yearly", // Treat permanent as yearly equivalent
+          productId: null,
+          subscriptionEnd: null,
+          isTrialing: false,
+          trialEnd: null,
+          daysRemaining: null,
+          isPermanent: true,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
+      if (override.override_type === 'trial' && override.trial_end_date) {
+        const trialEnd = new Date(override.trial_end_date);
+        const now = new Date();
+        
+        if (trialEnd > now) {
+          // Trial still valid
+          const diffTime = trialEnd.getTime() - now.getTime();
+          const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+          return new Response(JSON.stringify({
+            subscribed: true,
+            tier: "monthly", // Treat trial as monthly equivalent
+            productId: null,
+            subscriptionEnd: trialEnd.toISOString(),
+            isTrialing: true,
+            trialEnd: trialEnd.toISOString(),
+            daysRemaining,
+            isOverride: true,
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        } else {
+          logStep("Database trial has expired", { trialEnd: override.trial_end_date });
+          // Trial expired - continue to check Stripe
+        }
+      }
+    }
+
+    // SECOND: Check Stripe for subscriptions
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     
     // Find customer by email

@@ -812,6 +812,36 @@ export type Database = {
           },
         ]
       }
+      subscription_overrides: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          override_type: string
+          trial_end_date: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          override_type: string
+          trial_end_date?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          override_type?: string
+          trial_end_date?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       usage_analytics: {
         Row: {
           created_at: string | null
