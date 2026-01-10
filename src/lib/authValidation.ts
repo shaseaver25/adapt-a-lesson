@@ -69,8 +69,16 @@ export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 export type UpdatePasswordFormData = z.infer<typeof updatePasswordSchema>;
 
 // Helper function to get friendly error messages
-export function getAuthErrorMessage(errorCode: string | undefined): string {
-  switch (errorCode) {
+// Handles both error codes and error messages from Supabase
+export function getAuthErrorMessage(errorCodeOrMessage: string | undefined): string {
+  if (!errorCodeOrMessage) {
+    return 'An unexpected error occurred. Please try again.';
+  }
+  
+  const lowerMessage = errorCodeOrMessage.toLowerCase();
+  
+  // Check for common error codes first
+  switch (errorCodeOrMessage) {
     case 'invalid_credentials':
     case 'invalid_grant':
       return 'Invalid email or password. Please check your credentials and try again.';
@@ -90,9 +98,45 @@ export function getAuthErrorMessage(errorCode: string | undefined): string {
       return 'This account has been suspended. Please contact support.';
     case 'session_expired':
       return 'Your session has expired. Please sign in again.';
-    default:
-      return 'An unexpected error occurred. Please try again.';
   }
+  
+  // Check for error message patterns (Supabase returns full messages)
+  if (lowerMessage.includes('user already registered') || 
+      lowerMessage.includes('already been registered') ||
+      lowerMessage.includes('already exists')) {
+    return 'An account with this email already exists. Please sign in instead.';
+  }
+  
+  if (lowerMessage.includes('invalid login credentials') ||
+      lowerMessage.includes('invalid email or password')) {
+    return 'Invalid email or password. Please check your credentials and try again.';
+  }
+  
+  if (lowerMessage.includes('email not confirmed')) {
+    return 'Please verify your email address before signing in.';
+  }
+  
+  if (lowerMessage.includes('rate limit') || lowerMessage.includes('too many requests')) {
+    return 'Too many requests. Please wait a moment and try again.';
+  }
+  
+  if (lowerMessage.includes('password') && lowerMessage.includes('weak')) {
+    return 'Password is too weak. Please use a stronger password.';
+  }
+  
+  if (lowerMessage.includes('signup') && lowerMessage.includes('disabled')) {
+    return 'Sign up is currently disabled. Please contact support.';
+  }
+  
+  if (lowerMessage.includes('banned') || lowerMessage.includes('suspended')) {
+    return 'This account has been suspended. Please contact support.';
+  }
+  
+  if (lowerMessage.includes('expired')) {
+    return 'Your session has expired. Please sign in again.';
+  }
+  
+  return 'An unexpected error occurred. Please try again.';
 }
 
 // Check if account might be locked based on failed attempts
