@@ -125,7 +125,13 @@ export default function HelpCenter() {
         {/* Selected Category Header */}
         {selectedCategory && (
           <div className="mb-6">
-            <Button variant="ghost" onClick={() => setSelectedCategory(null)} className="mb-4">
+            <Button variant="ghost" onClick={() => {
+              setSelectedCategory(null);
+              // If we're on /help/articles, navigate to /help
+              if (window.location.pathname === '/help/articles') {
+                navigate('/help');
+              }
+            }} className="mb-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
               All Categories
             </Button>
