@@ -6,6 +6,9 @@ export interface SubscriptionState {
   isSubscribed: boolean;
   tier: 'monthly' | 'yearly' | null;
   subscriptionEnd: string | null;
+  isTrialing: boolean;
+  trialEnd: string | null;
+  daysRemaining: number | null;
   loading: boolean;
   error: string | null;
 }
@@ -16,6 +19,9 @@ export function useSubscription() {
     isSubscribed: false,
     tier: null,
     subscriptionEnd: null,
+    isTrialing: false,
+    trialEnd: null,
+    daysRemaining: null,
     loading: true,
     error: null,
   });
@@ -26,6 +32,9 @@ export function useSubscription() {
         isSubscribed: false,
         tier: null,
         subscriptionEnd: null,
+        isTrialing: false,
+        trialEnd: null,
+        daysRemaining: null,
         loading: false,
         error: null,
       });
@@ -49,6 +58,9 @@ export function useSubscription() {
         isSubscribed: data.subscribed ?? false,
         tier: data.tier ?? null,
         subscriptionEnd: data.subscriptionEnd ?? null,
+        isTrialing: data.isTrialing ?? false,
+        trialEnd: data.trialEnd ?? null,
+        daysRemaining: data.daysRemaining ?? null,
         loading: false,
         error: null,
       });
