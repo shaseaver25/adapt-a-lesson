@@ -107,6 +107,7 @@ export default function Landing() {
             <button onClick={() => scrollToSection('why')} className="text-foreground/80 hover:text-primary transition-colors font-medium">Why Us</button>
             <button onClick={() => scrollToSection('videos')} className="text-foreground/80 hover:text-primary transition-colors font-medium">Videos</button>
             <button onClick={() => scrollToSection('team')} className="text-foreground/80 hover:text-primary transition-colors font-medium">Team</button>
+            <Link to="/pricing" className="text-foreground/80 hover:text-primary transition-colors font-medium">Pricing</Link>
             <button onClick={() => setLoginOpen(true)} className="px-6 py-2.5 bg-primary text-white rounded-full font-semibold shadow-lg shadow-primary/30 hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/40 hover:-translate-y-0.5 transition-all">
               Get Started
             </button>
