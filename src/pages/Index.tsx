@@ -11,7 +11,7 @@ import { SubscriptionBanner } from '@/components/SubscriptionBanner';
 import { UpgradePromptModal } from '@/components/UpgradePromptModal';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, LogIn, LogOut, Settings, UserCircle, Loader2, MessageSquare } from 'lucide-react';
+import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, LogIn, LogOut, Settings, UserCircle, Loader2, MessageSquare, HelpCircle } from 'lucide-react';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
 import { DifferentiationProgressModal, createInitialProgressState } from '@/components/DifferentiationProgressModal';
@@ -216,6 +216,12 @@ const Index = () => {
               <Button variant="ghost" size="sm" className="gap-2">
                 <MessageSquare className="h-4 w-4" />
                 <span className="hidden sm:inline">Feedback</span>
+              </Button>
+            </Link>
+            <Link to="/help">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <HelpCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">Help</span>
               </Button>
             </Link>
             {showResults && (
