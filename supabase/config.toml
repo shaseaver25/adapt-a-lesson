@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.send-ticket-reply-notification]
 verify_jwt = false
+
+[functions.get-site-analytics]
+verify_jwt = false

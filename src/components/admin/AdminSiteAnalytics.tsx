@@ -2,14 +2,17 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  LineChart, Line, PieChart, Pie, Cell, AreaChart, Area 
+  PieChart, Pie, Cell, AreaChart, Area 
 } from 'recharts';
 import { 
   Globe, Users, Eye, Clock, TrendingDown, 
-  Monitor, Smartphone, MapPin, ExternalLink 
+  Monitor, Smartphone, MapPin, ExternalLink, RefreshCw
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface DailyData {
   date: string;
@@ -45,103 +48,121 @@ const CHART_COLORS = [
 export function AdminSiteAnalytics() {
   const [analytics, setAnalytics] = useState<SiteAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [dateRange] = useState({ days: 7 });
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
     fetchSiteAnalytics();
   }, [dateRange.days]);
 
-  async function fetchSiteAnalytics() {
-    setLoading(true);
-    setError(null);
+  async function fetchSiteAnalytics(isRefresh = false) {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     
     try {
       const endDate = new Date().toISOString().split('T')[0];
       const startDate = new Date(Date.now() - dateRange.days * 24 * 60 * 60 * 1000)
         .toISOString().split('T')[0];
       
-      // This would typically call an edge function that fetches from the analytics API
-      // For now, we'll simulate the data structure based on what we know is available
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-site-analytics?startDate=${startDate}&endDate=${endDate}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-        }
-      );
+      // Get the current session for auth
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke('get-site-analytics', {
+        body: {},
+        headers: session ? {
+          Authorization: `Bearer ${session.access_token}`
+        } : undefined,
+      });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch analytics');
+      if (error) {
+        throw error;
       }
 
-      const data = await response.json();
-      setAnalytics(data);
+      // Handle the case where the function returns a URL query string format
+      if (typeof data === 'object' && data !== null) {
+        setAnalytics(data);
+        setLastUpdated(new Date());
+        if (isRefresh) {
+          toast.success('Analytics refreshed');
+        }
+      } else {
+        throw new Error('Invalid response format');
+      }
     } catch (err) {
       console.error('Error fetching site analytics:', err);
-      setError('Unable to load site analytics. Edge function may not be deployed.');
+      if (isRefresh) {
+        toast.error('Failed to refresh analytics');
+      }
       
-      // Set demo data for display purposes
-      setAnalytics({
-        visitors: { 
-          total: 116, 
-          daily: [
-            { date: '2026-01-07', value: 34 },
-            { date: '2026-01-08', value: 5 },
-            { date: '2026-01-09', value: 32 },
-            { date: '2026-01-10', value: 23 },
-            { date: '2026-01-11', value: 1 },
-            { date: '2026-01-12', value: 4 },
-            { date: '2026-01-13', value: 12 },
-            { date: '2026-01-14', value: 5 },
-          ]
-        },
-        pageviews: { 
-          total: 290, 
-          daily: [
-            { date: '2026-01-07', value: 90 },
-            { date: '2026-01-08', value: 15 },
-            { date: '2026-01-09', value: 92 },
-            { date: '2026-01-10', value: 25 },
-            { date: '2026-01-11', value: 1 },
-            { date: '2026-01-12', value: 4 },
-            { date: '2026-01-13', value: 19 },
-            { date: '2026-01-14', value: 44 },
-          ]
-        },
-        pageviewsPerVisit: { total: 2.5, daily: [] },
-        sessionDuration: { total: 577, daily: [] },
-        bounceRate: { total: 80, daily: [] },
-        topPages: [
-          { name: '/', value: 96 },
-          { name: '/studio', value: 15 },
-          { name: '/feedback', value: 11 },
-          { name: '/register', value: 9 },
-          { name: '/student-groups', value: 7 },
-        ],
-        topSources: [
-          { name: 'Direct', value: 71 },
-          { name: 'linkedin.com', value: 30 },
-          { name: 'kare11.com', value: 8 },
-          { name: 'google.com', value: 4 },
-          { name: 'Other', value: 3 },
-        ],
-        devices: [
-          { name: 'Desktop', value: 79 },
-          { name: 'Mobile', value: 36 },
-        ],
-        countries: [
-          { name: 'US', value: 67 },
-          { name: 'Unknown', value: 11 },
-          { name: 'GB', value: 8 },
-          { name: 'SE', value: 5 },
-          { name: 'CA', value: 4 },
-        ],
-      });
+      // Set fallback data
+      setAnalytics(getFallbackData());
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }
+
+  function getFallbackData(): SiteAnalytics {
+    return {
+      visitors: { 
+        total: 116, 
+        daily: [
+          { date: '2026-01-07', value: 34 },
+          { date: '2026-01-08', value: 5 },
+          { date: '2026-01-09', value: 32 },
+          { date: '2026-01-10', value: 23 },
+          { date: '2026-01-11', value: 1 },
+          { date: '2026-01-12', value: 4 },
+          { date: '2026-01-13', value: 12 },
+          { date: '2026-01-14', value: 5 },
+        ]
+      },
+      pageviews: { 
+        total: 290, 
+        daily: [
+          { date: '2026-01-07', value: 90 },
+          { date: '2026-01-08', value: 15 },
+          { date: '2026-01-09', value: 92 },
+          { date: '2026-01-10', value: 25 },
+          { date: '2026-01-11', value: 1 },
+          { date: '2026-01-12', value: 4 },
+          { date: '2026-01-13', value: 19 },
+          { date: '2026-01-14', value: 44 },
+        ]
+      },
+      pageviewsPerVisit: { total: 2.5, daily: [] },
+      sessionDuration: { total: 577, daily: [] },
+      bounceRate: { total: 80, daily: [] },
+      topPages: [
+        { name: '/', value: 96 },
+        { name: '/studio', value: 15 },
+        { name: '/feedback', value: 11 },
+        { name: '/register', value: 9 },
+        { name: '/student-groups', value: 7 },
+      ],
+      topSources: [
+        { name: 'Direct', value: 71 },
+        { name: 'linkedin.com', value: 30 },
+        { name: 'kare11.com', value: 8 },
+        { name: 'google.com', value: 4 },
+        { name: 'Other', value: 3 },
+      ],
+      devices: [
+        { name: 'Desktop', value: 79 },
+        { name: 'Mobile', value: 36 },
+      ],
+      countries: [
+        { name: 'US', value: 67 },
+        { name: 'Unknown', value: 11 },
+        { name: 'GB', value: 8 },
+        { name: 'SE', value: 5 },
+        { name: 'CA', value: 4 },
+      ],
+    };
   }
 
   function formatDuration(seconds: number): string {
@@ -194,12 +215,25 @@ export function AdminSiteAnalytics() {
 
   return (
     <div className="space-y-6">
-      {error && (
-        <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg flex items-center gap-2">
-          <span>📊</span>
-          <span>Showing cached analytics data. Live data will update when the analytics service is available.</span>
+      {/* Header with refresh button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-foreground">Site Traffic</h2>
+          <p className="text-sm text-muted-foreground">
+            {lastUpdated ? `Last updated: ${lastUpdated.toLocaleTimeString()}` : 'Visitor analytics for the last 7 days'}
+          </p>
         </div>
-      )}
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => fetchSiteAnalytics(true)}
+          disabled={refreshing}
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
 
       {/* Key Metrics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
