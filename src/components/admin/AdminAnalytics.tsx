@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AdminSiteAnalytics } from './AdminSiteAnalytics';
+import { Globe, FileText } from 'lucide-react';
 
 interface DailyMetric {
   date: string;
@@ -67,6 +70,33 @@ export function AdminAnalytics() {
     }
   }
 
+  return (
+    <div className="space-y-6">
+      <Tabs defaultValue="site" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="site" className="flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            Site Traffic
+          </TabsTrigger>
+          <TabsTrigger value="usage" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Platform Usage
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="site">
+          <AdminSiteAnalytics />
+        </TabsContent>
+
+        <TabsContent value="usage">
+          <UsageAnalytics metrics={metrics} loading={loading} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function UsageAnalytics({ metrics, loading }: { metrics: DailyMetric[]; loading: boolean }) {
   if (loading) {
     return (
       <div className="space-y-6">
@@ -85,8 +115,8 @@ export function AdminAnalytics() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-foreground">Usage Analytics</h2>
-        <p className="text-muted-foreground">Platform usage over the last 30 days</p>
+        <h2 className="text-xl font-semibold text-foreground">Platform Usage</h2>
+        <p className="text-muted-foreground">Content generation over the last 30 days</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
