@@ -218,43 +218,35 @@ export function useLessonAudio(): UseLessonAudioReturn {
 
         while (retries <= MAX_RETRIES && !groupSuccess) {
           try {
-            const response = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-group-audio`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-                  'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            // Use supabase.functions.invoke which automatically includes the user's auth token
+            const { data: invokeResult, error: invokeError } = await supabase.functions.invoke('generate-group-audio', {
+              body: {
+                lessonId,
+                differentiatedContent: content,
+                group: {
+                  id: group.id,
+                  groupName: group.groupName,
+                  homeLanguage: group.homeLanguage,
+                  accommodations: group.accommodations || [],
                 },
-                body: JSON.stringify({
-                  lessonId,
-                  differentiatedContent: content,
-                  group: {
-                    id: group.id,
-                    groupName: group.groupName,
-                    homeLanguage: group.homeLanguage,
-                    accommodations: group.accommodations || [],
-                  },
-                  retryFailedOnly: retries > 0, // On retry, skip already generated
-                }),
-              }
-            );
+                retryFailedOnly: retries > 0, // On retry, skip already generated
+              },
+            });
 
-            if (!response.ok) {
-              throw new Error(`Request failed with status ${response.status}`);
+            if (invokeError) {
+              throw new Error(invokeError.message || `Request failed`);
             }
 
-            const result = await response.json();
-            totalResults.generated += result.generated;
-            totalResults.failed += result.failed;
+            const result = invokeResult as { generated: number; failed: number; status?: string; audioRecords?: any[] };
+            totalResults.generated += result.generated || 0;
+            totalResults.failed += result.failed || 0;
             if (result.audioRecords) {
               totalResults.audioRecords.push(...result.audioRecords);
             }
 
             // Update progress
             setProgress(prev => ({ 
-              generated: prev.generated + result.generated, 
+              generated: prev.generated + (result.generated || 0), 
               total: estimatedSections 
             }));
 
@@ -265,7 +257,7 @@ export function useLessonAudio(): UseLessonAudioReturn {
               updated_at: new Date().toISOString(),
             }).eq('lesson_id', lessonId);
 
-            groupSuccess = result.status === 'complete' || result.failed === 0;
+            groupSuccess = result.status === 'complete' || (result.failed || 0) === 0;
             
             if (!groupSuccess && retries < MAX_RETRIES) {
               console.log(`Group ${group.groupName} had failures, retrying... (attempt ${retries + 2})`);
