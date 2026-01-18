@@ -9,6 +9,7 @@ import { TestimonialCarousel } from '@/components/landing/TestimonialCarousel';
 import { Play, Clock, Globe, Shield, Users, Sparkles, FileDown, ArrowRight, Zap, Languages, CheckCircle2, FileText, Linkedin, Mail } from 'lucide-react';
 import shannonPhoto from '@/assets/shannon-seaver.jpg';
 import jenaPhoto from '@/assets/jena-zangs.jpg';
+import realpathLogo from '@/assets/realpath-learning-logo.png';
 
 // Video player component for back-to-back videos
 function GettingStartedVideoPlayer() {
@@ -113,12 +114,7 @@ export default function Landing() {
       <nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-8 py-4 bg-background/80 backdrop-blur-xl border-b border-border/50">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <a href="#" className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg transform -rotate-3">
-              R
-            </div>
-            <span className="font-display text-xl font-bold text-primary">
-              Let's Get <span className="text-accent">REAL</span>
-            </span>
+            <img src={realpathLogo} alt="RealPath Learning" className="h-12 w-auto" />
           </a>
           <div className="hidden md:flex items-center gap-8">
             <button onClick={() => scrollToSection('how-it-works')} className="text-foreground/80 hover:text-primary transition-colors font-medium">
@@ -148,7 +144,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
           <div className="animate-fade-in">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-accent/20 to-primary/20 text-accent px-4 py-2 rounded-full text-sm font-semibold mb-6">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-accent/20 to-primary/20 px-4 py-2 rounded-full text-sm font-semibold mb-6 text-white">
               <Sparkles className="w-4 h-4" />
               Built by Teachers, for Teachers
             </div>
@@ -156,7 +152,7 @@ export default function Landing() {
             {/* Main Headline */}
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
               Create Differentiated Lessons in{' '}
-              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              <span className="text-primary">
                 60 Seconds
               </span>
             </h1>
@@ -495,7 +491,7 @@ export default function Landing() {
                 </p>
                 <div className="flex justify-center gap-3">
                   <a
-                    href="https://linkedin.com"
+                    href="https://www.linkedin.com/in/shannon-seaver-nbct-23a2a933/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors"
@@ -574,10 +570,7 @@ export default function Landing() {
       <footer className="py-12 px-4 md:px-8 bg-foreground text-white/70">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center text-white font-bold text-lg">
-              R
-            </div>
-            <span className="font-display text-lg text-white">Let's Get REAL</span>
+            <img src={realpathLogo} alt="RealPath Learning" className="h-10 w-auto" />
           </div>
           <div className="flex flex-wrap justify-center gap-6">
             <button onClick={() => scrollToSection('features')} className="hover:text-white transition-colors">
@@ -602,8 +595,6 @@ export default function Landing() {
         </div>
       </footer>
 
-      {/* Sticky CTA Bar */}
-      <StickyCtaBar onGetStarted={() => setLoginOpen(true)} />
 
       {/* Login Modal */}
       <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
