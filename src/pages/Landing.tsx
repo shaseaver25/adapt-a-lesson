@@ -114,7 +114,7 @@ export default function Landing() {
       <nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-8 py-4 bg-background/80 backdrop-blur-xl border-b border-border/50">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <a href="#" className="flex items-center gap-3">
-            <img src={realpathLogo} alt="RealPath Learning" className="h-14 md:h-16 w-auto object-contain" />
+            <img src={realpathLogo} alt="RealPath Learning" className="h-20 md:h-24 w-auto object-contain" />
           </a>
           <div className="hidden md:flex items-center gap-8">
             <button onClick={() => scrollToSection('how-it-works')} className="text-foreground/80 hover:text-primary transition-colors font-medium">
