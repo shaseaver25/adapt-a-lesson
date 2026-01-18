@@ -6,7 +6,7 @@ import { StickyCtaBar } from '@/components/landing/StickyCtaBar';
 import { SocialProofBar } from '@/components/landing/SocialProofBar';
 import { ProductPreview } from '@/components/landing/ProductPreview';
 import { TestimonialCarousel } from '@/components/landing/TestimonialCarousel';
-import { Play, Clock, Globe, Shield, Users, Sparkles, FileDown, ArrowRight, Zap, Languages, CheckCircle2, FileText } from 'lucide-react';
+import { Play, Clock, Globe, Shield, Users, Sparkles, FileDown, ArrowRight, Zap, Languages, CheckCircle2, FileText, Linkedin, Mail } from 'lucide-react';
 import shannonPhoto from '@/assets/shannon-seaver.jpg';
 import jenaPhoto from '@/assets/jena-zangs.jpg';
 
@@ -482,51 +482,65 @@ export default function Landing() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-            {[
-              {
-                name: 'Shannon Seaver',
-                role: 'Founder & CEO',
-                bio: 'Tekne Award-winning National Board Certified Teacher with 15+ years in the classroom. Building the future of differentiated learning.',
-                email: 'shannon@creatempls.org',
-                image: shannonPhoto
-              },
-              {
-                name: 'Jena Zangs',
-                role: 'Co-Founder & Data Lead',
-                bio: 'Chief Data & Analytics Officer at University of St. Thomas. Women in AI Minnesota Ambassador.',
-                email: '',
-                image: jenaPhoto
-              }
-            ].map((member, i) => (
-              <div key={i} className="bg-card rounded-3xl overflow-hidden shadow-xl hover:-translate-y-2 hover:shadow-2xl transition-all">
-                <div className="aspect-square bg-gradient-to-br from-accent/50 to-primary/50 relative">
-                  <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
-                </div>
-                <div className="p-8 text-center">
-                  <h3 className="font-display text-2xl font-bold text-foreground mb-1">{member.name}</h3>
-                  <p className="text-secondary font-semibold mb-4">{member.role}</p>
-                  <p className="text-muted-foreground text-sm leading-relaxed mb-6">{member.bio}</p>
-                  <div className="flex justify-center gap-3">
-                    <a
-                      href="https://linkedin.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors"
-                    >
-                      in
-                    </a>
-                    {member.email && (
-                      <a
-                        href={`mailto:${member.email}`}
-                        className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors"
-                      >
-                        ✉
-                      </a>
-                    )}
-                  </div>
+            {/* Shannon Seaver Card */}
+            <div className="bg-card rounded-3xl overflow-hidden shadow-xl hover:-translate-y-2 hover:shadow-2xl transition-all">
+              <div className="aspect-square bg-gradient-to-br from-accent/50 to-primary/50 relative">
+                <img src={shannonPhoto} alt="Shannon Seaver" className="w-full h-full object-cover" />
+              </div>
+              <div className="p-8 text-center">
+                <h3 className="font-display text-2xl font-bold text-foreground mb-1">Shannon Seaver</h3>
+                <p className="text-secondary font-semibold mb-4">Founder & CEO</p>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+                  Tekne Award-winning National Board Certified Teacher with 15+ years in the classroom. Building the future of differentiated learning.
+                </p>
+                <div className="flex justify-center gap-3">
+                  <a
+                    href="https://linkedin.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors"
+                  >
+                    <Linkedin className="w-5 h-5" />
+                  </a>
+                  <a
+                    href="mailto:shannon@realpathlearning.com"
+                    className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors"
+                  >
+                    <Mail className="w-5 h-5" />
+                  </a>
                 </div>
               </div>
-            ))}
+            </div>
+
+            {/* Jena Zangs Card */}
+            <div className="bg-card rounded-3xl overflow-hidden shadow-xl hover:-translate-y-2 hover:shadow-2xl transition-all">
+              <div className="aspect-square bg-gradient-to-br from-accent/50 to-primary/50 relative">
+                <img src={jenaPhoto} alt="Jena Zangs" className="w-full h-full object-cover" />
+              </div>
+              <div className="p-8 text-center">
+                <h3 className="font-display text-2xl font-bold text-foreground mb-1">Jena Zangs</h3>
+                <p className="text-secondary font-semibold mb-4">Co-Founder & COO</p>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+                  Chief Data & AI Officer at the University of St. Thomas. 10+ years in Higher Education technology and passionate on meeting every learner where they need us with AI.
+                </p>
+                <div className="flex justify-center gap-3">
+                  <a
+                    href="https://www.linkedin.com/in/jenaz/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors"
+                  >
+                    <Linkedin className="w-5 h-5" />
+                  </a>
+                  <a
+                    href="mailto:jena@realpathlearning.com"
+                    className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors"
+                  >
+                    <Mail className="w-5 h-5" />
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -577,11 +591,12 @@ export default function Landing() {
             </button>
             <Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link>
             <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
+            <a href="mailto:press@realpathlearning.com" className="hover:text-white transition-colors">Press</a>
           </div>
           <div className="text-center md:text-right">
             <p>Questions? Reach out!</p>
-            <a href="mailto:shannon@creatempls.org" className="text-secondary hover:underline">
-              shannon@creatempls.org
+            <a href="mailto:support@realpathlearning.com" className="text-secondary hover:underline">
+              support@realpathlearning.com
             </a>
           </div>
         </div>
