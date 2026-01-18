@@ -588,7 +588,7 @@ export default function Landing() {
           </div>
           <div className="text-center md:text-right">
             <p>Questions? Reach out!</p>
-            <a href="mailto:support@realpathlearning.com" className="text-secondary hover:underline">
+            <a href="mailto:support@realpathlearning.com" className="text-white hover:underline">
               support@realpathlearning.com
             </a>
           </div>
