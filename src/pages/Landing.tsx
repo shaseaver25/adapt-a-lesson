@@ -10,6 +10,7 @@ import { Play, Clock, Globe, Shield, Users, Sparkles, FileDown, ArrowRight, Zap,
 import shannonPhoto from '@/assets/shannon-seaver.jpg';
 import jenaPhoto from '@/assets/jena-zangs.jpg';
 import realpathLogo from '@/assets/realpath-learning-logo.png';
+import realpathLogoLight from '@/assets/realpath-learning-logo-light.png';
 
 // Video player component for back-to-back videos
 function GettingStartedVideoPlayer() {
@@ -570,7 +571,7 @@ export default function Landing() {
       <footer className="py-12 px-4 md:px-8 bg-foreground text-white/70">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-3">
-            <img src={realpathLogo} alt="RealPath Learning" className="h-8 md:h-10 w-auto object-contain brightness-0 invert" />
+            <img src={realpathLogoLight} alt="RealPath Learning" className="h-8 md:h-10 w-auto object-contain" />
           </div>
           <div className="flex flex-wrap justify-center gap-6">
             <button onClick={() => scrollToSection('features')} className="hover:text-white transition-colors">
