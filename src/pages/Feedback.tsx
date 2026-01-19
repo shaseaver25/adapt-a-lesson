@@ -17,7 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { StarRating } from "@/components/feedback/StarRating";
 import { FeedbackProgress } from "@/components/feedback/FeedbackProgress";
 import { useFeedbackForm, FeedbackFormData } from "@/hooks/useFeedbackForm";
-import realLogo from "@/assets/real-logo.png";
+import { Logo } from '@/components/ui/Logo';
 
 const GRADE_LEVELS = [
   { value: "K-2", label: "K-2" },
@@ -287,7 +287,7 @@ export default function Feedback() {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <img src={realLogo} alt="Logo" className="h-8 w-auto" />
+          <Logo size="small" />
           <div className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-primary" />
             <h1 className="text-xl font-semibold">Share Your Feedback</h1>

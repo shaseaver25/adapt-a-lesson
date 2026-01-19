@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { signUpSchema, getAuthErrorMessage } from '@/lib/authValidation';
 import { useTranslation } from '@/i18n';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { Logo } from '@/components/ui/Logo';
 
 // Password strength calculator
 function calculatePasswordStrength(password: string): {
@@ -161,21 +162,7 @@ export default function Register() {
       <Card className="w-full max-w-md shadow-lg border-border animate-fade-in">
         <CardHeader className="space-y-4 pb-4 px-4 sm:px-6">
           <div className="flex flex-col items-center gap-2">
-            <div className="p-3 rounded-xl bg-primary/10 transition-transform duration-200 hover:scale-105">
-              <svg
-                className="h-8 w-8 sm:h-10 sm:w-10 text-primary"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-              </svg>
-            </div>
+            <Logo size="large" />
             <div className="text-center">
               <h1 className="font-display font-bold text-xl sm:text-2xl text-foreground">
                 {t('register.title')}

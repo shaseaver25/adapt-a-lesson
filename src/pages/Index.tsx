@@ -12,6 +12,7 @@ import { UpgradePromptModal } from '@/components/UpgradePromptModal';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, LogIn, LogOut, Settings, UserCircle, Loader2, MessageSquare, HelpCircle } from 'lucide-react';
+import { Logo } from '@/components/ui/Logo';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
 import { DifferentiationProgressModal, createInitialProgressState } from '@/components/DifferentiationProgressModal';
@@ -172,14 +173,9 @@ const Index = () => {
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="font-display font-bold text-xl text-primary">
-              Let's Get REAL
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              Responsive. Equitable. Adaptive. <span className="font-semibold">Learner.</span>
-            </p>
-          </div>
+          <Link to="/" className="flex items-center">
+            <Logo size="medium" />
+          </Link>
           <div className="flex items-center gap-2">
             <Link to="/saved-lessons">
               <Button variant="ghost" size="sm" className="gap-2">
