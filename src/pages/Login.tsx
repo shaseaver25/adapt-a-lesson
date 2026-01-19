@@ -8,6 +8,7 @@ import { signInSchema } from '@/lib/authValidation';
 import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from '@/i18n';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { Logo } from '@/components/ui/Logo';
 
 // OAuth provider icons
 const GoogleIcon = () => (
@@ -290,11 +291,7 @@ export default function Login() {
         <div className="auth-wrapper animate-fade-in">
           {/* Brand Header */}
           <header className="brand-header">
-            <img 
-              src="/real-logo.png" 
-              alt="REAL Authentic Learning Studio" 
-              className="brand-logo-img"
-            />
+            <Logo size="large" />
             <p className="brand-tagline">{t('login.subtitle')}</p>
             
             <h1 className="hero-headline">

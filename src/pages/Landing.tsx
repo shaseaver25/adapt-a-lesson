@@ -9,8 +9,7 @@ import { TestimonialCarousel } from '@/components/landing/TestimonialCarousel';
 import { Play, Clock, Globe, Shield, Users, Sparkles, FileDown, ArrowRight, Zap, Languages, CheckCircle2, FileText, Linkedin, Mail } from 'lucide-react';
 import shannonPhoto from '@/assets/shannon-seaver.jpg';
 import jenaPhoto from '@/assets/jena-zangs.jpg';
-import realpathLogo from '@/assets/realpath-learning-logo.png';
-import realpathLogoLight from '@/assets/realpath-learning-logo-light.png';
+import { Logo } from '@/components/ui/Logo';
 
 // Video player component for back-to-back videos
 function GettingStartedVideoPlayer() {
@@ -115,7 +114,7 @@ export default function Landing() {
       <nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-8 py-4 bg-background/80 backdrop-blur-xl border-b border-border/50">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <a href="#" className="flex items-center gap-3">
-            <img src={realpathLogo} alt="RealPath Learning" className="h-20 md:h-24 w-auto object-contain" />
+            <Logo size="xlarge" />
           </a>
           <div className="hidden md:flex items-center gap-8">
             <button onClick={() => scrollToSection('how-it-works')} className="text-foreground/80 hover:text-primary transition-colors font-medium">
@@ -571,7 +570,7 @@ export default function Landing() {
       <footer className="py-12 px-4 md:px-8 bg-foreground text-white/70">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-3">
-            <img src={realpathLogoLight} alt="RealPath Learning" className="h-8 md:h-10 w-auto object-contain" />
+            <Logo size="small" variant="dark" />
           </div>
           <div className="flex flex-wrap justify-center gap-6">
             <button onClick={() => scrollToSection('features')} className="hover:text-white transition-colors">

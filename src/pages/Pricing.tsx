@@ -4,6 +4,7 @@ import { Check, Sparkles, ArrowRight, Loader2, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Logo } from '@/components/ui/Logo';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/hooks/useAuth';
 import { PRICING_TIERS } from '@/lib/pricing';
@@ -71,12 +72,7 @@ export default function Pricing() {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg transform -rotate-3">
-              R
-            </div>
-            <span className="font-display text-lg font-bold text-primary">
-              Let's Get <span className="text-accent">REAL</span>
-            </span>
+            <Logo size="medium" />
           </Link>
           <div className="flex items-center gap-4">
             {user ? (
