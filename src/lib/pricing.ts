@@ -1,7 +1,7 @@
 export const PRICING_TIERS = {
   monthly: {
-    priceId: "price_1So0wqDnqCVCwtRquWiEdV90",
-    productId: "prod_TlY3S8sEWv59zN",
+    priceId: "price_1So0wcDnqCVCwtRqFp7HG0xw",
+    productId: "prod_TlY2hwwSjAUHT1",
     name: "Let's Get REAL Monthly",
     price: 10,
     interval: "month" as const,
