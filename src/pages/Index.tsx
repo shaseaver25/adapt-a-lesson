@@ -23,26 +23,33 @@ import { useRubricGenerator } from '@/hooks/useRubricGenerator';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { PRICING_TIERS } from '@/lib/pricing';
-
 const Index = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { setCachedLessonContent, clearSelection } = useDifferentiation();
-  const { user, loading: authLoading, signOut } = useAuth();
-  const { isAdmin } = useAdmin();
-  
+  const {
+    setCachedLessonContent,
+    clearSelection
+  } = useDifferentiation();
+  const {
+    user,
+    loading: authLoading,
+    signOut
+  } = useAuth();
+  const {
+    isAdmin
+  } = useAdmin();
+
   // Subscription hook
-  const { 
-    isSubscribed, 
-    tier, 
-    subscriptionEnd, 
-    isTrialing, 
-    trialEnd, 
+  const {
+    isSubscribed,
+    tier,
+    subscriptionEnd,
+    isTrialing,
+    trialEnd,
     daysRemaining,
     loading: subscriptionLoading,
-    createCheckout,
+    createCheckout
   } = useSubscription();
-
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Redirect unauthenticated users to landing page
@@ -61,23 +68,19 @@ const Index = () => {
       }
     }
   }, [authLoading, subscriptionLoading, user, isSubscribed]);
-
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
-    return tabParam && ['differentiate', 'assessment', 'rubric'].includes(tabParam) 
-      ? tabParam 
-      : 'differentiate';
+    return tabParam && ['differentiate', 'assessment', 'rubric'].includes(tabParam) ? tabParam : 'differentiate';
   });
-
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Audio generation hook
-  const { 
-    isGenerating: isGeneratingAudio, 
-    progress: audioProgress, 
-    audioRecords, 
+  const {
+    isGenerating: isGeneratingAudio,
+    progress: audioProgress,
+    audioRecords,
     vocabularyAudio,
-    generateAudio, 
+    generateAudio
   } = useLessonAudio();
 
   // Differentiation hook
@@ -98,7 +101,7 @@ const Index = () => {
     handleLessonSaved,
     handleResetDifferentiation,
     setShowProgressModal,
-    setProgressStatus,
+    setProgressStatus
   } = useDifferentiationGenerator(setCachedLessonContent, clearSelection, generateAudio);
 
   // Assessment hook
@@ -107,7 +110,7 @@ const Index = () => {
     lastAssessmentInput,
     isGeneratingAssessment,
     handleGenerateAssessment,
-    handleResetAssessment,
+    handleResetAssessment
   } = useAssessmentGenerator();
 
   // Rubric hook
@@ -117,7 +120,7 @@ const Index = () => {
     isGeneratingRubric,
     rubricAutoVerification,
     handleGenerateRubric,
-    handleResetRubric,
+    handleResetRubric
   } = useRubricGenerator();
 
   // Warn user before leaving if there's unsaved content
@@ -129,46 +132,30 @@ const Index = () => {
         return e.returnValue;
       }
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [differentiatedLesson, isLessonSaved]);
-
   const handleReset = () => {
-    if (differentiatedLesson) handleResetDifferentiation();
-    else if (generatedAssessment) handleResetAssessment();
-    else if (generatedRubric) handleResetRubric();
+    if (differentiatedLesson) handleResetDifferentiation();else if (generatedAssessment) handleResetAssessment();else if (generatedRubric) handleResetRubric();
   };
-
   const handleUpgradeCheckout = async (selectedTier: 'monthly' | 'yearly') => {
     const tierInfo = PRICING_TIERS[selectedTier];
     await createCheckout(tierInfo.priceId, tierInfo.mode);
   };
-
   const showResults = differentiatedLesson || generatedAssessment || generatedRubric;
 
   // Show loading while checking auth and subscription
-  if (authLoading || (user && subscriptionLoading)) {
-    return (
-      <div className="min-h-screen gradient-hero flex items-center justify-center">
+  if (authLoading || user && subscriptionLoading) {
+    return <div className="min-h-screen gradient-hero flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen gradient-hero">
+  return <div className="min-h-screen gradient-hero">
       {/* Subscription Banner */}
-      <SubscriptionBanner 
-        isTrialing={isTrialing}
-        daysRemaining={daysRemaining}
-        tier={tier}
-        subscriptionEnd={subscriptionEnd}
-        isSubscribed={isSubscribed}
-      />
+      <SubscriptionBanner isTrialing={isTrialing} daysRemaining={daysRemaining} tier={tier} subscriptionEnd={subscriptionEnd} isSubscribed={isSubscribed} />
 
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
@@ -219,66 +206,43 @@ const Index = () => {
                 <span className="hidden sm:inline">Help</span>
               </Button>
             </Link>
-            {showResults && (
-              <button
-                onClick={handleReset}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
-              >
+            {showResults && <button onClick={handleReset} className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium">
                 ← Start Over
-              </button>
-            )}
+              </button>}
             
             {/* Admin link - only visible to admins */}
-            {isAdmin && (
-              <Link to="/admin">
+            {isAdmin && <Link to="/admin">
                 <Button variant="ghost" size="sm" className="gap-2">
                   <Settings className="h-4 w-4" />
                   <span className="hidden sm:inline">Admin</span>
                 </Button>
-              </Link>
-            )}
+              </Link>}
             
             {/* Auth buttons */}
-            {user ? (
-              <>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="gap-2"
-                  onClick={() => setIsProfileModalOpen(true)}
-                >
+            {user ? <>
+                <Button variant="ghost" size="sm" className="gap-2" onClick={() => setIsProfileModalOpen(true)}>
                   <UserCircle className="h-4 w-4" />
                   <span className="hidden sm:inline">Profile</span>
                 </Button>
-                <Button 
-                  onClick={signOut}
-                  size="sm" 
-                  className="gap-2 bg-[#166534] hover:bg-[#14532d] text-white font-semibold"
-                >
+                <Button onClick={signOut} size="sm" className="gap-2 bg-[#166534] hover:bg-[#14532d] text-white font-semibold">
                   <LogOut className="h-4 w-4" />
                   <span className="hidden sm:inline">Log Out</span>
                 </Button>
-              </>
-            ) : (
-              <Link to="/login">
+              </> : <Link to="/login">
                 <Button variant="ghost" size="sm" className="gap-2">
                   <LogIn className="h-4 w-4" />
                   <span className="hidden sm:inline">Log In</span>
                 </Button>
-              </Link>
-            )}
+              </Link>}
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {!showResults ? (
-          <div className="max-w-3xl mx-auto">
+        {!showResults ? <div className="max-w-3xl mx-auto">
             {/* Hero section */}
             <div className="text-center mb-8 animate-fade-in">
-              <h2 className="font-display font-extrabold text-3xl md:text-4xl text-primary mb-3">
-                Let's Get REAL
-              </h2>
+              <h2 className="font-display font-extrabold text-3xl md:text-4xl text-primary mb-3">REAL Path Learning</h2>
               <p className="text-lg text-muted-foreground mb-2">
                 <span className="font-semibold text-primary">R</span>esponsive. <span className="font-semibold text-primary">E</span>quitable. <span className="font-semibold text-primary">A</span>daptive. <span className="font-semibold text-primary">L</span>earner.
               </p>
@@ -307,13 +271,7 @@ const Index = () => {
 
               <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-medium">
                 <TabsContent value="differentiate" className="mt-0">
-                  <DifferentiateForm 
-                    onSubmit={handleDifferentiate} 
-                    isLoading={isDifferentiating}
-                    error={differentiateError}
-                    onRetry={handleRetryDifferentiate}
-                    onCancel={handleCancelGeneration}
-                  />
+                  <DifferentiateForm onSubmit={handleDifferentiate} isLoading={isDifferentiating} error={differentiateError} onRetry={handleRetryDifferentiate} onCancel={handleCancelGeneration} />
                 </TabsContent>
 
                 <TabsContent value="assessment" className="mt-0">
@@ -325,9 +283,7 @@ const Index = () => {
                 </TabsContent>
               </div>
             </Tabs>
-          </div>
-        ) : differentiatedLesson ? (
-          <div className="max-w-4xl mx-auto animate-slide-up">
+          </div> : differentiatedLesson ? <div className="max-w-4xl mx-auto animate-slide-up">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-success/10">
                 <BookOpenCheck className="h-5 w-5 text-success" />
@@ -338,34 +294,18 @@ const Index = () => {
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   Customized for {selectedGroups.length} student group{selectedGroups.length !== 1 ? 's' : ''}
-                  {isGeneratingAudio && (
-                    <span className="ml-2 text-primary">
+                  {isGeneratingAudio && <span className="ml-2 text-primary">
                       • Generating audio ({audioProgress.generated}/{audioProgress.total})...
-                    </span>
-                  )}
-                  {!isGeneratingAudio && audioRecords.length > 0 && (
-                    <span className="ml-2 text-success">
+                    </span>}
+                  {!isGeneratingAudio && audioRecords.length > 0 && <span className="ml-2 text-success">
                       • {audioRecords.length} audio files ready
-                    </span>
-                  )}
+                    </span>}
                 </p>
               </div>
             </div>
 
-            <DifferentiatedLessonOutput 
-              lessonData={differentiatedLesson} 
-              selectedGroups={selectedGroups}
-              lessonTitle={lastDifferentiateInput?.lessonName || 'Differentiated Lesson'}
-              originalContent={originalLessonContent}
-              onSaved={handleLessonSaved}
-              lessonId={currentLessonId}
-              preGeneratedAudio={audioRecords}
-              preGeneratedVocabularyAudio={vocabularyAudio}
-              isGeneratingAudio={isGeneratingAudio}
-            />
-          </div>
-        ) : generatedAssessment ? (
-          <div className="max-w-4xl mx-auto animate-slide-up">
+            <DifferentiatedLessonOutput lessonData={differentiatedLesson} selectedGroups={selectedGroups} lessonTitle={lastDifferentiateInput?.lessonName || 'Differentiated Lesson'} originalContent={originalLessonContent} onSaved={handleLessonSaved} lessonId={currentLessonId} preGeneratedAudio={audioRecords} preGeneratedVocabularyAudio={vocabularyAudio} isGeneratingAudio={isGeneratingAudio} />
+          </div> : generatedAssessment ? <div className="max-w-4xl mx-auto animate-slide-up">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-success/10">
                 <ShieldCheck className="h-5 w-5 text-success" />
@@ -380,15 +320,8 @@ const Index = () => {
               </div>
             </div>
 
-            <AssessmentOutput 
-              content={generatedAssessment} 
-              lessonTitle={lastAssessmentInput?.lessonContext?.title || 'assessment'}
-              assessmentInput={lastAssessmentInput}
-              onReset={handleResetAssessment}
-            />
-          </div>
-        ) : generatedRubric ? (
-          <div className="max-w-4xl mx-auto animate-slide-up">
+            <AssessmentOutput content={generatedAssessment} lessonTitle={lastAssessmentInput?.lessonContext?.title || 'assessment'} assessmentInput={lastAssessmentInput} onReset={handleResetAssessment} />
+          </div> : generatedRubric ? <div className="max-w-4xl mx-auto animate-slide-up">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-success/10">
                 <TableProperties className="h-5 w-5 text-success" />
@@ -403,55 +336,31 @@ const Index = () => {
               </div>
             </div>
 
-            <RubricOutput 
-              content={generatedRubric} 
-              assessmentTitle={currentRubricInput?.assessmentDescription.slice(0, 50) || 'rubric'}
-              autoVerificationAdded={rubricAutoVerification?.added}
-              autoVerificationCount={rubricAutoVerification?.count}
-              rubricInput={currentRubricInput || undefined}
-              vulnerabilityAnalysis={currentRubricInput?.vulnerabilityAnalysis}
-            />
-          </div>
-        ) : null}
+            <RubricOutput content={generatedRubric} assessmentTitle={currentRubricInput?.assessmentDescription.slice(0, 50) || 'rubric'} autoVerificationAdded={rubricAutoVerification?.added} autoVerificationCount={rubricAutoVerification?.count} rubricInput={currentRubricInput || undefined} vulnerabilityAnalysis={currentRubricInput?.vulnerabilityAnalysis} />
+          </div> : null}
       </main>
 
       {/* Progress Modal */}
-      <DifferentiationProgressModal
-        isOpen={showProgressModal}
-        progress={progressStatus}
-        onViewLesson={() => {
-          setShowProgressModal(false);
-          setProgressStatus(createInitialProgressState());
-        }}
-        onRetryFailed={() => {
-          if (currentLessonId && lastDifferentiateInput && differentiatedLesson) {
-            const fullContent = differentiatedLesson.teacherGuide + '\n\n' + 
-              differentiatedLesson.studentHandouts.map(h => h.content).join('\n\n');
-            generateAudio(currentLessonId, fullContent, lastDifferentiateInput.selectedGroups);
-          }
-        }}
-        onClose={() => {
-          if (progressStatus.isComplete) {
-            setShowProgressModal(false);
-            setProgressStatus(createInitialProgressState());
-          }
-        }}
-      />
+      <DifferentiationProgressModal isOpen={showProgressModal} progress={progressStatus} onViewLesson={() => {
+      setShowProgressModal(false);
+      setProgressStatus(createInitialProgressState());
+    }} onRetryFailed={() => {
+      if (currentLessonId && lastDifferentiateInput && differentiatedLesson) {
+        const fullContent = differentiatedLesson.teacherGuide + '\n\n' + differentiatedLesson.studentHandouts.map(h => h.content).join('\n\n');
+        generateAudio(currentLessonId, fullContent, lastDifferentiateInput.selectedGroups);
+      }
+    }} onClose={() => {
+      if (progressStatus.isComplete) {
+        setShowProgressModal(false);
+        setProgressStatus(createInitialProgressState());
+      }
+    }} />
 
       {/* Profile Modal */}
-      <ProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        user={user}
-      />
+      <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} user={user} />
 
       {/* Upgrade Prompt Modal */}
-      <UpgradePromptModal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        reason="no_subscription"
-        onCheckout={handleUpgradeCheckout}
-      />
+      <UpgradePromptModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} reason="no_subscription" onCheckout={handleUpgradeCheckout} />
 
       {/* Footer */}
       <footer className="border-t border-border mt-auto py-6">
@@ -461,8 +370,6 @@ const Index = () => {
           </p>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
