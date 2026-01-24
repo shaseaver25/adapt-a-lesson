@@ -191,7 +191,7 @@ export default function Landing() {
             {[{
             step: '01',
             icon: FileText,
-            title: 'Enter Your Topic',
+            title: "Tell Us What You're Teaching",
             desc: "Tell us what you're teaching and your learning objectives. That's it.",
             color: 'bg-primary'
           }, {
