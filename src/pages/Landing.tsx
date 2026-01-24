@@ -467,9 +467,7 @@ export default function Landing() {
             Get Started Free
             <ArrowRight className="w-5 h-5" />
           </button>
-          <p className="text-white/60 text-sm mt-4">
-            No credit card required · Free forever for basic use
-          </p>
+          <p className="text-white/60 text-sm mt-4">No credit card required · No FERPA data needed</p>
         </div>
       </section>
 
