@@ -134,7 +134,7 @@ export default function Landing() {
             
             {/* Main Headline */}
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
-              Create Differentiated Lessons in{' '}
+              Create Lesson Variations in{' '}
               <span className="text-primary">
                 60 Seconds
               </span>
