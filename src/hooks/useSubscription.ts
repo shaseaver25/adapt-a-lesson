@@ -54,13 +54,16 @@ export function useSubscription() {
         throw new Error(error.message);
       }
 
+      // TEMPORARY: Bypass subscription check - all users get free access
+      // To re-enable payments, restore original logic:
+      // isSubscribed: data.subscribed ?? false,
       setSubscriptionState({
-        isSubscribed: data.subscribed ?? false,
-        tier: data.tier ?? null,
+        isSubscribed: true,
+        tier: data.tier ?? 'monthly',
         subscriptionEnd: data.subscriptionEnd ?? null,
-        isTrialing: data.isTrialing ?? false,
-        trialEnd: data.trialEnd ?? null,
-        daysRemaining: data.daysRemaining ?? null,
+        isTrialing: false,
+        trialEnd: null,
+        daysRemaining: null,
         loading: false,
         error: null,
       });
