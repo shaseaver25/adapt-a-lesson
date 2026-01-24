@@ -199,7 +199,7 @@ export default function Landing() {
             icon: Users,
             title: 'Set Student Needs',
             desc: 'Define reading levels, ELL students, IEP accommodations. We handle the rest.',
-            color: 'bg-secondary'
+            color: 'bg-accent'
           }, {
             step: '03',
             icon: Zap,
