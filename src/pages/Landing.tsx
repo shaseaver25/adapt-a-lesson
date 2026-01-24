@@ -197,7 +197,7 @@ export default function Landing() {
           }, {
             step: '02',
             icon: Users,
-            title: 'Set Student Needs',
+            title: 'Reflect Your Classroom',
             desc: 'Define reading levels, ELL students, IEP accommodations. We handle the rest.',
             color: 'bg-accent'
           }, {
