@@ -353,7 +353,7 @@ export function LoginModal({ isOpen, onClose, onSwitchToRegister }: LoginModalPr
 
           {/* Register Link */}
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            New to Authentic Learning?{' '}
+            New to RealPath Learning?{' '}
             <Link to="/register" onClick={onClose} className="text-secondary font-semibold hover:underline">
               Create an account
             </Link>
