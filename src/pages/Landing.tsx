@@ -127,8 +127,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
           <div className="animate-fade-in">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-accent/20 to-primary/20 px-4 py-2 rounded-full text-sm font-semibold mb-6 text-muted-foreground">Make Lesson Variations in 
-60 Seconds<Sparkles className="w-4 h-4" />
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-accent/20 to-primary/20 px-4 py-2 rounded-full text-sm font-semibold mb-6 text-muted-foreground">Built by Teachers, for Teachers<Sparkles className="w-4 h-4" />
               Built by Teachers, for Teachers
             </div>
             
