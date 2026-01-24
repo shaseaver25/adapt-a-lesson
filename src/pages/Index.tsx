@@ -55,7 +55,11 @@ const Index = () => {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // First-time user detection
-  const { isFirstTimeUser, userName, dismissWelcome } = useFirstTimeUser();
+  const {
+    isFirstTimeUser,
+    userName,
+    dismissWelcome
+  } = useFirstTimeUser();
   const [showGetStartedModal, setShowGetStartedModal] = useState(false);
 
   // Show get started modal when first-time user is detected
@@ -256,13 +260,8 @@ const Index = () => {
             {/* Hero section */}
             <div className="text-center mb-8 animate-fade-in">
               <h2 className="font-display font-extrabold text-3xl md:text-4xl text-primary mb-3">Let's Get Building</h2>
-              <p className="text-lg text-muted-foreground mb-2">
-                <span className="font-semibold text-primary">R</span>esponsive. <span className="font-semibold text-primary">E</span>quitable. <span className="font-semibold text-primary">A</span>daptive. <span className="font-semibold text-primary">L</span>earner.
-              </p>
-              <p className="text-muted-foreground max-w-xl mx-auto">
-                Create personalized lessons for every learner and design authentic 
-                assessments that reveal genuine student thinking.
-              </p>
+              
+              <p className="text-muted-foreground max-w-xl mx-auto">Select a Tab to Create What You Need</p>
             </div>
 
             {/* Tabs */}
@@ -376,14 +375,10 @@ const Index = () => {
       <UpgradePromptModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} reason="no_subscription" onCheckout={handleUpgradeCheckout} />
 
       {/* Get Started Modal for First-Time Users */}
-      <GetStartedModal 
-        isOpen={showGetStartedModal} 
-        onClose={() => {
-          setShowGetStartedModal(false);
-          dismissWelcome();
-        }}
-        userName={userName}
-      />
+      <GetStartedModal isOpen={showGetStartedModal} onClose={() => {
+      setShowGetStartedModal(false);
+      dismissWelcome();
+    }} userName={userName} />
 
       {/* Footer */}
       <footer className="border-t border-border mt-auto py-6">
