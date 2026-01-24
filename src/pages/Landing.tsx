@@ -398,9 +398,8 @@ export default function Landing() {
             <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
               Built by Educators
             </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              We've been in the classroom. We know the struggle. That's why we built something that actually works.
-            </p>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">We've been in the classroom and parents. We know the struggle. 
+That's why we built something that actually works.</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
