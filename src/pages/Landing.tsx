@@ -133,7 +133,7 @@ export default function Landing() {
             
             {/* Main Headline */}
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
-              Create Lesson Variations in{' '}
+              Create a Real Learning Path for Every Student in{' '}
               <span className="text-primary">
 60 Seconds</span>
             </h1>
