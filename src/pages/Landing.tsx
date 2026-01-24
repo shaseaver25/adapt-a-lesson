@@ -203,7 +203,7 @@ export default function Landing() {
           }, {
             step: '03',
             icon: Zap,
-            title: 'Get Complete Lessons',
+            title: 'Get Ready-to-Use Lessons',
             desc: 'Receive differentiated handouts, teacher guide, multilingual audio in 60 seconds.',
             color: 'bg-accent'
           }].map((item, i) => {
