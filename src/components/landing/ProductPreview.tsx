@@ -31,7 +31,7 @@ export function ProductPreview() {
     animationDelay: '0.2s'
   }} onMouseEnter={() => setIsAnimating(false)} onMouseLeave={() => setIsAnimating(true)}>
       {/* Gradient top bar */}
-      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-secondary via-primary to-accent" style={{
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-secondary via-primary to-accent text-primary bg-primary" style={{
       borderRadius: '24px 24px 0 0'
     }} />
       
@@ -68,7 +68,7 @@ export function ProductPreview() {
       
       {/* Progress bar */}
       <div className="mt-6 h-1 bg-muted rounded-full overflow-hidden">
-        <div className="h-full bg-gradient-to-r from-secondary via-primary to-accent transition-all duration-500" style={{
+        <div className="h-full bg-gradient-to-r from-secondary via-primary to-accent transition-all duration-500 bg-primary" style={{
         width: `${(step + 1) / steps.length * 100}%`
       }} />
       </div>
