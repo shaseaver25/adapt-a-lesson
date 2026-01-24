@@ -128,8 +128,7 @@ export default function Landing() {
           <div className="animate-fade-in">
             {/* Main Headline */}
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
-              Make Lesson Variations in{' '}
-              <span className="text-primary">60 Seconds</span>
+              Make Lesson Variations in <span className="text-primary">60 Seconds</span>
             </h1>
             
             {/* Subheadline */}
