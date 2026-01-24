@@ -193,7 +193,7 @@ export default function Landing() {
             icon: FileText,
             title: "Tell Us What You're Teaching",
             desc: 'Enter your topic and goals. No templates. No setup.',
-            color: 'bg-primary'
+            color: 'bg-accent'
           }, {
             step: '02',
             icon: Users,
