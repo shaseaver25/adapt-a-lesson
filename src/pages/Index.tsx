@@ -255,7 +255,7 @@ const Index = () => {
         {!showResults ? <div className="max-w-3xl mx-auto">
             {/* Hero section */}
             <div className="text-center mb-8 animate-fade-in">
-              <h2 className="font-display font-extrabold text-3xl md:text-4xl text-primary mb-3">REAL Path Learning</h2>
+              <h2 className="font-display font-extrabold text-3xl md:text-4xl text-primary mb-3">Let's Get Building</h2>
               <p className="text-lg text-muted-foreground mb-2">
                 <span className="font-semibold text-primary">R</span>esponsive. <span className="font-semibold text-primary">E</span>quitable. <span className="font-semibold text-primary">A</span>daptive. <span className="font-semibold text-primary">L</span>earner.
               </p>
