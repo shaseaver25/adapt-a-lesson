@@ -126,29 +126,28 @@ export default function Landing() {
       <section className="min-h-screen flex items-center pt-24 pb-16 px-4 md:px-8">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
           <div className="animate-fade-in">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-accent/20 to-primary/20 px-4 py-2 rounded-full text-sm font-semibold mb-6 text-muted-foreground">Built by Teachers, for Teachers<Sparkles className="w-4 h-4" />
-              Built by Teachers, for Teachers
-            </div>
-            
             {/* Main Headline */}
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
-              Create Lesson Variations in{' '}
-              <span className="text-primary">
-60 Seconds</span>
+              Create Lesson Variations in <span className="text-primary">60 Seconds</span>
             </h1>
             
             {/* Subheadline */}
             <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8 max-w-lg">Lessons, assessments, visuals, audio, and translations automatically adapted to your students needs.</p>
             
             {/* CTAs */}
-            <div className="flex flex-wrap gap-4 mb-10">
+            <div className="flex flex-wrap gap-4">
               <button onClick={() => setLoginOpen(true)} className="px-8 py-4 bg-primary text-white rounded-full font-semibold text-lg shadow-lg shadow-primary/30 hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2">Try It Free<ArrowRight className="w-5 h-5" />
               </button>
               <button onClick={() => scrollToSection('videos')} className="px-6 py-4 border-2 border-foreground/20 text-foreground rounded-full font-semibold hover:bg-muted transition-all flex items-center gap-2">
                 <Play className="w-5 h-5" />
                 Watch 2-Min Demo
               </button>
+            </div>
+            
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-accent/20 to-primary/20 px-4 py-2 rounded-full text-sm font-semibold mt-6 mb-10 text-muted-foreground">
+              <Sparkles className="w-4 h-4" />
+              Built by Teachers, for Teachers
             </div>
             
             {/* Quick Stats */}
