@@ -114,7 +114,7 @@ export default function Landing() {
             </button>
             
             <button onClick={() => setLoginOpen(true)} className="px-6 py-2.5 bg-primary text-white rounded-full font-semibold shadow-lg shadow-primary/30 hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all">
-              Start Free
+              Login
             </button>
           </div>
         </div>
