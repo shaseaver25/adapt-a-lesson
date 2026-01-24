@@ -261,7 +261,7 @@ const Index = () => {
             <div className="text-center mb-8 animate-fade-in">
               <h2 className="font-display font-extrabold text-3xl md:text-4xl text-primary mb-3">Let's Get Building</h2>
               
-              <p className="text-muted-foreground max-w-xl mx-auto">Select a Tab and Follow the Prompts, then We Build the Bath</p>
+              <p className="text-muted-foreground max-w-xl mx-auto">Select a Tab Below. Follow the Prompts. We Build for You.</p>
             </div>
 
             {/* Tabs */}
