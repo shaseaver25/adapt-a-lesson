@@ -17,7 +17,6 @@ function GettingStartedVideoPlayer() {
   const [currentVideo, setCurrentVideo] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const videos = ['/videos/getting-started-1.mp4', '/videos/getting-started-2.mp4'];
-  
   const handleVideoEnd = () => {
     if (currentVideo < videos.length - 1) {
       setCurrentVideo(prev => prev + 1);
@@ -26,13 +25,11 @@ function GettingStartedVideoPlayer() {
       setIsPlaying(false);
     }
   };
-  
   useEffect(() => {
     if (videoRef.current && isPlaying) {
       videoRef.current.play();
     }
   }, [currentVideo, isPlaying]);
-  
   const handlePlay = () => {
     if (videoRef.current) {
       if (isPlaying) {
@@ -44,70 +41,59 @@ function GettingStartedVideoPlayer() {
       }
     }
   };
-  
-  return (
-    <div className="aspect-video bg-foreground relative">
-      <video
-        ref={videoRef}
-        src={videos[currentVideo]}
-        onEnded={handleVideoEnd}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        className="w-full h-full object-cover"
-        controls
-        playsInline
-      />
-      {!isPlaying && (
-        <button
-          onClick={handlePlay}
-          className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors"
-        >
+  return <div className="aspect-video bg-foreground relative">
+      <video ref={videoRef} src={videos[currentVideo]} onEnded={handleVideoEnd} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} className="w-full h-full object-cover" controls playsInline />
+      {!isPlaying && <button onClick={handlePlay} className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors">
           <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform">
             <Play className="w-8 h-8 text-secondary ml-1" fill="currentColor" />
           </div>
-        </button>
-      )}
+        </button>}
       <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium">
         {currentVideo + 1} / {videos.length}
       </div>
-    </div>
-  );
+    </div>;
 }
-
 export default function Landing() {
-  const { user, loading } = useAuth();
+  const {
+    user,
+    loading
+  } = useAuth();
   const navigate = useNavigate();
   const [loginOpen, setLoginOpen] = useState(false);
-  
   useEffect(() => {
     if (!loading && user) {
       navigate('/studio');
     }
   }, [user, loading, navigate]);
-  
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
     }
   };
-  
-  return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+  return <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* Animated Background */}
       <div className="fixed inset-0 -z-10 opacity-40">
-        <div
-          className="absolute w-[600px] h-[600px] rounded-full bg-primary/30 blur-[100px] animate-pulse"
-          style={{ top: '20%', left: '80%', animationDuration: '8s' }}
-        />
-        <div
-          className="absolute w-[500px] h-[500px] rounded-full bg-secondary/30 blur-[100px] animate-pulse"
-          style={{ top: '80%', left: '20%', animationDuration: '10s', animationDelay: '2s' }}
-        />
-        <div
-          className="absolute w-[400px] h-[400px] rounded-full bg-accent/30 blur-[100px] animate-pulse"
-          style={{ top: '40%', left: '40%', animationDuration: '12s', animationDelay: '4s' }}
-        />
+        <div className="absolute w-[600px] h-[600px] rounded-full bg-primary/30 blur-[100px] animate-pulse" style={{
+        top: '20%',
+        left: '80%',
+        animationDuration: '8s'
+      }} />
+        <div className="absolute w-[500px] h-[500px] rounded-full bg-secondary/30 blur-[100px] animate-pulse" style={{
+        top: '80%',
+        left: '20%',
+        animationDuration: '10s',
+        animationDelay: '2s'
+      }} />
+        <div className="absolute w-[400px] h-[400px] rounded-full bg-accent/30 blur-[100px] animate-pulse" style={{
+        top: '40%',
+        left: '40%',
+        animationDuration: '12s',
+        animationDelay: '4s'
+      }} />
       </div>
 
       {/* Navigation */}
@@ -129,10 +115,7 @@ export default function Landing() {
             <Link to="/pricing" className="text-foreground/80 hover:text-primary transition-colors font-medium">
               Pricing
             </Link>
-            <button
-              onClick={() => setLoginOpen(true)}
-              className="px-6 py-2.5 bg-primary text-white rounded-full font-semibold shadow-lg shadow-primary/30 hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all"
-            >
+            <button onClick={() => setLoginOpen(true)} className="px-6 py-2.5 bg-primary text-white rounded-full font-semibold shadow-lg shadow-primary/30 hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all">
               Start Free
             </button>
           </div>
@@ -144,7 +127,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
           <div className="animate-fade-in">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-accent/20 to-primary/20 px-4 py-2 rounded-full text-sm font-semibold mb-6 text-white">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-accent/20 to-primary/20 px-4 py-2 rounded-full text-sm font-semibold mb-6 text-muted-foreground">
               <Sparkles className="w-4 h-4" />
               Built by Teachers, for Teachers
             </div>
@@ -165,17 +148,11 @@ export default function Landing() {
             
             {/* CTAs */}
             <div className="flex flex-wrap gap-4 mb-10">
-              <button
-                onClick={() => setLoginOpen(true)}
-                className="px-8 py-4 bg-primary text-white rounded-full font-semibold text-lg shadow-lg shadow-primary/30 hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2"
-              >
+              <button onClick={() => setLoginOpen(true)} className="px-8 py-4 bg-primary text-white rounded-full font-semibold text-lg shadow-lg shadow-primary/30 hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2">
                 Start Creating Free
                 <ArrowRight className="w-5 h-5" />
               </button>
-              <button
-                onClick={() => scrollToSection('videos')}
-                className="px-6 py-4 border-2 border-foreground/20 text-foreground rounded-full font-semibold hover:bg-muted transition-all flex items-center gap-2"
-              >
+              <button onClick={() => scrollToSection('videos')} className="px-6 py-4 border-2 border-foreground/20 text-foreground rounded-full font-semibold hover:bg-muted transition-all flex items-center gap-2">
                 <Play className="w-5 h-5" />
                 Watch 2-Min Demo
               </button>
@@ -222,32 +199,27 @@ export default function Landing() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                step: '01',
-                icon: FileText,
-                title: 'Enter Your Topic',
-                desc: "Tell us what you're teaching and your learning objectives. That's it.",
-                color: 'bg-primary'
-              },
-              {
-                step: '02',
-                icon: Users,
-                title: 'Set Student Needs',
-                desc: 'Define reading levels, ELL students, IEP accommodations. We handle the rest.',
-                color: 'bg-secondary'
-              },
-              {
-                step: '03',
-                icon: Zap,
-                title: 'Get Complete Lessons',
-                desc: 'Receive differentiated handouts, teacher guide, multilingual audio in 60 seconds.',
-                color: 'bg-accent'
-              }
-            ].map((item, i) => {
-              const Icon = item.icon;
-              return (
-                <div key={i} className="relative">
+            {[{
+            step: '01',
+            icon: FileText,
+            title: 'Enter Your Topic',
+            desc: "Tell us what you're teaching and your learning objectives. That's it.",
+            color: 'bg-primary'
+          }, {
+            step: '02',
+            icon: Users,
+            title: 'Set Student Needs',
+            desc: 'Define reading levels, ELL students, IEP accommodations. We handle the rest.',
+            color: 'bg-secondary'
+          }, {
+            step: '03',
+            icon: Zap,
+            title: 'Get Complete Lessons',
+            desc: 'Receive differentiated handouts, teacher guide, multilingual audio in 60 seconds.',
+            color: 'bg-accent'
+          }].map((item, i) => {
+            const Icon = item.icon;
+            return <div key={i} className="relative">
                   <div className="bg-background rounded-2xl p-8 shadow-lg border border-border/50 hover:-translate-y-2 transition-transform">
                     <div className="text-6xl font-display font-bold text-muted/30 absolute -top-4 -left-2">
                       {item.step}
@@ -258,19 +230,13 @@ export default function Landing() {
                     <h3 className="font-display text-xl font-bold text-foreground mb-3">{item.title}</h3>
                     <p className="text-muted-foreground leading-relaxed">{item.desc}</p>
                   </div>
-                  {i < 2 && (
-                    <div className="hidden md:block absolute top-1/2 -right-4 w-8 h-0.5 bg-border" />
-                  )}
-                </div>
-              );
-            })}
+                  {i < 2 && <div className="hidden md:block absolute top-1/2 -right-4 w-8 h-0.5 bg-border" />}
+                </div>;
+          })}
           </div>
 
           <div className="text-center mt-12">
-            <button
-              onClick={() => setLoginOpen(true)}
-              className="px-8 py-3 bg-primary text-white rounded-full font-semibold shadow-lg shadow-primary/30 hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all"
-            >
+            <button onClick={() => setLoginOpen(true)} className="px-8 py-3 bg-primary text-white rounded-full font-semibold shadow-lg shadow-primary/30 hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all">
               Try It Now — Free
             </button>
           </div>
@@ -293,38 +259,29 @@ export default function Landing() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            {[
-              {
-                icon: Clock,
-                title: 'Save 10+ Hours Weekly',
-                desc: 'Stop spending nights on differentiation. Get complete lesson packages in 60 seconds—teacher guide, student handouts, and assessments.',
-                highlight: '10+ hours saved'
-              },
-              {
-                icon: Users,
-                title: 'Serve Every Learner',
-                desc: 'Automatic differentiation for multiple reading levels, IEP accommodations, and 504 plans. Every student gets what they need.',
-                highlight: 'All students included'
-              },
-              {
-                icon: Shield,
-                title: 'AI-Proof Assessments',
-                desc: "Authentic tasks students can't ChatGPT—process checkpoints, artifacts, and reflection prompts that prove real learning.",
-                highlight: 'Real understanding'
-              },
-              {
-                icon: Languages,
-                title: 'Multilingual Support',
-                desc: '12+ languages with auto-generated audio. Spanish, Hmong, Somali, Vietnamese, and more. ELL students hear lessons in their home language.',
-                highlight: '12+ languages'
-              }
-            ].map((feature, i) => {
-              const Icon = feature.icon;
-              return (
-                <div
-                  key={i}
-                  className="bg-white/5 border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-white/20 transition-all group"
-                >
+            {[{
+            icon: Clock,
+            title: 'Save 10+ Hours Weekly',
+            desc: 'Stop spending nights on differentiation. Get complete lesson packages in 60 seconds—teacher guide, student handouts, and assessments.',
+            highlight: '10+ hours saved'
+          }, {
+            icon: Users,
+            title: 'Serve Every Learner',
+            desc: 'Automatic differentiation for multiple reading levels, IEP accommodations, and 504 plans. Every student gets what they need.',
+            highlight: 'All students included'
+          }, {
+            icon: Shield,
+            title: 'AI-Proof Assessments',
+            desc: "Authentic tasks students can't ChatGPT—process checkpoints, artifacts, and reflection prompts that prove real learning.",
+            highlight: 'Real understanding'
+          }, {
+            icon: Languages,
+            title: 'Multilingual Support',
+            desc: '12+ languages with auto-generated audio. Spanish, Hmong, Somali, Vietnamese, and more. ELL students hear lessons in their home language.',
+            highlight: '12+ languages'
+          }].map((feature, i) => {
+            const Icon = feature.icon;
+            return <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-white/20 transition-all group">
                   <div className="flex items-start gap-5">
                     <div className="w-14 h-14 rounded-2xl bg-accent flex items-center justify-center shadow-lg shrink-0">
                       <Icon className="w-7 h-7 text-white" />
@@ -340,9 +297,8 @@ export default function Landing() {
                       </span>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                </div>;
+          })}
           </div>
         </div>
       </section>
@@ -381,15 +337,10 @@ export default function Landing() {
           {/* Main Video */}
           <div className="max-w-3xl mx-auto mb-12">
             <div className="bg-background rounded-2xl overflow-hidden shadow-xl">
-              <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
-                <iframe
-                  src="https://player.vimeo.com/video/1147251547?h=1d0d9465af&badge=0&autopause=0&player_id=0&app_id=58479"
-                  frameBorder="0"
-                  allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  className="absolute top-0 left-0 w-full h-full"
-                  title="Getting Started with Authentic Learning Studio"
-                />
+              <div className="relative w-full" style={{
+              paddingTop: '56.25%'
+            }}>
+                <iframe src="https://player.vimeo.com/video/1147251547?h=1d0d9465af&badge=0&autopause=0&player_id=0&app_id=58479" frameBorder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media" referrerPolicy="strict-origin-when-cross-origin" className="absolute top-0 left-0 w-full h-full" title="Getting Started with Authentic Learning Studio" />
               </div>
               <div className="p-6">
                 <h3 className="font-display text-xl font-bold text-foreground mb-1">
@@ -398,11 +349,7 @@ export default function Landing() {
                 <p className="text-muted-foreground text-sm mb-3">
                   Watch how quickly you can generate a complete differentiated lesson package.
                 </p>
-                <a
-                  href="/examples/getting-started-example.md"
-                  download
-                  className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium text-sm transition-colors"
-                >
+                <a href="/examples/getting-started-example.md" download className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium text-sm transition-colors">
                   <FileDown className="w-4 h-4" />
                   Download Example Lesson
                 </a>
@@ -412,30 +359,25 @@ export default function Landing() {
 
           {/* Secondary Videos */}
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {[
-              {
-                title: 'Authentic Assessment',
-                desc: 'See how our assessments ensure real learning.',
-                duration: '5:12',
-                exampleUrl: '/examples/authentic-assessment-example.doc',
-                videoUrl: '/videos/authentic-assessment.mp4'
-              },
-              {
-                title: 'Multilingual Support',
-                desc: '12+ languages with automatic audio.',
-                duration: '4:08',
-                exampleUrl: '/examples/multilingual-support-example.md',
-                videoUrl: '/videos/multilingual-support.mp4'
-              },
-              {
-                title: 'Rubric Creation',
-                desc: 'Generate aligned rubrics instantly.',
-                duration: '3:24',
-                exampleUrl: '/examples/rubric-example.md',
-                videoUrl: '/videos/rubric-creation.mp4'
-              }
-            ].map((video, i) => (
-              <div key={i} className="bg-background rounded-2xl overflow-hidden shadow-xl hover:-translate-y-2 hover:shadow-2xl transition-all">
+            {[{
+            title: 'Authentic Assessment',
+            desc: 'See how our assessments ensure real learning.',
+            duration: '5:12',
+            exampleUrl: '/examples/authentic-assessment-example.doc',
+            videoUrl: '/videos/authentic-assessment.mp4'
+          }, {
+            title: 'Multilingual Support',
+            desc: '12+ languages with automatic audio.',
+            duration: '4:08',
+            exampleUrl: '/examples/multilingual-support-example.md',
+            videoUrl: '/videos/multilingual-support.mp4'
+          }, {
+            title: 'Rubric Creation',
+            desc: 'Generate aligned rubrics instantly.',
+            duration: '3:24',
+            exampleUrl: '/examples/rubric-example.md',
+            videoUrl: '/videos/rubric-creation.mp4'
+          }].map((video, i) => <div key={i} className="bg-background rounded-2xl overflow-hidden shadow-xl hover:-translate-y-2 hover:shadow-2xl transition-all">
                 <div className="aspect-video bg-gradient-to-br from-foreground to-foreground/80 relative">
                   <video src={video.videoUrl} controls className="w-full h-full object-cover" />
                 </div>
@@ -446,18 +388,13 @@ export default function Landing() {
                     <span className="inline-flex items-center gap-2 text-secondary font-semibold text-sm">
                       🎬 {video.duration}
                     </span>
-                    <a
-                      href={video.exampleUrl}
-                      download
-                      className="inline-flex items-center gap-1.5 text-primary hover:text-primary/80 font-medium text-sm transition-colors"
-                    >
+                    <a href={video.exampleUrl} download className="inline-flex items-center gap-1.5 text-primary hover:text-primary/80 font-medium text-sm transition-colors">
                       <FileDown className="w-4 h-4" />
                       Example
                     </a>
                   </div>
                 </div>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
       </section>
@@ -490,18 +427,10 @@ export default function Landing() {
                   Tekne Award-winning National Board Certified Teacher with 15+ years in the classroom. Building the future of differentiated learning.
                 </p>
                 <div className="flex justify-center gap-3">
-                  <a
-                    href="https://www.linkedin.com/in/shannon-seaver-nbct-23a2a933/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors"
-                  >
+                  <a href="https://www.linkedin.com/in/shannon-seaver-nbct-23a2a933/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors">
                     <Linkedin className="w-5 h-5" />
                   </a>
-                  <a
-                    href="mailto:shannon@realpathlearning.com"
-                    className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors"
-                  >
+                  <a href="mailto:shannon@realpathlearning.com" className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors">
                     <Mail className="w-5 h-5" />
                   </a>
                 </div>
@@ -520,18 +449,10 @@ export default function Landing() {
                   Chief Data & AI Officer at the University of St. Thomas. 10+ years in Higher Education technology and passionate on meeting every learner where they need us with AI.
                 </p>
                 <div className="flex justify-center gap-3">
-                  <a
-                    href="https://www.linkedin.com/in/jenaz/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors"
-                  >
+                  <a href="https://www.linkedin.com/in/jenaz/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors">
                     <Linkedin className="w-5 h-5" />
                   </a>
-                  <a
-                    href="mailto:jena@realpathlearning.com"
-                    className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors"
-                  >
+                  <a href="mailto:jena@realpathlearning.com" className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors">
                     <Mail className="w-5 h-5" />
                   </a>
                 </div>
@@ -553,10 +474,7 @@ export default function Landing() {
           <p className="text-white/90 text-lg md:text-xl mb-8 max-w-xl mx-auto">
             Join educators who are finally spending time teaching, not planning.
           </p>
-          <button
-            onClick={() => setLoginOpen(true)}
-            className="px-10 py-4 bg-white text-secondary rounded-full font-bold text-lg shadow-xl hover:bg-foreground hover:text-white hover:-translate-y-1 transition-all inline-flex items-center gap-2"
-          >
+          <button onClick={() => setLoginOpen(true)} className="px-10 py-4 bg-white text-secondary rounded-full font-bold text-lg shadow-xl hover:bg-foreground hover:text-white hover:-translate-y-1 transition-all inline-flex items-center gap-2">
             Get Started Free
             <ArrowRight className="w-5 h-5" />
           </button>
@@ -598,6 +516,5 @@ export default function Landing() {
 
       {/* Login Modal */}
       <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
-    </div>
-  );
+    </div>;
 }
