@@ -14,7 +14,7 @@ export function ProductPreview() {
   }, {
     label: 'Generate',
     icon: Sparkles,
-    text: 'AI creates differentiated lessons...'
+    text: 'AI creates differentiated lessons, visuals, and audio files'
   }, {
     label: 'Complete!',
     icon: CheckCircle2,
