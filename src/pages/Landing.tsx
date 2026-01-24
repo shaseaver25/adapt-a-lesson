@@ -198,7 +198,7 @@ export default function Landing() {
             step: '02',
             icon: Users,
             title: 'Reflect Your Classroom',
-            desc: 'Define reading levels, ELL students, IEP accommodations. We handle the rest.',
+            desc: 'Select learning needs: IEPs, language supports, reading levels. RealPath adapts automatically.',
             color: 'bg-accent'
           }, {
             step: '03',
