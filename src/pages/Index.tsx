@@ -9,6 +9,7 @@ import { RubricOutput } from '@/components/RubricOutput';
 import { ProfileModal } from '@/components/ProfileModal';
 import { SubscriptionBanner } from '@/components/SubscriptionBanner';
 import { UpgradePromptModal } from '@/components/UpgradePromptModal';
+import { GetStartedModal } from '@/components/GetStartedModal';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, LogIn, LogOut, Settings, UserCircle, Loader2, MessageSquare, HelpCircle } from 'lucide-react';
@@ -22,6 +23,7 @@ import { useAssessmentGenerator } from '@/hooks/useAssessmentGenerator';
 import { useRubricGenerator } from '@/hooks/useRubricGenerator';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useFirstTimeUser } from '@/hooks/useFirstTimeUser';
 import { PRICING_TIERS } from '@/lib/pricing';
 const Index = () => {
   const [searchParams] = useSearchParams();
@@ -51,6 +53,17 @@ const Index = () => {
     createCheckout
   } = useSubscription();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // First-time user detection
+  const { isFirstTimeUser, userName, dismissWelcome } = useFirstTimeUser();
+  const [showGetStartedModal, setShowGetStartedModal] = useState(false);
+
+  // Show get started modal when first-time user is detected
+  useEffect(() => {
+    if (isFirstTimeUser && !showUpgradeModal) {
+      setShowGetStartedModal(true);
+    }
+  }, [isFirstTimeUser, showUpgradeModal]);
 
   // Redirect unauthenticated users to landing page
   useEffect(() => {
@@ -361,6 +374,16 @@ const Index = () => {
 
       {/* Upgrade Prompt Modal */}
       <UpgradePromptModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} reason="no_subscription" onCheckout={handleUpgradeCheckout} />
+
+      {/* Get Started Modal for First-Time Users */}
+      <GetStartedModal 
+        isOpen={showGetStartedModal} 
+        onClose={() => {
+          setShowGetStartedModal(false);
+          dismissWelcome();
+        }}
+        userName={userName}
+      />
 
       {/* Footer */}
       <footer className="border-t border-border mt-auto py-6">
