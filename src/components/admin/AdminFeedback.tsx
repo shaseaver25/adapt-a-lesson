@@ -327,6 +327,12 @@ export default function AdminFeedback() {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (!currentUser) throw new Error("Not authenticated");
 
+      // Get user profile for email
+      const userProfile = profiles.get(userId);
+      if (!userProfile?.email) {
+        throw new Error("User email not found");
+      }
+
       // Check if user already has an override
       const { data: existingOverride } = await supabase
         .from("subscription_overrides")
@@ -334,19 +340,19 @@ export default function AdminFeedback() {
         .eq("user_id", userId)
         .maybeSingle();
 
-      const newTrialEnd = addDays(new Date(), 30);
+      let finalTrialEnd: Date;
 
       if (existingOverride) {
         // Extend existing trial by 30 days from current trial_end or now
         const currentEnd = existingOverride.trial_end_date 
           ? new Date(existingOverride.trial_end_date) 
           : new Date();
-        const extendedEnd = addDays(currentEnd > new Date() ? currentEnd : new Date(), 30);
+        finalTrialEnd = addDays(currentEnd > new Date() ? currentEnd : new Date(), 30);
         
         const { error } = await supabase
           .from("subscription_overrides")
           .update({
-            trial_end_date: extendedEnd.toISOString(),
+            trial_end_date: finalTrialEnd.toISOString(),
             notes: `Extended 30 days for feedback on ${format(new Date(), "yyyy-MM-dd")}. ${existingOverride.notes || ""}`
           })
           .eq("id", existingOverride.id);
@@ -354,12 +360,13 @@ export default function AdminFeedback() {
         if (error) throw error;
       } else {
         // Create new override with 30-day trial
+        finalTrialEnd = addDays(new Date(), 30);
         const { error } = await supabase
           .from("subscription_overrides")
           .insert({
             user_id: userId,
             override_type: "trial",
-            trial_end_date: newTrialEnd.toISOString(),
+            trial_end_date: finalTrialEnd.toISOString(),
             created_by: currentUser.id,
             notes: `Granted 30-day free access for feedback on ${format(new Date(), "yyyy-MM-dd")}`
           });
@@ -367,9 +374,23 @@ export default function AdminFeedback() {
         if (error) throw error;
       }
 
+      // Send thank-you email
+      try {
+        await supabase.functions.invoke("send-free-month-email", {
+          body: {
+            email: userProfile.email,
+            userName: userProfile.full_name,
+            trialEndDate: finalTrialEnd.toISOString(),
+          },
+        });
+      } catch (emailError) {
+        console.error("Failed to send thank-you email:", emailError);
+        // Don't fail the whole operation if email fails
+      }
+
       toast({
         title: "Free Month Granted!",
-        description: "User now has 30 days of free access.",
+        description: "User now has 30 days of free access and has been sent a thank-you email.",
       });
 
       // Refresh feedback list
