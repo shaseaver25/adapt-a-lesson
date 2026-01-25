@@ -7,7 +7,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Star, ThumbsUp, ThumbsDown, MessageSquare, Users, TrendingUp, Calendar, Download, Search, Eye, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Star, ThumbsUp, ThumbsDown, MessageSquare, Users, TrendingUp, Calendar, Download, Search, Eye, CheckCircle, ChevronLeft, ChevronRight, Gift } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { addDays } from "date-fns";
 import { format, subDays, isAfter } from "date-fns";
 import {
   BarChart,
@@ -46,6 +48,7 @@ interface FeedbackEntry {
   success_stories: string | null;
   comparison_to_other_tools: string | null;
   feedback_type: string | null;
+  incentive_claimed: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -89,6 +92,7 @@ export default function AdminFeedback() {
   
   // Modal
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackWithUser | null>(null);
+  const [grantingFreeMonth, setGrantingFreeMonth] = useState<string | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   useEffect(() => {
@@ -300,6 +304,72 @@ export default function AdminFeedback() {
       user: profiles.get(entry.user_id),
     });
     setDetailModalOpen(true);
+  };
+
+  const grantFreeMonth = async (userId: string, feedbackId: string) => {
+    setGrantingFreeMonth(feedbackId);
+    try {
+      // Get current user for created_by field
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) throw new Error("Not authenticated");
+
+      // Check if user already has an override
+      const { data: existingOverride } = await supabase
+        .from("subscription_overrides")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      const newTrialEnd = addDays(new Date(), 30);
+
+      if (existingOverride) {
+        // Extend existing trial by 30 days from current trial_end or now
+        const currentEnd = existingOverride.trial_end_date 
+          ? new Date(existingOverride.trial_end_date) 
+          : new Date();
+        const extendedEnd = addDays(currentEnd > new Date() ? currentEnd : new Date(), 30);
+        
+        const { error } = await supabase
+          .from("subscription_overrides")
+          .update({
+            trial_end_date: extendedEnd.toISOString(),
+            notes: `Extended 30 days for feedback on ${format(new Date(), "yyyy-MM-dd")}. ${existingOverride.notes || ""}`
+          })
+          .eq("id", existingOverride.id);
+
+        if (error) throw error;
+      } else {
+        // Create new override with 30-day trial
+        const { error } = await supabase
+          .from("subscription_overrides")
+          .insert({
+            user_id: userId,
+            override_type: "trial",
+            trial_end_date: newTrialEnd.toISOString(),
+            created_by: currentUser.id,
+            notes: `Granted 30-day free access for feedback on ${format(new Date(), "yyyy-MM-dd")}`
+          });
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Free Month Granted!",
+        description: "User now has 30 days of free access.",
+      });
+
+      // Refresh feedback list
+      fetchFeedback();
+    } catch (err) {
+      console.error("Error granting free month:", err);
+      toast({
+        title: "Error",
+        description: "Failed to grant free month. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setGrantingFreeMonth(null);
+    }
   };
 
   if (loading) {
@@ -618,14 +688,32 @@ export default function AdminFeedback() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDetailModal(entry)}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => grantFreeMonth(entry.user_id, entry.id)}
+                              disabled={grantingFreeMonth === entry.id}
+                              className="text-primary hover:bg-primary hover:text-primary-foreground"
+                            >
+                              {grantingFreeMonth === entry.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <Gift className="h-4 w-4 mr-1" />
+                                  Free Month
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openDetailModal(entry)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
