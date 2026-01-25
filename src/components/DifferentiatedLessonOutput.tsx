@@ -20,9 +20,11 @@ import { anyGroupNeedsAudio } from '@/types/audioRequirements';
 import { AudioGenerationButton } from '@/components/AudioGenerationButton';
 import { ExportForLMSButton } from '@/components/export/ExportForLMSButton';
 import { useLessonImages } from '@/hooks/useLessonImages';
+import { useLessonImageVariations } from '@/hooks/useLessonImageVariations';
 import { extractVisualDescriptions } from '@/lib/imageGeneration';
 import LessonImageFrame from '@/components/LessonImageFrame';
 import { LessonImageBrowser } from '@/components/LessonImageBrowser';
+import { ImageVariationPicker } from '@/components/ImageVariationPicker';
 
 interface PreGeneratedAudioRecord {
   id: string;
@@ -137,8 +139,42 @@ const processContentWithImages = (content: string, imageMap: Map<string, string>
 };
 
 // Shared markdown component mappings for consistent HTML rendering
-const createMarkdownComponents = (imageMap: Map<string, string>) => ({
-  img: ({ src, alt }: { src?: string; alt?: string }) => <LessonImageFrame src={src || ''} alt={alt || ''} />,
+const createMarkdownComponents = (
+  imageMap: Map<string, string>,
+  onRegenerateImage?: (description: string) => void,
+  isRegenerating?: boolean
+) => ({
+  img: ({ src, alt }: { src?: string; alt?: string }) => {
+    // If there's a callback for regeneration, wrap the image with hover UI
+    if (onRegenerateImage && alt) {
+      return (
+        <figure className="my-6 mx-auto max-w-[600px] group relative">
+          <div className="relative w-full aspect-[3/2] bg-muted border-4 border-primary/20 rounded-lg shadow-soft overflow-hidden">
+            <img
+              src={src || ''}
+              alt={alt || 'Lesson diagram'}
+              className="absolute inset-0 w-full h-full object-contain p-2"
+            />
+            {/* Hover overlay with regenerate button */}
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <button
+                onClick={() => onRegenerateImage(alt)}
+                disabled={isRegenerating}
+                className="flex items-center gap-2 px-3 py-2 bg-white text-gray-900 rounded-md text-sm font-medium hover:bg-gray-100 disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                Try Different Options
+              </button>
+            </div>
+          </div>
+          {alt && (
+            <figcaption className="text-center text-sm text-muted-foreground mt-2 italic">{alt}</figcaption>
+          )}
+        </figure>
+      );
+    }
+    return <LessonImageFrame src={src || ''} alt={alt || ''} />;
+  },
   h1: ({ children }: { children?: React.ReactNode }) => <h1 className="text-2xl font-display font-bold text-foreground mt-6 mb-4 pb-2 border-b border-border">{children}</h1>,
   h2: ({ children }: { children?: React.ReactNode }) => <h2 className="text-xl font-display font-semibold text-foreground mt-5 mb-3">{children}</h2>,
   h3: ({ children }: { children?: React.ReactNode }) => <h3 className="text-lg font-display font-medium text-foreground mt-4 mb-2">{children}</h3>,
@@ -182,8 +218,25 @@ export function DifferentiatedLessonOutput({
   const { user } = useAuth();
   const { options } = useDifferentiation();
   const { imageMap, isGenerating: isGeneratingImages, progress: imageProgress, generateImages, hasVisuals } = useLessonImages();
+  const { 
+    variationsState, 
+    selectedImages, 
+    isGenerating: isGeneratingVariations, 
+    generateVariations, 
+    selectImage, 
+    clearVariations 
+  } = useLessonImageVariations();
 
   const { teacherGuide, studentHandouts } = lessonData;
+
+  // Combine base imageMap with user-selected variations (selected takes precedence)
+  const combinedImageMap = useMemo(() => {
+    const combined = new Map(imageMap);
+    selectedImages.forEach((url, desc) => {
+      combined.set(desc, url);
+    });
+    return combined;
+  }, [imageMap, selectedImages]);
 
   // Check if audio already exists for this lesson
   const hasExistingAudio = preGeneratedAudio.length > 0;
@@ -218,6 +271,11 @@ export function DifferentiatedLessonOutput({
     
     await generateImages(allContent, lessonId || undefined, undefined, lessonTitle);
   }, [studentHandouts, generateImages, lessonId, lessonTitle]);
+
+  // Handle generating variations for a specific image
+  const handleGenerateVariations = useCallback((description: string) => {
+    generateVariations(description, lessonId || undefined, undefined, lessonTitle);
+  }, [generateVariations, lessonId, lessonTitle]);
 
   // Create a unique identifier for this lesson content
   const lessonContentId = useMemo(() => {
@@ -390,8 +448,8 @@ export function DifferentiatedLessonOutput({
                 lessonTitle={lessonTitle}
                 getGroupContent={getGroupContent}
                 getGroupEnglishContent={getGroupEnglishContent}
-                imageMap={imageMap}
-                isGeneratingImages={isGeneratingImages}
+                imageMap={combinedImageMap}
+                isGeneratingImages={isGeneratingImages || isGeneratingVariations}
               />
             </div>
           </div>
@@ -599,8 +657,8 @@ export function DifferentiatedLessonOutput({
                                 <span>{handout.language}</span>
                               </div>
                               <div className="prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(imageMap)}>
-                                  {processContentWithImages(handout.content, imageMap)}
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(combinedImageMap, handleGenerateVariations, isGeneratingVariations)}>
+                                  {processContentWithImages(handout.content, combinedImageMap)}
                                 </ReactMarkdown>
                               </div>
                             </div>
@@ -612,8 +670,8 @@ export function DifferentiatedLessonOutput({
                                 <span>English</span>
                               </div>
                               <div className="prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(imageMap)}>
-                                  {processContentWithImages(handout.englishContent || '', imageMap)}
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(combinedImageMap, handleGenerateVariations, isGeneratingVariations)}>
+                                  {processContentWithImages(handout.englishContent || '', combinedImageMap)}
                                 </ReactMarkdown>
                               </div>
                             </div>
@@ -621,8 +679,8 @@ export function DifferentiatedLessonOutput({
                         ) : (
                           // Single column for English-only
                           <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(imageMap)}>
-                              {processContentWithImages(handout.content, imageMap)}
+                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(combinedImageMap, handleGenerateVariations, isGeneratingVariations)}>
+                              {processContentWithImages(handout.content, combinedImageMap)}
                             </ReactMarkdown>
                           </div>
                         )}
@@ -640,14 +698,15 @@ export function DifferentiatedLessonOutput({
             {/* Teacher Guide */}
             <TabsContent value="teacher" className="mt-0 p-4">
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(imageMap)}>
-                  {processContentWithImages(teacherGuide, imageMap)}
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(combinedImageMap, handleGenerateVariations, isGeneratingVariations)}>
+                  {processContentWithImages(teacherGuide, combinedImageMap)}
                 </ReactMarkdown>
               </div>
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
+
       {/* Image Browser Dialog */}
       {lessonId && (
         <Dialog open={showImageBrowser} onOpenChange={setShowImageBrowser}>
@@ -658,6 +717,19 @@ export function DifferentiatedLessonOutput({
             <LessonImageBrowser lessonId={lessonId} />
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Image Variation Picker Modal */}
+      {variationsState && variationsState.variations.length > 0 && (
+        <ImageVariationPicker
+          description={variationsState.description}
+          variations={variationsState.variations}
+          isOpen={true}
+          onClose={clearVariations}
+          onSelect={(url) => selectImage(variationsState.description, url)}
+          onRegenerate={() => handleGenerateVariations(variationsState.description)}
+          isRegenerating={variationsState.isGenerating}
+        />
       )}
     </div>
   );

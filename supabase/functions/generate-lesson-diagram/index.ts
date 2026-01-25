@@ -7,32 +7,54 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Different visual styles for variation
+const VARIATION_STYLES = [
+  "Clean, minimal vector-style illustration with simple shapes and clear labels. High contrast colors suitable for printing.",
+  "Detailed educational diagram with annotations and visual hierarchy. Uses color coding to distinguish different elements.",
+  "Infographic-style visual with icons and visual metaphors. Modern flat design with bold colors and clear typography.",
+];
+
+// Prompt improvements based on variation index
+function buildPrompt(description: string, variationIndex?: number): string {
+  const styleHint = variationIndex !== undefined && variationIndex < VARIATION_STYLES.length 
+    ? VARIATION_STYLES[variationIndex] 
+    : VARIATION_STYLES[0];
+
+  return `CREATE A VISUAL EDUCATIONAL DIAGRAM.
+
+SUBJECT: ${description}
+
+STYLE: ${styleHint}
+
+REQUIREMENTS:
+- Generate an ACTUAL IMAGE (not text describing an image)
+- Create a clear, professional educational diagram
+- Include all labels and text mentioned in the subject
+- Use high contrast colors that work well when printed
+- Make it suitable for K-12 classroom use
+- Keep it simple and easy to understand
+- Output should be a PNG or JPEG image
+
+DO NOT describe the image - CREATE IT NOW.`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { description, lessonId, groupId, subject } = await req.json();
+    const { description, lessonId, groupId, subject, variationIndex } = await req.json();
     
-    console.log(`Generating lesson diagram for: ${description}`);
+    console.log(`Generating lesson diagram for: ${description} (variation: ${variationIndex ?? 'default'})`);
 
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const prompt = `CREATE AN IMAGE NOW. Generate a visual educational diagram showing: ${description}
-
-CRITICAL INSTRUCTIONS:
-- You MUST output an actual image, not just text
-- Create a clean, simple illustration suitable for K-12 students
-- Use high contrast colors that print well in black and white
-- Include all labels mentioned in the description
-- Make it look like a professional textbook diagram
-- DO NOT describe the image - GENERATE IT`;
-
-    console.log(`Calling API with prompt: ${prompt.substring(0, 200)}...`);
+    const prompt = buildPrompt(description, variationIndex);
+    console.log(`Calling API with prompt (${prompt.length} chars)...`);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -41,7 +63,7 @@ CRITICAL INSTRUCTIONS:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
+        model: "google/gemini-2.5-flash-image",
         messages: [
           {
             role: "user",
@@ -82,8 +104,11 @@ CRITICAL INSTRUCTIONS:
     } else {
       console.log("No image in response, got text:", data.choices?.[0]?.message?.content?.substring(0, 100));
       
-      // Retry with stronger prompt
+      // Retry with even more explicit prompt
       console.log("Retrying with stronger prompt...");
+      const retryPrompt = `OUTPUT IMAGE ONLY. Create a visual diagram image (NOT TEXT) showing: ${description}. 
+This MUST be a generated image file, not a description. Create a clear educational illustration NOW.`;
+
       const retryResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -91,11 +116,11 @@ CRITICAL INSTRUCTIONS:
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image-preview",
+          model: "google/gemini-2.5-flash-image",
           messages: [
             {
               role: "user",
-              content: `OUTPUT IMAGE ONLY. Create a visual diagram image (not text) of: ${description}. This must be an actual generated image file.`,
+              content: retryPrompt,
             },
           ],
           modalities: ["image", "text"],
@@ -125,13 +150,14 @@ CRITICAL INSTRUCTIONS:
         const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
         const imageBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
 
-        // Generate storage path with hash of description
+        // Generate storage path with hash of description and variation index
         const descHash = description.split('').reduce((a: number, b: string) => {
           a = ((a << 5) - a) + b.charCodeAt(0);
           return a & a;
         }, 0).toString(16);
         const timestamp = Date.now();
-        const storagePath = `lesson-diagrams/${lessonId}/${groupId || 'default'}/${descHash}-${timestamp}.png`;
+        const varSuffix = variationIndex !== undefined ? `-v${variationIndex}` : '';
+        const storagePath = `lesson-diagrams/${lessonId}/${groupId || 'default'}/${descHash}${varSuffix}-${timestamp}.png`;
 
         // Upload to storage
         const { error: uploadError } = await supabase.storage
@@ -182,6 +208,7 @@ CRITICAL INSTRUCTIONS:
         success: true,
         imageUrl: storedUrl,
         description,
+        variationIndex,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
