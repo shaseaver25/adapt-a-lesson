@@ -84,6 +84,7 @@ export default function AdminFeedback() {
   const [stats, setStats] = useState<FeedbackStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [usersWithOverride, setUsersWithOverride] = useState<Map<string, { trialEnd: string | null; type: string }>>(new Map());
   
   // Filters
   const [dateRange, setDateRange] = useState("30");
@@ -127,6 +128,19 @@ export default function AdminFeedback() {
         const profileMap = new Map<string, UserProfile>();
         (profilesData || []).forEach((p) => profileMap.set(p.id, p));
         setProfiles(profileMap);
+
+        // Fetch subscription overrides to show who has been granted free access
+        const { data: overridesData } = await supabase
+          .from("subscription_overrides")
+          .select("user_id, trial_end_date, override_type")
+          .in("user_id", userIds);
+
+        const overrideMap = new Map<string, { trialEnd: string | null; type: string }>();
+        (overridesData || []).forEach((o) => overrideMap.set(o.user_id, { 
+          trialEnd: o.trial_end_date, 
+          type: o.override_type 
+        }));
+        setUsersWithOverride(overrideMap);
       }
 
       const feedbackWithUsers = (feedbackData || []).map((f) => ({
@@ -652,13 +666,23 @@ export default function AdminFeedback() {
                     {paginatedFeedback.map((entry) => (
                       <tr key={entry.id} className="hover:bg-muted/30">
                         <td className="px-4 py-3">
-                          <div>
-                            <p className="font-medium text-sm">
-                              {profiles.get(entry.user_id)?.full_name || "Unknown User"}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {profiles.get(entry.user_id)?.email || ""}
-                            </p>
+                          <div className="flex items-center gap-2">
+                            <div>
+                              <p className="font-medium text-sm">
+                                {profiles.get(entry.user_id)?.full_name || "Unknown User"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {profiles.get(entry.user_id)?.email || ""}
+                              </p>
+                            </div>
+                            {usersWithOverride.has(entry.user_id) && (
+                              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs shrink-0">
+                                <Gift className="h-3 w-3 mr-1" />
+                                {usersWithOverride.get(entry.user_id)?.type === "permanent" 
+                                  ? "Permanent" 
+                                  : `Free until ${format(new Date(usersWithOverride.get(entry.user_id)?.trialEnd || ""), "MMM dd")}`}
+                              </Badge>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm">
