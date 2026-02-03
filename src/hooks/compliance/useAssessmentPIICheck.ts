@@ -45,6 +45,30 @@ export function useAssessmentPIICheck() {
   const { checkText, modalState, handleEdit, handleOverride, isChecking } = usePIIGuard();
 
   /**
+   * Check a single text content field for PII (e.g., generated assessment content).
+   */
+  const checkContentField = async (
+    content: string,
+    entityId?: string | null
+  ): Promise<AssessmentPIICheckResult> => {
+    if (!content.trim()) {
+      return { proceed: true };
+    }
+    
+    const contentCheck = await checkText({
+      text: content,
+      fieldName: 'assessment_content',
+      entityType: 'assessment',
+      entityId: entityId ?? null,
+    });
+    
+    if (!contentCheck.proceed) return { proceed: false };
+    if (contentCheck.overridden) return { proceed: true, overridden: true };
+    
+    return { proceed: true };
+  };
+
+  /**
    * Check all assessment fields for PII.
    * Returns immediately if any field triggers a block.
    */
@@ -53,11 +77,11 @@ export function useAssessmentPIICheck() {
   ): Promise<AssessmentPIICheckResult> => {
     const { lessonContext, localContext, entityId } = fields;
 
-    // Check lesson title
+    // Check assessment name (lesson title)
     if (lessonContext.title.trim()) {
       const titleCheck = await checkText({
         text: lessonContext.title,
-        fieldName: 'lesson_title',
+        fieldName: 'assessment_name',
         entityType: 'assessment',
         entityId: entityId ?? null,
       });
@@ -65,12 +89,12 @@ export function useAssessmentPIICheck() {
       if (titleCheck.overridden) return { proceed: true, overridden: true };
     }
 
-    // Check each learning objective
+    // Check each assessment objective
     const objectives = lessonContext.objectives.filter(o => o.trim());
     for (let i = 0; i < objectives.length; i++) {
       const objectiveCheck = await checkText({
         text: objectives[i],
-        fieldName: `learning_objective_${i + 1}`,
+        fieldName: `assessment_objective_${i + 1}`,
         entityType: 'assessment',
         entityId: entityId ?? null,
       });
@@ -78,11 +102,11 @@ export function useAssessmentPIICheck() {
       if (objectiveCheck.overridden) return { proceed: true, overridden: true };
     }
 
-    // Check local context details (free-text field)
+    // Check assessment context (free-text field)
     if (localContext.details.trim()) {
       const detailsCheck = await checkText({
         text: localContext.details,
-        fieldName: 'local_context_details',
+        fieldName: 'assessment_context',
         entityType: 'assessment',
         entityId: entityId ?? null,
       });
@@ -95,6 +119,7 @@ export function useAssessmentPIICheck() {
 
   return {
     checkAssessmentFields,
+    checkContentField,
     modalState,
     handleEdit,
     handleOverride,
