@@ -1,22 +1,34 @@
+```tsx
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
-import { Copy, Download, Check, RotateCcw, Save, FileText, Globe, CheckCircle, AlertCircle } from 'lucide-react';
+import {
+  Copy,
+  Download,
+  RotateCcw,
+  Save,
+  FileText,
+  Globe,
+  CheckCircle,
+} from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useAssessmentPIICheck } from '@/hooks/compliance/useAssessmentPIICheck';
-import { PIIWarningModal } from '@/components/compliance/PIIWarningModal';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AssessmentInput } from '@/hooks/useAssessmentGenerator';
 import type { Components } from 'react-markdown';
+
+import { AssessmentInput } from '@/hooks/useAssessmentGenerator';
+
+// ✅ PII guard
+import { useAssessmentPIICheck } from '@/hooks/compliance/useAssessmentPIICheck';
+import { PIIWarningModal } from '@/components/compliance/PIIWarningModal';
 
 interface AssessmentOutputProps {
   content: string;
@@ -25,15 +37,23 @@ interface AssessmentOutputProps {
   onReset?: () => void;
 }
 
-export function AssessmentOutput({ content, lessonTitle, assessmentInput, onReset }: AssessmentOutputProps) {
+export function AssessmentOutput({
+  content,
+  lessonTitle,
+  assessmentInput,
+  onReset,
+}: AssessmentOutputProps) {
   const [copied, setCopied] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { checkAssessmentFields, checkContentField, modalState, handleEdit, handleOverride, isChecking } = useAssessmentPIICheck();
   const mainContentRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
+
+  // ✅ PII guard hook (content scan + modal state)
+  const { checkContentField, modalState, handleEdit, handleOverride, isChecking } =
+    useAssessmentPIICheck();
 
   // Announce status changes to screen readers
   useEffect(() => {
@@ -57,6 +77,17 @@ export function AssessmentOutput({ content, lessonTitle, assessmentInput, onRese
   const generateFileName = (extension: string) => {
     const title = assessmentInput?.lessonContext?.title || lessonTitle || 'assessment';
     return `${title.replace(/\s+/g, '-').toLowerCase()}-assessment.${extension}`;
+  };
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleDownloadHTML = () => {
@@ -87,12 +118,16 @@ export function AssessmentOutput({ content, lessonTitle, assessmentInput, onRese
 <body>
   <main role="main">
     <article>
-      ${content.replace(/^# /gm, '<h1>').replace(/^## /gm, '<h2>').replace(/^### /gm, '<h3>').replace(/\n/g, '<br>')}
+      ${content
+        .replace(/^# /gm, '<h1>')
+        .replace(/^## /gm, '<h2>')
+        .replace(/^### /gm, '<h3>')
+        .replace(/\n/g, '<br>')}
     </article>
   </main>
 </body>
 </html>`;
-    
+
     const blob = new Blob([htmlContent], { type: 'text/html' });
     downloadBlob(blob, generateFileName('html'));
     setStatusMessage('Assessment downloaded as HTML file');
@@ -128,7 +163,8 @@ export function AssessmentOutput({ content, lessonTitle, assessmentInput, onRese
 <body>
 <main role="main">
 <article>
-${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
+${content
+  .replace(/^# (.*$)/gm, '<h1>$1</h1>')
   .replace(/^## (.*$)/gm, '<h2>$1</h2>')
   .replace(/^### (.*$)/gm, '<h3>$1</h3>')
   .replace(/^\* (.*$)/gm, '<li>$1</li>')
@@ -139,7 +175,7 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
 </main>
 </body>
 </html>`;
-    
+
     const blob = new Blob([wordContent], { type: 'application/msword' });
     downloadBlob(blob, generateFileName('doc'));
     setStatusMessage('Assessment downloaded as Word document');
@@ -159,7 +195,8 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
 <body>
 <main role="main">
 <article>
-${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
+${content
+  .replace(/^# (.*$)/gm, '<h1>$1</h1>')
   .replace(/^## (.*$)/gm, '<h2>$1</h2>')
   .replace(/^### (.*$)/gm, '<h3>$1</h3>')
   .replace(/^\* (.*$)/gm, '<li>$1</li>')
@@ -168,7 +205,7 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
 </main>
 </body>
 </html>`;
-    
+
     const blob = new Blob([htmlContent], { type: 'text/html' });
     downloadBlob(blob, generateFileName('html'));
     setStatusMessage('Assessment downloaded for Google Docs. Upload to Google Drive to convert.');
@@ -178,21 +215,8 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
     });
   };
 
-  const downloadBlob = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
   const handleStartOver = () => {
-    if (onReset) {
-      onReset();
-    }
+    if (onReset) onReset();
     navigate('/studio?tab=assessment');
   };
 
@@ -207,22 +231,13 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
       return;
     }
 
-    // Check for PII in generated content BEFORE any save operation
-    const contentResult = await checkContentField(content);
-    if (!contentResult.proceed) return;
-
-    // Check for PII in form fields if we have the input context
-    if (assessmentInput?.lessonContext && assessmentInput?.localContext) {
-      const { proceed } = await checkAssessmentFields({
-        lessonContext: assessmentInput.lessonContext,
-        localContext: assessmentInput.localContext,
-      });
-      
-      if (!proceed) return;
-    }
+    // ✅ PII check on generated content BEFORE upload/insert
+    const { proceed } = await checkContentField(content, null);
+    if (!proceed) return;
 
     setIsSaving(true);
     setStatusMessage('Saving assessment...');
+
     try {
       const title = assessmentInput?.lessonContext?.title || lessonTitle || 'Untitled Assessment';
       const fileName = `${user.id}/${Date.now()}-${title.replace(/\s+/g, '-').toLowerCase()}.md`;
@@ -233,41 +248,34 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
           contentType: 'text/markdown',
         });
 
-      if (storageError) {
-        throw storageError;
-      }
+      if (storageError) throw storageError;
 
-      const { error: dbError } = await supabase
-        .from('generated_assessments')
-        .insert({
-          user_id: user.id,
-          title,
-          assessment_content: content,
-          lesson_title: assessmentInput?.lessonContext?.title || null,
-          subject: assessmentInput?.lessonContext?.subject || null,
-          grade_level: assessmentInput?.lessonContext?.gradeLevel || null,
-          learning_objectives: assessmentInput?.lessonContext?.objectives?.filter(o => o.trim()) || [],
-          method_category: assessmentInput?.selectedCategory || null,
-          method_name: assessmentInput?.selectedMethod || null,
-          method_outputs: assessmentInput?.methodDetails?.outputs || null,
-          school_name: assessmentInput?.localContext?.schoolName || null,
-          city: assessmentInput?.localContext?.city || null,
-          state: assessmentInput?.localContext?.state || null,
-          local_context_details: assessmentInput?.localContext?.details || null,
-          storage_path: fileName,
-        });
+      const { error: dbError } = await supabase.from('generated_assessments').insert({
+        user_id: user.id,
+        title,
+        assessment_content: content,
+        lesson_title: assessmentInput?.lessonContext?.title || null,
+        subject: assessmentInput?.lessonContext?.subject || null,
+        grade_level: assessmentInput?.lessonContext?.gradeLevel || null,
+        learning_objectives: assessmentInput?.lessonContext?.objectives?.filter((o) => o.trim()) || [],
+        method_category: assessmentInput?.selectedCategory || null,
+        method_name: assessmentInput?.selectedMethod || null,
+        method_outputs: assessmentInput?.methodDetails?.outputs || null,
+        school_name: assessmentInput?.localContext?.schoolName || null,
+        city: assessmentInput?.localContext?.city || null,
+        state: assessmentInput?.localContext?.state || null,
+        local_context_details: assessmentInput?.localContext?.details || null,
+        storage_path: fileName,
+      });
 
-      if (dbError) {
-        throw dbError;
-      }
+      if (dbError) throw dbError;
 
       setStatusMessage('Assessment saved successfully');
       toast({
         title: 'Assessment saved',
         description: 'Your assessment has been saved to My Assessments.',
       });
-    } catch (error) {
-      console.error('Error saving assessment:', error);
+    } catch {
       setStatusMessage('Error saving assessment. Please try again.');
       toast({
         title: 'Error saving assessment',
@@ -312,12 +320,20 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
       </p>
     ),
     ul: ({ children, ...props }) => (
-      <ul className="list-disc list-outside ml-6 mb-4 space-y-1 text-foreground" role="list" {...props}>
+      <ul
+        className="list-disc list-outside ml-6 mb-4 space-y-1 text-foreground"
+        role="list"
+        {...props}
+      >
         {children}
       </ul>
     ),
     ol: ({ children, ...props }) => (
-      <ol className="list-decimal list-outside ml-6 mb-4 space-y-1 text-foreground" role="list" {...props}>
+      <ol
+        className="list-decimal list-outside ml-6 mb-4 space-y-1 text-foreground"
+        role="list"
+        {...props}
+      >
         {children}
       </ol>
     ),
@@ -339,7 +355,11 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
       </thead>
     ),
     th: ({ children, ...props }) => (
-      <th className="border border-border px-4 py-2 text-left font-semibold text-foreground" scope="col" {...props}>
+      <th
+        className="border border-border px-4 py-2 text-left font-semibold text-foreground"
+        scope="col"
+        {...props}
+      >
         {children}
       </th>
     ),
@@ -349,8 +369,8 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
       </td>
     ),
     blockquote: ({ children, ...props }) => (
-      <blockquote 
-        className="border-l-4 border-primary pl-4 my-4 italic text-muted-foreground" 
+      <blockquote
+        className="border-l-4 border-primary pl-4 my-4 italic text-muted-foreground"
         role="note"
         {...props}
       >
@@ -358,24 +378,22 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
       </blockquote>
     ),
     a: ({ href, children, ...props }) => (
-      <a 
-        href={href} 
+      <a
+        href={href}
         className="text-primary underline hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         target={href?.startsWith('http') ? '_blank' : undefined}
         rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
         {...props}
       >
         {children}
-        {href?.startsWith('http') && (
-          <span className="sr-only"> (opens in new tab)</span>
-        )}
+        {href?.startsWith('http') && <span className="sr-only"> (opens in new tab)</span>}
       </a>
     ),
     img: ({ src, alt, ...props }) => (
       <figure className="my-4">
-        <img 
-          src={src} 
-          alt={alt || 'Assessment image'} 
+        <img
+          src={src}
+          alt={alt || 'Assessment image'}
           className="max-w-full h-auto rounded-lg border border-border"
           {...props}
         />
@@ -403,9 +421,7 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
         </pre>
       );
     },
-    hr: (props) => (
-      <hr className="my-6 border-t border-border" role="separator" {...props} />
-    ),
+    hr: (props) => <hr className="my-6 border-t border-border" role="separator" {...props} />,
   };
 
   const assessmentTitle = assessmentInput?.lessonContext?.title || lessonTitle || 'Assessment';
@@ -446,14 +462,14 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
       </header>
 
       {/* Action buttons - toolbar */}
-      <nav 
+      <nav
         className="flex flex-wrap gap-3 justify-between items-center border-b border-border pb-4"
         aria-label="Assessment actions"
       >
         <div className="flex gap-3" role="group" aria-label="Primary actions">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleCopy}
             aria-pressed={copied}
             aria-label={copied ? 'Assessment copied to clipboard' : 'Copy assessment to clipboard'}
@@ -470,11 +486,11 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
               </>
             )}
           </Button>
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="secondary" 
+              <Button
+                variant="secondary"
                 size="sm"
                 aria-haspopup="menu"
                 aria-label="Download assessment - choose format"
@@ -499,18 +515,22 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button 
-            variant="default" 
-            size="sm" 
+          <Button
+            variant="default"
+            size="sm"
             onClick={handleSaveAssessment}
             disabled={isSaving || isChecking}
             className="bg-primary hover:bg-primary/90"
             aria-busy={isSaving || isChecking}
-            aria-label={isSaving || isChecking ? 'Saving assessment...' : 'Save assessment to My Assessments'}
+            aria-label={
+              isSaving || isChecking ? 'Saving assessment...' : 'Save assessment to My Assessments'
+            }
           >
             {isSaving || isChecking ? (
               <>
-                <span className="animate-spin" aria-hidden="true">⏳</span>
+                <span className="animate-spin" aria-hidden="true">
+                  ⏳
+                </span>
                 <span>{isChecking ? 'Checking...' : 'Saving...'}</span>
               </>
             ) : (
@@ -522,19 +542,14 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
           </Button>
         </div>
 
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={handleStartOver}
-          aria-label="Start a new assessment"
-        >
+        <Button variant="ghost" size="sm" onClick={handleStartOver} aria-label="Start a new assessment">
           <RotateCcw className="h-4 w-4" aria-hidden="true" />
           <span>Start New Assessment</span>
         </Button>
       </nav>
 
       {/* Main content area */}
-      <main 
+      <main
         id="assessment-content"
         ref={mainContentRef}
         tabIndex={-1}
@@ -542,10 +557,7 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
         aria-labelledby="assessment-title"
       >
         <article className="prose-lesson bg-card border border-border rounded-xl p-6 shadow-soft max-h-[calc(100vh-20rem)] overflow-y-auto">
-          <ReactMarkdown 
-            remarkPlugins={[remarkGfm]}
-            components={markdownComponents}
-          >
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
             {content}
           </ReactMarkdown>
         </article>
@@ -577,14 +589,15 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
         }
       `}</style>
 
-      {/* PII Warning Modal */}
+      {/* ✅ PII Warning Modal */}
       <PIIWarningModal
         open={modalState.open}
         riskLevel={modalState.riskLevel}
         findings={modalState.findings}
         onEdit={handleEdit}
-        onOverride={handleOverride}
+        onOverride={modalState.canOverride ? handleOverride : undefined}
       />
     </div>
   );
 }
+```
