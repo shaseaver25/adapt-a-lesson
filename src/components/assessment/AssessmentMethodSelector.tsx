@@ -340,7 +340,7 @@ export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMe
         riskLevel={modalState.riskLevel}
         findings={modalState.findings}
         onEdit={handleEdit}
-        onOverride={modalState.canOverride ? handleOverride : undefined}
+        onOverride={handleOverride}
       />
     </div>
   );
