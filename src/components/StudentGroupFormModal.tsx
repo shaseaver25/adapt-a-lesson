@@ -5,6 +5,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { usePIIGuard } from '@/hooks/compliance/usePIIGuard';
+import { PIIWarningModal } from '@/components/compliance/PIIWarningModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,7 +48,7 @@ interface StudentGroupFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (group: StudentGroup) => void;
-  initialData?: StudentGroup;
+  initialData?: StudentGroup & { id?: string };
   isLoading?: boolean;
 }
 
@@ -57,6 +59,8 @@ export function StudentGroupFormModal({
   initialData,
   isLoading,
 }: StudentGroupFormModalProps) {
+  const { checkText, modalState, handleEdit, handleOverride, isChecking } = usePIIGuard();
+  
   const [groupName, setGroupName] = useState('');
   const [numStudents, setNumStudents] = useState(1);
   const [readingLevelLabel, setReadingLevelLabel] = useState<StudentGroup['readingLevelLabel']>('On Grade');
@@ -114,8 +118,31 @@ export function StudentGroupFormModal({
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check group name for PII
+    const groupNameCheck = await checkText({
+      text: groupName,
+      fieldName: 'group_name',
+      entityType: 'student_group',
+      entityId: initialData?.id ?? null,
+    });
+    
+    if (!groupNameCheck.proceed) return;
+    
+    // Check notes for PII if present
+    if (notes.trim()) {
+      const notesCheck = await checkText({
+        text: notes,
+        fieldName: 'notes',
+        entityType: 'student_group',
+        entityId: initialData?.id ?? null,
+      });
+      
+      if (!notesCheck.proceed) return;
+    }
+    
     onSave({
       groupName,
       numStudents,
@@ -388,13 +415,21 @@ export function StudentGroupFormModal({
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading || !groupName}>
-                {isLoading ? 'Saving...' : initialData ? 'Save Changes' : 'Create Group'}
+              <Button type="submit" disabled={isLoading || isChecking || !groupName}>
+                {isLoading || isChecking ? 'Saving...' : initialData ? 'Save Changes' : 'Create Group'}
               </Button>
             </div>
           </form>
         </ScrollArea>
       </DialogContent>
+      
+      <PIIWarningModal
+        open={modalState.open}
+        riskLevel={modalState.riskLevel}
+        findings={modalState.findings}
+        onEdit={handleEdit}
+        onOverride={handleOverride}
+      />
     </Dialog>
   );
 }
