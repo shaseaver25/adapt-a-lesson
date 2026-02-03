@@ -9,7 +9,7 @@ import {
   TrendingUp,
   Activity
 } from 'lucide-react';
-
+import { ComplianceSummaryCard } from './ComplianceSummaryCard';
 interface Stats {
   totalUsers: number;
   totalLessons: number;
@@ -158,7 +158,7 @@ export function AdminOverview() {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Language Distribution */}
         <Card>
           <CardHeader>
@@ -207,6 +207,9 @@ export function AdminOverview() {
             <RecentActivityList />
           </CardContent>
         </Card>
+
+        {/* Compliance Summary */}
+        <ComplianceSummaryCard />
       </div>
     </div>
   );
