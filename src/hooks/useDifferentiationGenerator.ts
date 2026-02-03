@@ -2,6 +2,8 @@ import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { handleError } from '@/lib/errorUtils';
+import { detectPotentialPII } from '@/lib/compliance/detectPotentialPII';
 import { StudentGroup } from '@/types/studentGroup';
 import { DifferentiationProgressState, createInitialProgressState } from '@/components/DifferentiationProgressModal';
 import { DifferentiateInput } from '@/components/DifferentiateForm';
@@ -78,6 +80,19 @@ export function useDifferentiationGenerator(
   }, []);
 
   const handleDifferentiate = async (input: DifferentiateInput, isRetry = false) => {
+    // Defensive PII guard - block if high-risk PII detected without override
+    const contentCheck = detectPotentialPII(input.lessonContent);
+    if (contentCheck.risk === 'high') {
+      const errorMsg = 'Content contains sensitive information. Please remove PII before proceeding.';
+      setDifferentiateError(errorMsg);
+      toast({
+        title: 'PII Detected',
+        description: errorMsg,
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setIsDifferentiating(true);
     setDifferentiateError(null);
     setSelectedGroups(input.selectedGroups);
