@@ -26,7 +26,7 @@ export interface ComplianceEventsPagination {
   offset: number;
 }
 
-/** Single compliance event row */
+/** Single compliance event row - no PII fields */
 export interface ComplianceEventRow {
   id: string;
   user_id: string | null;
@@ -39,7 +39,6 @@ export interface ComplianceEventRow {
   match_count: number;
   action_taken: string | null;
   created_at: string;
-  user_email?: string;
 }
 
 /** Query result with pagination metadata */
@@ -114,29 +113,23 @@ async function fetchComplianceEvents(
     throw new Error(handleError(error, 'Fetch Compliance Events'));
   }
 
-  // Fetch user emails for display
-  const events = data || [];
-  const userIds = [...new Set(events.map(e => e.user_id).filter(Boolean))] as string[];
-  
-  let emailMap: Record<string, string> = {};
-  if (userIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, email')
-      .in('id', userIds);
-    
-    profiles?.forEach(p => {
-      if (p.email) emailMap[p.id] = p.email;
-    });
-  }
-
-  const eventsWithEmail: ComplianceEventRow[] = events.map(event => ({
-    ...event,
-    user_email: event.user_id ? emailMap[event.user_id] : undefined,
+  // Return events directly - no PII enrichment
+  const events: ComplianceEventRow[] = (data || []).map(row => ({
+    id: row.id,
+    user_id: row.user_id,
+    event_type: row.event_type,
+    entity_type: row.entity_type,
+    entity_id: row.entity_id,
+    field_name: row.field_name,
+    risk_level: row.risk_level,
+    findings: row.findings,
+    match_count: row.match_count,
+    action_taken: row.action_taken,
+    created_at: row.created_at,
   }));
 
   return {
-    events: eventsWithEmail,
+    events,
     totalCount: count || 0,
     hasMore: (count || 0) > pagination.offset + pagination.limit,
   };

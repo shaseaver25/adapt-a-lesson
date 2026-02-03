@@ -143,8 +143,8 @@ export function ComplianceEventsTable({
                   {event.match_count}
                 </TableCell>
                 <TableCell>{getActionBadge(event.action_taken)}</TableCell>
-                <TableCell className="text-sm text-muted-foreground truncate max-w-[180px]">
-                  {event.user_email || event.user_id?.slice(0, 8) || '-'}
+                <TableCell className="text-sm font-mono text-muted-foreground">
+                  {event.user_id ? event.user_id.slice(0, 8) : '-'}
                 </TableCell>
               </TableRow>
             ))}
