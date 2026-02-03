@@ -27,6 +27,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { HelpTooltip } from '@/components/ui/help-tooltip';
 import { RUBRIC_SECTION_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
+import { useRubricPIICheck } from '@/hooks/compliance/useRubricPIICheck';
+import { PIIWarningModal } from '@/components/compliance/PIIWarningModal';
 
 interface RubricFormProps {
   onSubmit: (input: RubricInput) => void;
@@ -69,6 +71,9 @@ export function RubricForm({ onSubmit, isLoading }: RubricFormProps) {
   const [selectedEnhancements, setSelectedEnhancements] = useState<string[]>([]);
   const [isApplyingEnhancements, setIsApplyingEnhancements] = useState(false);
 
+  // PII guard hook
+  const { checkRubricFields, modalState, handleEdit, handleOverride, isChecking } = useRubricPIICheck();
+
   const addObjective = () => {
     setObjectives([...objectives, '']);
   };
@@ -95,6 +100,15 @@ export function RubricForm({ onSubmit, isLoading }: RubricFormProps) {
 
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Run PII check before proceeding
+    const { proceed } = await checkRubricFields({
+      rubricName,
+      assessmentDescription,
+      objectives,
+      entityId: null,
+    });
+    if (!proceed) return;
     
     if (!aiProofSettings.enableAIProofAnalysis) {
       // Skip analysis and go straight to generation
@@ -616,9 +630,14 @@ ${enhancements.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
             variant="hero"
             size="lg"
             className="w-full"
-            disabled={isAnalyzing || !isValid}
+            disabled={isChecking || isAnalyzing || !isValid}
           >
-            {isAnalyzing ? (
+            {isChecking ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Checking...
+              </>
+            ) : isAnalyzing ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Analyzing for AI Vulnerabilities...
@@ -658,6 +677,15 @@ ${enhancements.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
           />
         </div>
       )}
+
+      {/* PII Warning Modal */}
+      <PIIWarningModal
+        open={modalState.open}
+        riskLevel={modalState.riskLevel}
+        findings={modalState.findings}
+        onEdit={handleEdit}
+        onOverride={handleOverride}
+      />
     </div>
   );
 }
