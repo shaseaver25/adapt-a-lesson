@@ -23,6 +23,8 @@ import { RubricExportOptions, RubricInput, AIProofSettings, VerificationCheckpoi
 import { AIVulnerabilityAnalysis } from '@/types/vulnerabilityAnalysis';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useRubricPIICheck } from '@/hooks/compliance/useRubricPIICheck';
+import { PIIWarningModal } from '@/components/compliance/PIIWarningModal';
 
 interface RubricOutputProps {
   content: string;
@@ -54,6 +56,9 @@ export function RubricOutput({
     qaQuestionBank: false,
   });
   const { user } = useAuth();
+
+  // PII guard hook
+  const { checkContentField, modalState, handleEdit, handleOverride, isChecking } = useRubricPIICheck();
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(content);
@@ -148,6 +153,10 @@ export function RubricOutput({
       });
       return;
     }
+
+    // Run PII check on generated content BEFORE saving
+    const { proceed } = await checkContentField(content, null);
+    if (!proceed) return;
 
     setIsSaving(true);
 
@@ -252,10 +261,15 @@ export function RubricOutput({
                     variant={isSaved ? "secondary" : "default"}
                     size="sm"
                     onClick={handleSave}
-                    disabled={isSaving || isSaved}
+                    disabled={isChecking || isSaving || isSaved}
                     className="flex items-center gap-2"
                   >
-                    {isSaving ? (
+                    {isChecking ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Checking...
+                      </>
+                    ) : isSaving ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Saving...
@@ -444,6 +458,15 @@ export function RubricOutput({
           </div>
         </CardContent>
       </Card>
+
+      {/* PII Warning Modal */}
+      <PIIWarningModal
+        open={modalState.open}
+        riskLevel={modalState.riskLevel}
+        findings={modalState.findings}
+        onEdit={handleEdit}
+        onOverride={handleOverride}
+      />
     </div>
   );
 }
