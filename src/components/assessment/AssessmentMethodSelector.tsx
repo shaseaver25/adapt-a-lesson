@@ -10,6 +10,8 @@ import { Sparkles, BookOpen, Target, Plus, X } from 'lucide-react';
 import { CategoryCard } from './CategoryCard';
 import { MethodOption } from './MethodOption';
 import { LocalContextCard } from './LocalContextCard';
+import { useAssessmentPIICheck } from '@/hooks/compliance/useAssessmentPIICheck';
+import { PIIWarningModal } from '@/components/compliance/PIIWarningModal';
 import { 
   ASSESSMENT_METHODS, 
   LessonContext, 
@@ -47,6 +49,8 @@ const getStoredValue = <T,>(key: string, defaultValue: T): T => {
 };
 
 export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMethodSelectorProps) {
+  const { checkAssessmentFields, modalState, handleEdit, handleOverride, isChecking } = useAssessmentPIICheck();
+  
   const [selectedCategory, setSelectedCategory] = useState<string | null>(() => 
     getStoredValue(STORAGE_KEYS.SELECTED_CATEGORY, null)
   );
@@ -123,8 +127,16 @@ export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMe
     }));
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!selectedCategory || !selectedMethod || !selectedMethodData) return;
+    
+    // Check for PII before sending to AI
+    const { proceed } = await checkAssessmentFields({
+      lessonContext,
+      localContext,
+    });
+    
+    if (!proceed) return;
     
     onGenerate({
       lessonContext,
@@ -317,13 +329,13 @@ export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMe
       {selectedMethod && selectedMethodData && (
         <Button
           onClick={handleGenerate}
-          disabled={!isFormValid || isLoading}
+          disabled={!isFormValid || isLoading || isChecking}
           className="w-full h-12 gradient-warm text-primary-foreground font-semibold shadow-lg shadow-orange-200/50 hover:shadow-orange-300/50 transition-all"
         >
-          {isLoading ? (
+          {isLoading || isChecking ? (
             <>
               <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              Generating...
+              {isChecking ? 'Checking...' : 'Generating...'}
             </>
           ) : (
             <>
@@ -333,6 +345,15 @@ export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMe
           )}
         </Button>
       )}
+
+      {/* PII Warning Modal */}
+      <PIIWarningModal
+        open={modalState.open}
+        riskLevel={modalState.riskLevel}
+        findings={modalState.findings}
+        onEdit={handleEdit}
+        onOverride={handleOverride}
+      />
     </div>
   );
 }

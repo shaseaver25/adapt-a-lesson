@@ -7,6 +7,8 @@ import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAssessmentPIICheck } from '@/hooks/compliance/useAssessmentPIICheck';
+import { PIIWarningModal } from '@/components/compliance/PIIWarningModal';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +31,7 @@ export function AssessmentOutput({ content, lessonTitle, assessmentInput, onRese
   const [statusMessage, setStatusMessage] = useState('');
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { checkAssessmentFields, modalState, handleEdit, handleOverride, isChecking } = useAssessmentPIICheck();
   const mainContentRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
 
@@ -202,6 +205,16 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
         variant: 'destructive',
       });
       return;
+    }
+
+    // Check for PII before saving if we have the input context
+    if (assessmentInput?.lessonContext && assessmentInput?.localContext) {
+      const { proceed } = await checkAssessmentFields({
+        lessonContext: assessmentInput.lessonContext,
+        localContext: assessmentInput.localContext,
+      });
+      
+      if (!proceed) return;
     }
 
     setIsSaving(true);
@@ -486,15 +499,15 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
             variant="default" 
             size="sm" 
             onClick={handleSaveAssessment}
-            disabled={isSaving}
+            disabled={isSaving || isChecking}
             className="bg-primary hover:bg-primary/90"
-            aria-busy={isSaving}
-            aria-label={isSaving ? 'Saving assessment...' : 'Save assessment to My Assessments'}
+            aria-busy={isSaving || isChecking}
+            aria-label={isSaving || isChecking ? 'Saving assessment...' : 'Save assessment to My Assessments'}
           >
-            {isSaving ? (
+            {isSaving || isChecking ? (
               <>
                 <span className="animate-spin" aria-hidden="true">⏳</span>
-                <span>Saving...</span>
+                <span>{isChecking ? 'Checking...' : 'Saving...'}</span>
               </>
             ) : (
               <>
@@ -559,6 +572,15 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
           }
         }
       `}</style>
+
+      {/* PII Warning Modal */}
+      <PIIWarningModal
+        open={modalState.open}
+        riskLevel={modalState.riskLevel}
+        findings={modalState.findings}
+        onEdit={handleEdit}
+        onOverride={handleOverride}
+      />
     </div>
   );
 }
