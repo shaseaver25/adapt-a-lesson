@@ -27,6 +27,8 @@ import { useDifferentiation, type GraphicOrganizerType } from '@/contexts/Differ
 import { READING_LEVEL_DESCRIPTIONS, ELL_STATUS_DESCRIPTIONS, SECTION_DESCRIPTIONS, DIFFERENTIATION_OPTION_DESCRIPTIONS, FIELD_DESCRIPTIONS } from '@/lib/tooltipDescriptions';
 import { HelpTooltip } from '@/components/ui/help-tooltip';
 import { getStudentFriendlyName, getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
+import { usePIIGuard } from '@/hooks/compliance/usePIIGuard';
+import { PIIWarningModal } from '@/components/compliance/PIIWarningModal';
 import type { StudentGroup } from '@/types/studentGroup';
 
 interface DBStudentGroup {
@@ -103,6 +105,7 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
     setOptions,
   } = useDifferentiation();
 
+  const { checkText, modalState, handleEdit, handleOverride, isChecking } = usePIIGuard();
   const [showCacheNotice, setShowCacheNotice] = useState(false);
 
   const { data: groups = [], isLoading: isLoadingGroups } = useQuery({
@@ -143,8 +146,29 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check lesson name for PII if provided
+    if (lessonName.trim()) {
+      const nameCheck = await checkText({
+        text: lessonName,
+        fieldName: 'lesson_name',
+        entityType: 'lesson',
+        entityId: null,
+      });
+      if (!nameCheck.proceed) return;
+    }
+    
+    // Check lesson content for PII
+    const contentCheck = await checkText({
+      text: cachedLessonContent,
+      fieldName: 'lesson_content',
+      entityType: 'lesson',
+      entityId: null,
+    });
+    if (!contentCheck.proceed) return;
+    
     const selectedGroups = groups.filter((g) => selectedGroupIds.includes(g.id));
     onSubmit({
       lessonName: lessonName.trim() || 'Untitled Lesson',
@@ -517,9 +541,9 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
         variant="hero"
         size="lg"
         className="w-full"
-        disabled={isLoading || selectedGroupIds.length === 0 || !cachedLessonContent.trim()}
+        disabled={isLoading || isChecking || selectedGroupIds.length === 0 || !cachedLessonContent.trim()}
       >
-        {isLoading ? (
+        {isLoading || isChecking ? (
           <span className="animate-pulse-soft">Processing...</span>
         ) : selectedGroupIds.length === 0 ? (
           'Select at least one group to continue'
@@ -528,6 +552,14 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
         )}
       </Button>
       </form>
+      
+      <PIIWarningModal
+        open={modalState.open}
+        riskLevel={modalState.riskLevel}
+        findings={modalState.findings}
+        onEdit={handleEdit}
+        onOverride={handleOverride}
+      />
     </div>
   );
 }
