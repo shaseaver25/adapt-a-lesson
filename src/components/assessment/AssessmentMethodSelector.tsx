@@ -1,31 +1,26 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import { Sparkles, BookOpen, Target, Plus, X } from 'lucide-react';
-import { CategoryCard } from './CategoryCard';
-import { MethodOption } from './MethodOption';
-import { LocalContextCard } from './LocalContextCard';
-import { useAssessmentPIICheck } from '@/hooks/compliance/useAssessmentPIICheck';
-import { PIIWarningModal } from '@/components/compliance/PIIWarningModal';
-import { 
-  ASSESSMENT_METHODS, 
-  LessonContext, 
-  LocalContext, 
-  AssessmentCategory,
-  MethodOutput 
-} from '@/types/assessmentMethods';
-import { SUBJECTS, GRADE_LEVELS } from '@/types/assessment';
+import { Sparkles, BookOpen, Target, Plus, X } from "lucide-react";
+import { CategoryCard } from "./CategoryCard";
+import { MethodOption } from "./MethodOption";
+import { LocalContextCard } from "./LocalContextCard";
+import { ASSESSMENT_METHODS, LessonContext, LocalContext, MethodOutput } from "@/types/assessmentMethods";
+import { SUBJECTS, GRADE_LEVELS } from "@/types/assessment";
+
+// ✅ ADD THESE IMPORTS
+import { useAssessmentPIICheck } from "@/hooks/compliance/useAssessmentPIICheck";
+import { PIIWarningModal } from "@/components/compliance/PIIWarningModal";
 
 const STORAGE_KEYS = {
-  LESSON_CONTEXT: 'assessment_lesson_context',
-  LOCAL_CONTEXT: 'assessment_local_context',
-  SELECTED_CATEGORY: 'assessment_selected_category',
-  SELECTED_METHOD: 'assessment_selected_method',
+  LESSON_CONTEXT: "assessment_lesson_context",
+  LOCAL_CONTEXT: "assessment_local_context",
+  SELECTED_CATEGORY: "assessment_selected_category",
+  SELECTED_METHOD: "assessment_selected_method",
 };
 
 interface AssessmentMethodSelectorProps {
@@ -42,39 +37,40 @@ interface AssessmentMethodSelectorProps {
 const getStoredValue = <T,>(key: string, defaultValue: T): T => {
   try {
     const stored = localStorage.getItem(key);
-    return stored ? JSON.parse(stored) : defaultValue;
+    return stored ? (JSON.parse(stored) as T) : defaultValue;
   } catch {
     return defaultValue;
   }
 };
 
 export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMethodSelectorProps) {
-  const { checkAssessmentFields, modalState, handleEdit, handleOverride, isChecking } = useAssessmentPIICheck();
-  
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(() => 
-    getStoredValue(STORAGE_KEYS.SELECTED_CATEGORY, null)
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(() =>
+    getStoredValue(STORAGE_KEYS.SELECTED_CATEGORY, null),
   );
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(() => 
-    getStoredValue(STORAGE_KEYS.SELECTED_METHOD, null)
-  );
-  
-  const [lessonContext, setLessonContext] = useState<LessonContext>(() => 
-    getStoredValue(STORAGE_KEYS.LESSON_CONTEXT, {
-      title: '',
-      subject: '',
-      gradeLevel: '',
-      objectives: [''],
-    })
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(() =>
+    getStoredValue(STORAGE_KEYS.SELECTED_METHOD, null),
   );
 
-  const [localContext, setLocalContext] = useState<LocalContext>(() => 
-    getStoredValue(STORAGE_KEYS.LOCAL_CONTEXT, {
-      schoolName: '',
-      city: '',
-      state: '',
-      details: '',
-    })
+  const [lessonContext, setLessonContext] = useState<LessonContext>(() =>
+    getStoredValue(STORAGE_KEYS.LESSON_CONTEXT, {
+      title: "",
+      subject: "",
+      gradeLevel: "",
+      objectives: [""],
+    }),
   );
+
+  const [localContext, setLocalContext] = useState<LocalContext>(() =>
+    getStoredValue(STORAGE_KEYS.LOCAL_CONTEXT, {
+      schoolName: "",
+      city: "",
+      state: "",
+      details: "",
+    }),
+  );
+
+  // ✅ PII guard hook
+  const { checkAssessmentFields, modalState, handleEdit, handleOverride, isChecking } = useAssessmentPIICheck();
 
   // Persist state to localStorage
   useEffect(() => {
@@ -95,7 +91,7 @@ export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMe
 
   const categories = Object.values(ASSESSMENT_METHODS);
   const selectedCategoryData = selectedCategory ? ASSESSMENT_METHODS[selectedCategory] : null;
-  const selectedMethodData = selectedCategoryData?.options.find(m => m.id === selectedMethod);
+  const selectedMethodData = selectedCategoryData?.options.find((m) => m.id === selectedMethod);
 
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -107,37 +103,38 @@ export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMe
   };
 
   const addObjective = () => {
-    setLessonContext(prev => ({
+    setLessonContext((prev) => ({
       ...prev,
-      objectives: [...prev.objectives, ''],
+      objectives: [...prev.objectives, ""],
     }));
   };
 
   const removeObjective = (index: number) => {
-    setLessonContext(prev => ({
+    setLessonContext((prev) => ({
       ...prev,
       objectives: prev.objectives.filter((_, i) => i !== index),
     }));
   };
 
   const updateObjective = (index: number, value: string) => {
-    setLessonContext(prev => ({
+    setLessonContext((prev) => ({
       ...prev,
       objectives: prev.objectives.map((obj, i) => (i === index ? value : obj)),
     }));
   };
 
+  // ✅ Make async + run PII check before AI generation
   const handleGenerate = async () => {
     if (!selectedCategory || !selectedMethod || !selectedMethodData) return;
-    
-    // Check for PII before sending to AI
+
     const { proceed } = await checkAssessmentFields({
       lessonContext,
       localContext,
+      entityId: null,
     });
-    
+
     if (!proceed) return;
-    
+
     onGenerate({
       lessonContext,
       localContext,
@@ -147,11 +144,11 @@ export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMe
     });
   };
 
-  const isFormValid = 
-    lessonContext.title.trim() !== '' &&
-    lessonContext.subject !== '' &&
-    lessonContext.gradeLevel !== '' &&
-    lessonContext.objectives.some(o => o.trim() !== '') &&
+  const isFormValid =
+    lessonContext.title.trim() !== "" &&
+    lessonContext.subject !== "" &&
+    lessonContext.gradeLevel !== "" &&
+    lessonContext.objectives.some((o) => o.trim() !== "") &&
     selectedCategory !== null &&
     selectedMethod !== null;
 
@@ -193,7 +190,7 @@ export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMe
                   <p className="text-sm text-muted-foreground">{selectedCategoryData.description}</p>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 {selectedCategoryData.options.map((method) => (
                   <MethodOption
@@ -228,7 +225,7 @@ export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMe
               id="lessonTitle"
               placeholder="e.g., Introduction to Ecosystems"
               value={lessonContext.title}
-              onChange={(e) => setLessonContext(prev => ({ ...prev, title: e.target.value }))}
+              onChange={(e) => setLessonContext((prev) => ({ ...prev, title: e.target.value }))}
             />
           </div>
 
@@ -239,7 +236,7 @@ export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMe
               </Label>
               <Select
                 value={lessonContext.subject}
-                onValueChange={(value) => setLessonContext(prev => ({ ...prev, subject: value }))}
+                onValueChange={(value) => setLessonContext((prev) => ({ ...prev, subject: value }))}
               >
                 <SelectTrigger id="subject">
                   <SelectValue placeholder="Select subject" />
@@ -260,7 +257,7 @@ export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMe
               </Label>
               <Select
                 value={lessonContext.gradeLevel}
-                onValueChange={(value) => setLessonContext(prev => ({ ...prev, gradeLevel: value }))}
+                onValueChange={(value) => setLessonContext((prev) => ({ ...prev, gradeLevel: value }))}
               >
                 <SelectTrigger id="gradeLevel">
                   <SelectValue placeholder="Select grade" />
@@ -281,13 +278,7 @@ export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMe
               <Label className="text-sm font-medium">
                 Learning Objectives <span className="text-destructive">*</span>
               </Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={addObjective}
-                className="h-7 text-xs"
-              >
+              <Button type="button" variant="ghost" size="sm" onClick={addObjective} className="h-7 text-xs">
                 <Plus className="h-3 w-3 mr-1" />
                 Add
               </Button>
@@ -320,22 +311,19 @@ export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMe
       </Card>
 
       {/* Local Context Card - Last */}
-      <LocalContextCard
-        localContext={localContext}
-        onChange={setLocalContext}
-      />
+      <LocalContextCard localContext={localContext} onChange={setLocalContext} />
 
       {/* Generate Button */}
       {selectedMethod && selectedMethodData && (
         <Button
           onClick={handleGenerate}
-          disabled={!isFormValid || isLoading || isChecking}
+          disabled={!isFormValid || Boolean(isLoading) || isChecking}
           className="w-full h-12 gradient-warm text-primary-foreground font-semibold shadow-lg shadow-orange-200/50 hover:shadow-orange-300/50 transition-all"
         >
           {isLoading || isChecking ? (
             <>
               <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              {isChecking ? 'Checking...' : 'Generating...'}
+              {isChecking ? "Checking..." : "Generating..."}
             </>
           ) : (
             <>
@@ -346,13 +334,13 @@ export function AssessmentMethodSelector({ onGenerate, isLoading }: AssessmentMe
         </Button>
       )}
 
-      {/* PII Warning Modal */}
+      {/* ✅ PII Warning Modal */}
       <PIIWarningModal
         open={modalState.open}
         riskLevel={modalState.riskLevel}
         findings={modalState.findings}
         onEdit={handleEdit}
-        onOverride={handleOverride}
+        onOverride={modalState.canOverride ? handleOverride : undefined}
       />
     </div>
   );
