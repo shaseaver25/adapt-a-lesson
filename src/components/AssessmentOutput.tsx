@@ -1,4 +1,3 @@
-```tsx
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
@@ -595,9 +594,8 @@ ${content
         riskLevel={modalState.riskLevel}
         findings={modalState.findings}
         onEdit={handleEdit}
-        onOverride={modalState.canOverride ? handleOverride : undefined}
+        onOverride={handleOverride}
       />
     </div>
   );
 }
-```
