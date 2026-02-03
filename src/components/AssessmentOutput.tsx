@@ -1,33 +1,25 @@
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Button } from '@/components/ui/button';
-import {
-  Copy,
-  Download,
-  RotateCcw,
-  Save,
-  FileText,
-  Globe,
-  CheckCircle,
-} from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
-import { toast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Button } from "@/components/ui/button";
+import { Copy, Download, RotateCcw, Save, FileText, Globe, CheckCircle } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import type { Components } from 'react-markdown';
+} from "@/components/ui/dropdown-menu";
+import type { Components } from "react-markdown";
 
-import { AssessmentInput } from '@/hooks/useAssessmentGenerator';
+import { AssessmentInput } from "@/hooks/useAssessmentGenerator";
 
-// ✅ PII guard
-import { useAssessmentPIICheck } from '@/hooks/compliance/useAssessmentPIICheck';
-import { PIIWarningModal } from '@/components/compliance/PIIWarningModal';
+// PII guard
+import { useAssessmentPIICheck } from "@/hooks/compliance/useAssessmentPIICheck";
+import { PIIWarningModal } from "@/components/compliance/PIIWarningModal";
 
 interface AssessmentOutputProps {
   content: string;
@@ -36,51 +28,45 @@ interface AssessmentOutputProps {
   onReset?: () => void;
 }
 
-export function AssessmentOutput({
-  content,
-  lessonTitle,
-  assessmentInput,
-  onReset,
-}: AssessmentOutputProps) {
+export function AssessmentOutput({ content, lessonTitle, assessmentInput, onReset }: AssessmentOutputProps) {
   const [copied, setCopied] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('');
+  const [statusMessage, setStatusMessage] = useState("");
+
   const navigate = useNavigate();
   const { user } = useAuth();
+
   const mainContentRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
 
-  // ✅ PII guard hook (content scan + modal state)
-  const { checkContentField, modalState, handleEdit, handleOverride, isChecking } =
-    useAssessmentPIICheck();
+  const { checkContentField, modalState, handleEdit, handleOverride, isChecking } = useAssessmentPIICheck();
 
   // Announce status changes to screen readers
   useEffect(() => {
-    if (statusMessage) {
-      const timer = setTimeout(() => setStatusMessage(''), 3000);
-      return () => clearTimeout(timer);
-    }
+    if (!statusMessage) return;
+    const timer = setTimeout(() => setStatusMessage(""), 3000);
+    return () => clearTimeout(timer);
   }, [statusMessage]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(content);
     setCopied(true);
-    setStatusMessage('Assessment copied to clipboard');
+    setStatusMessage("Assessment copied to clipboard");
     toast({
-      title: 'Copied to clipboard',
-      description: 'The assessment has been copied.',
+      title: "Copied to clipboard",
+      description: "The assessment has been copied.",
     });
     setTimeout(() => setCopied(false), 2000);
   };
 
   const generateFileName = (extension: string) => {
-    const title = assessmentInput?.lessonContext?.title || lessonTitle || 'assessment';
-    return `${title.replace(/\s+/g, '-').toLowerCase()}-assessment.${extension}`;
+    const title = assessmentInput?.lessonContext?.title || lessonTitle || "assessment";
+    return `${title.replace(/\s+/g, "-").toLowerCase()}-assessment.${extension}`;
   };
 
   const downloadBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
@@ -95,7 +81,7 @@ export function AssessmentOutput({
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${assessmentInput?.lessonContext?.title || 'Assessment'}</title>
+  <title>${assessmentInput?.lessonContext?.title || "Assessment"}</title>
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #2A1E17; }
     h1, h2, h3 { color: #166534; }
@@ -118,21 +104,21 @@ export function AssessmentOutput({
   <main role="main">
     <article>
       ${content
-        .replace(/^# /gm, '<h1>')
-        .replace(/^## /gm, '<h2>')
-        .replace(/^### /gm, '<h3>')
-        .replace(/\n/g, '<br>')}
+        .replace(/^# (.*$)/gm, "<h1>$1</h1>")
+        .replace(/^## (.*$)/gm, "<h2>$1</h2>")
+        .replace(/^### (.*$)/gm, "<h3>$1</h3>")
+        .replace(/\n/g, "<br>")}
     </article>
   </main>
 </body>
 </html>`;
 
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    downloadBlob(blob, generateFileName('html'));
-    setStatusMessage('Assessment downloaded as HTML file');
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    downloadBlob(blob, generateFileName("html"));
+    setStatusMessage("Assessment downloaded as HTML file");
     toast({
-      title: 'Downloaded',
-      description: 'Your assessment has been saved as an HTML file.',
+      title: "Downloaded",
+      description: "Your assessment has been saved as an HTML file.",
     });
   };
 
@@ -141,7 +127,7 @@ export function AssessmentOutput({
 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>${assessmentInput?.lessonContext?.title || 'Assessment'}</title>
+  <title>${assessmentInput?.lessonContext?.title || "Assessment"}</title>
   <!--[if gte mso 9]>
   <xml>
     <w:WordDocument>
@@ -163,24 +149,21 @@ export function AssessmentOutput({
 <main role="main">
 <article>
 ${content
-  .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-  .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-  .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-  .replace(/^\* (.*$)/gm, '<li>$1</li>')
-  .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
-  .replace(/\n\n/g, '</p><p>')
-  .replace(/\n/g, '<br>')}
+  .replace(/^# (.*$)/gm, "<h1>$1</h1>")
+  .replace(/^## (.*$)/gm, "<h2>$1</h2>")
+  .replace(/^### (.*$)/gm, "<h3>$1</h3>")
+  .replace(/\n/g, "<br>")}
 </article>
 </main>
 </body>
 </html>`;
 
-    const blob = new Blob([wordContent], { type: 'application/msword' });
-    downloadBlob(blob, generateFileName('doc'));
-    setStatusMessage('Assessment downloaded as Word document');
+    const blob = new Blob([wordContent], { type: "application/msword" });
+    downloadBlob(blob, generateFileName("doc"));
+    setStatusMessage("Assessment downloaded as Word document");
     toast({
-      title: 'Downloaded',
-      description: 'Your assessment has been saved as a Word document.',
+      title: "Downloaded",
+      description: "Your assessment has been saved as a Word document.",
     });
   };
 
@@ -189,67 +172,63 @@ ${content
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>${assessmentInput?.lessonContext?.title || 'Assessment'}</title>
+  <title>${assessmentInput?.lessonContext?.title || "Assessment"}</title>
 </head>
 <body>
 <main role="main">
 <article>
 ${content
-  .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-  .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-  .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-  .replace(/^\* (.*$)/gm, '<li>$1</li>')
-  .replace(/\n\n/g, '</p><p>')}
+  .replace(/^# (.*$)/gm, "<h1>$1</h1>")
+  .replace(/^## (.*$)/gm, "<h2>$1</h2>")
+  .replace(/^### (.*$)/gm, "<h3>$1</h3>")}
 </article>
 </main>
 </body>
 </html>`;
 
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    downloadBlob(blob, generateFileName('html'));
-    setStatusMessage('Assessment downloaded for Google Docs. Upload to Google Drive to convert.');
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    downloadBlob(blob, generateFileName("html"));
+    setStatusMessage("Assessment downloaded for Google Docs. Upload to Google Drive to convert.");
     toast({
-      title: 'Downloaded for Google Docs',
-      description: 'Upload this HTML file to Google Drive and open with Google Docs to convert.',
+      title: "Downloaded for Google Docs",
+      description: "Upload this HTML file to Google Drive and open with Google Docs to convert.",
     });
   };
 
   const handleStartOver = () => {
     if (onReset) onReset();
-    navigate('/studio?tab=assessment');
+    navigate("/studio?tab=assessment");
   };
 
   const handleSaveAssessment = async () => {
     if (!user) {
-      setStatusMessage('Login required to save assessments');
+      setStatusMessage("Login required to save assessments");
       toast({
-        title: 'Login required',
-        description: 'Please log in to save assessments.',
-        variant: 'destructive',
+        title: "Login required",
+        description: "Please log in to save assessments.",
+        variant: "destructive",
       });
       return;
     }
 
-    // ✅ PII check on generated content BEFORE upload/insert
+    // PII check BEFORE upload/insert
     const { proceed } = await checkContentField(content, null);
     if (!proceed) return;
 
     setIsSaving(true);
-    setStatusMessage('Saving assessment...');
+    setStatusMessage("Saving assessment...");
 
     try {
-      const title = assessmentInput?.lessonContext?.title || lessonTitle || 'Untitled Assessment';
-      const fileName = `${user.id}/${Date.now()}-${title.replace(/\s+/g, '-').toLowerCase()}.md`;
+      const title = assessmentInput?.lessonContext?.title || lessonTitle || "Untitled Assessment";
+      const fileName = `${user.id}/${Date.now()}-${title.replace(/\s+/g, "-").toLowerCase()}.md`;
 
-      const { error: storageError } = await supabase.storage
-        .from('assessments')
-        .upload(fileName, content, {
-          contentType: 'text/markdown',
-        });
+      const { error: storageError } = await supabase.storage.from("assessments").upload(fileName, content, {
+        contentType: "text/markdown",
+      });
 
       if (storageError) throw storageError;
 
-      const { error: dbError } = await supabase.from('generated_assessments').insert({
+      const { error: dbError } = await supabase.from("generated_assessments").insert({
         user_id: user.id,
         title,
         assessment_content: content,
@@ -269,29 +248,27 @@ ${content
 
       if (dbError) throw dbError;
 
-      setStatusMessage('Assessment saved successfully');
+      setStatusMessage("Assessment saved successfully");
       toast({
-        title: 'Assessment saved',
-        description: 'Your assessment has been saved to My Assessments.',
+        title: "Assessment saved",
+        description: "Your assessment has been saved to My Assessments.",
       });
     } catch {
-      setStatusMessage('Error saving assessment. Please try again.');
+      setStatusMessage("Error saving assessment. Please try again.");
       toast({
-        title: 'Error saving assessment',
-        description: 'Please try again later.',
-        variant: 'destructive',
+        title: "Error saving assessment",
+        description: "Please try again later.",
+        variant: "destructive",
       });
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Skip link handler
   const skipToContent = () => {
     mainContentRef.current?.focus();
   };
 
-  // Accessible custom components for ReactMarkdown
   const markdownComponents: Components = {
     h1: ({ children, ...props }) => (
       <h1 className="text-2xl font-bold text-primary mb-4 mt-6 first:mt-0" {...props}>
@@ -319,20 +296,12 @@ ${content
       </p>
     ),
     ul: ({ children, ...props }) => (
-      <ul
-        className="list-disc list-outside ml-6 mb-4 space-y-1 text-foreground"
-        role="list"
-        {...props}
-      >
+      <ul className="list-disc list-outside ml-6 mb-4 space-y-1 text-foreground" role="list" {...props}>
         {children}
       </ul>
     ),
     ol: ({ children, ...props }) => (
-      <ol
-        className="list-decimal list-outside ml-6 mb-4 space-y-1 text-foreground"
-        role="list"
-        {...props}
-      >
+      <ol className="list-decimal list-outside ml-6 mb-4 space-y-1 text-foreground" role="list" {...props}>
         {children}
       </ol>
     ),
@@ -354,11 +323,7 @@ ${content
       </thead>
     ),
     th: ({ children, ...props }) => (
-      <th
-        className="border border-border px-4 py-2 text-left font-semibold text-foreground"
-        scope="col"
-        {...props}
-      >
+      <th className="border border-border px-4 py-2 text-left font-semibold text-foreground" scope="col" {...props}>
         {children}
       </th>
     ),
@@ -368,11 +333,7 @@ ${content
       </td>
     ),
     blockquote: ({ children, ...props }) => (
-      <blockquote
-        className="border-l-4 border-primary pl-4 my-4 italic text-muted-foreground"
-        role="note"
-        {...props}
-      >
+      <blockquote className="border-l-4 border-primary pl-4 my-4 italic text-muted-foreground" role="note" {...props}>
         {children}
       </blockquote>
     ),
@@ -380,27 +341,23 @@ ${content
       <a
         href={href}
         className="text-primary underline hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        target={href?.startsWith('http') ? '_blank' : undefined}
-        rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+        target={href?.startsWith("http") ? "_blank" : undefined}
+        rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
         {...props}
       >
         {children}
-        {href?.startsWith('http') && <span className="sr-only"> (opens in new tab)</span>}
+        {href?.startsWith("http") && <span className="sr-only"> (opens in new tab)</span>}
       </a>
     ),
     img: ({ src, alt, ...props }) => (
       <figure className="my-4">
         <img
           src={src}
-          alt={alt || 'Assessment image'}
+          alt={alt || "Assessment image"}
           className="max-w-full h-auto rounded-lg border border-border"
           {...props}
         />
-        {alt && (
-          <figcaption className="text-sm text-muted-foreground mt-2 italic">
-            {alt}
-          </figcaption>
-        )}
+        {alt && <figcaption className="text-sm text-muted-foreground mt-2 italic">{alt}</figcaption>}
       </figure>
     ),
     code: ({ children, className, ...props }) => {
@@ -423,7 +380,7 @@ ${content
     hr: (props) => <hr className="my-6 border-t border-border" role="separator" {...props} />,
   };
 
-  const assessmentTitle = assessmentInput?.lessonContext?.title || lessonTitle || 'Assessment';
+  const assessmentTitle = assessmentInput?.lessonContext?.title || lessonTitle || "Assessment";
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -440,27 +397,17 @@ ${content
       </a>
 
       {/* Screen reader status announcements */}
-      <div
-        ref={statusRef}
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        className="sr-only"
-      >
+      <div ref={statusRef} role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {statusMessage}
       </div>
 
-      {/* Header with title */}
       <header className="flex flex-col gap-2">
         <h1 className="text-xl font-bold text-primary" id="assessment-title">
           {assessmentTitle}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Generated assessment ready for review and download
-        </p>
+        <p className="text-sm text-muted-foreground">Generated assessment ready for review and download</p>
       </header>
 
-      {/* Action buttons - toolbar */}
       <nav
         className="flex flex-wrap gap-3 justify-between items-center border-b border-border pb-4"
         aria-label="Assessment actions"
@@ -471,7 +418,7 @@ ${content
             size="sm"
             onClick={handleCopy}
             aria-pressed={copied}
-            aria-label={copied ? 'Assessment copied to clipboard' : 'Copy assessment to clipboard'}
+            aria-label={copied ? "Assessment copied to clipboard" : "Copy assessment to clipboard"}
           >
             {copied ? (
               <>
@@ -521,16 +468,14 @@ ${content
             disabled={isSaving || isChecking}
             className="bg-primary hover:bg-primary/90"
             aria-busy={isSaving || isChecking}
-            aria-label={
-              isSaving || isChecking ? 'Saving assessment...' : 'Save assessment to My Assessments'
-            }
+            aria-label={isSaving || isChecking ? "Saving assessment..." : "Save assessment to My Assessments"}
           >
             {isSaving || isChecking ? (
               <>
                 <span className="animate-spin" aria-hidden="true">
                   ⏳
                 </span>
-                <span>{isChecking ? 'Checking...' : 'Saving...'}</span>
+                <span>{isChecking ? "Checking..." : "Saving..."}</span>
               </>
             ) : (
               <>
@@ -547,7 +492,6 @@ ${content
         </Button>
       </nav>
 
-      {/* Main content area */}
       <main
         id="assessment-content"
         ref={mainContentRef}
@@ -562,7 +506,6 @@ ${content
         </article>
       </main>
 
-      {/* Print styles */}
       <style>{`
         @media print {
           .prose-lesson {
@@ -588,7 +531,7 @@ ${content
         }
       `}</style>
 
-      {/* ✅ PII Warning Modal */}
+      {/* PII Warning Modal: pass handleOverride directly; it may be undefined for non-admins */}
       <PIIWarningModal
         open={modalState.open}
         riskLevel={modalState.riskLevel}
