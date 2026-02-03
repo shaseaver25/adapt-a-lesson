@@ -14,15 +14,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { RefreshCw } from 'lucide-react';
-import type { ComplianceEventsFilters } from '@/hooks/compliance/useComplianceEvents';
+import { RefreshCw, Download } from 'lucide-react';
+import type { ComplianceEventsFilters, ComplianceEventRow } from '@/hooks/compliance/useComplianceEvents';
 import type { ComplianceEventType, ComplianceEntityType, PIIRisk } from '@/types/compliance';
+import { toCSV, downloadCSV } from '@/lib/export/toCsv';
 
 interface Props {
   filters: ComplianceEventsFilters;
   onFiltersChange: (filters: ComplianceEventsFilters) => void;
   onRefresh: () => void;
   isLoading: boolean;
+  events?: ComplianceEventRow[];
 }
 
 const EVENT_TYPE_OPTIONS: { value: ComplianceEventType; label: string }[] = [
@@ -53,7 +55,13 @@ function parseDateFromInput(value: string): Date | undefined {
   return new Date(value);
 }
 
-export function ComplianceEventsFilters({ filters, onFiltersChange, onRefresh, isLoading }: Props) {
+/** Truncate user_id for privacy (first 8 chars) */
+function truncateUserId(userId: string | null): string {
+  if (!userId) return '';
+  return userId.substring(0, 8) + '...';
+}
+
+export function ComplianceEventsFilters({ filters, onFiltersChange, onRefresh, isLoading, events }: Props) {
   const handleEventTypeChange = (value: string) => {
     if (value === 'all') {
       onFiltersChange({ ...filters, eventTypes: ['PII_WARNING_TRIGGERED', 'PII_OVERRIDE_USED'] });
@@ -82,6 +90,33 @@ export function ComplianceEventsFilters({ filters, onFiltersChange, onRefresh, i
 
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onFiltersChange({ ...filters, endDate: parseDateFromInput(e.target.value) });
+  };
+
+  const handleExportCSV = () => {
+    if (!events || events.length === 0) return;
+
+    const csvContent = toCSV(events, [
+      { key: 'created_at', header: 'Created At' },
+      { key: 'event_type', header: 'Event Type' },
+      { key: 'entity_type', header: 'Entity Type' },
+      { key: 'field_name', header: 'Field Name' },
+      { key: 'risk_level', header: 'Risk Level' },
+      { 
+        key: 'findings', 
+        header: 'Findings',
+        transform: (value) => Array.isArray(value) ? value.join('|') : String(value || '')
+      },
+      { key: 'match_count', header: 'Match Count' },
+      { key: 'action_taken', header: 'Action Taken' },
+      { 
+        key: 'user_id', 
+        header: 'User ID (Truncated)',
+        transform: (value) => truncateUserId(value as string | null)
+      },
+    ]);
+
+    const timestamp = new Date().toISOString().split('T')[0];
+    downloadCSV(csvContent, `compliance-events-${timestamp}.csv`);
   };
 
   const currentEventType = filters.eventTypes?.length === 1 ? filters.eventTypes[0] : 'all';
@@ -164,6 +199,17 @@ export function ComplianceEventsFilters({ filters, onFiltersChange, onRefresh, i
       <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
         <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
         Refresh
+      </Button>
+
+      {/* Export CSV Button */}
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={handleExportCSV} 
+        disabled={isLoading || !events || events.length === 0}
+      >
+        <Download className="h-4 w-4 mr-2" />
+        Export CSV
       </Button>
     </div>
   );

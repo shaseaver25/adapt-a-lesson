@@ -63,6 +63,7 @@ export function AdminComplianceEvents() {
             onFiltersChange={handleFiltersChange}
             onRefresh={handleRefresh}
             isLoading={isLoading}
+            events={data?.events}
           />
         </CardHeader>
         <CardContent>
