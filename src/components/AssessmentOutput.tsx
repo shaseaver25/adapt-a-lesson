@@ -31,7 +31,7 @@ export function AssessmentOutput({ content, lessonTitle, assessmentInput, onRese
   const [statusMessage, setStatusMessage] = useState('');
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { checkAssessmentFields, modalState, handleEdit, handleOverride, isChecking } = useAssessmentPIICheck();
+  const { checkAssessmentFields, checkContentField, modalState, handleEdit, handleOverride, isChecking } = useAssessmentPIICheck();
   const mainContentRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
 
@@ -207,7 +207,11 @@ ${content.replace(/^# (.*$)/gm, '<h1>$1</h1>')
       return;
     }
 
-    // Check for PII before saving if we have the input context
+    // Check for PII in generated content BEFORE any save operation
+    const contentResult = await checkContentField(content);
+    if (!contentResult.proceed) return;
+
+    // Check for PII in form fields if we have the input context
     if (assessmentInput?.lessonContext && assessmentInput?.localContext) {
       const { proceed } = await checkAssessmentFields({
         lessonContext: assessmentInput.lessonContext,
