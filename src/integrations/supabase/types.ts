@@ -200,6 +200,48 @@ export type Database = {
         }
         Relationships: []
       }
+      compliance_events: {
+        Row: {
+          action_taken: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          event_type: string
+          field_name: string
+          findings: string[]
+          id: string
+          match_count: number
+          risk_level: string
+          user_id: string | null
+        }
+        Insert: {
+          action_taken?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          event_type: string
+          field_name: string
+          findings?: string[]
+          id?: string
+          match_count?: number
+          risk_level: string
+          user_id?: string | null
+        }
+        Update: {
+          action_taken?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          event_type?: string
+          field_name?: string
+          findings?: string[]
+          id?: string
+          match_count?: number
+          risk_level?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       error_logs: {
         Row: {
           created_at: string | null
