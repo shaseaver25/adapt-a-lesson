@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, Shield, User, RefreshCw, UserPlus, Pencil, Trash2, KeyRound, Clock } from 'lucide-react';
+import { Search, Shield, User, RefreshCw, UserPlus, Pencil, Trash2, KeyRound, Clock, Mail } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -107,6 +107,11 @@ export function AdminUsers() {
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [userToResetPassword, setUserToResetPassword] = useState<UserData | null>(null);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+
+  // Feedback request state
+  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
+  const [userToSendFeedback, setUserToSendFeedback] = useState<UserData | null>(null);
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -423,6 +428,49 @@ export function AdminUsers() {
       toast.error('Failed to send password reset email');
     } finally {
       setIsResettingPassword(false);
+    }
+  }
+
+  async function handleSendFeedbackRequest() {
+    if (!userToSendFeedback?.email) {
+      toast.error('User has no email address');
+      return;
+    }
+
+    setIsSendingFeedback(true);
+    try {
+      const response = await supabase.functions.invoke('send-feedback-request-email', {
+        body: {
+          email: userToSendFeedback.email,
+          userName: userToSendFeedback.full_name,
+        },
+      });
+
+      if (response.error) throw response.error;
+
+      // Update feedback_request_sent_at in profiles
+      await supabase
+        .from('profiles')
+        .update({ feedback_request_sent_at: new Date().toISOString() })
+        .eq('id', userToSendFeedback.id);
+
+      // Log the activity
+      await supabase.from('activity_logs').insert({
+        action_type: 'feedback_request_sent',
+        description: `Sent feedback request email to ${userToSendFeedback.email}`,
+        target_user_id: userToSendFeedback.id,
+        performed_by: userId,
+        metadata: { email: userToSendFeedback.email }
+      });
+
+      toast.success(`Feedback request email sent to ${userToSendFeedback.email}`);
+      setIsFeedbackDialogOpen(false);
+      setUserToSendFeedback(null);
+    } catch (error) {
+      console.error('Error sending feedback request:', error);
+      toast.error('Failed to send feedback request email');
+    } finally {
+      setIsSendingFeedback(false);
     }
   }
 
@@ -815,6 +863,18 @@ export function AdminUsers() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
+                                  setUserToSendFeedback(user);
+                                  setIsFeedbackDialogOpen(true);
+                                }}
+                                className="h-8 w-8 p-0"
+                                title="Send Feedback Request"
+                              >
+                                <Mail className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
                                   setUserToDelete(user);
                                   setIsDeleteDialogOpen(true);
                                 }}
@@ -889,6 +949,28 @@ export function AdminUsers() {
               disabled={isResettingPassword || !userToResetPassword?.email}
             >
               {isResettingPassword ? 'Sending...' : 'Send Reset Email'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Send Feedback Request Dialog */}
+      <AlertDialog open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send Feedback Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will send a feedback request email to <strong>{userToSendFeedback?.email}</strong>, 
+              inviting them to share their experience with RealPath Learning.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSendingFeedback}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSendFeedbackRequest}
+              disabled={isSendingFeedback || !userToSendFeedback?.email}
+            >
+              {isSendingFeedback ? 'Sending...' : 'Send Feedback Request'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
