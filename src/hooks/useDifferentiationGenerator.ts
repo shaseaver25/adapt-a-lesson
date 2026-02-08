@@ -191,10 +191,19 @@ export function useDifferentiationGenerator(
 
       // Save lesson to database
       let lessonId: string | null = null;
+      let isFirstLesson = false;
       try {
         if (!user?.id) {
           console.warn('User not authenticated, skipping lesson save');
         } else {
+          // Check if this is the user's first lesson before inserting
+          const { count: existingLessonCount } = await supabase
+            .from('generated_lessons')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+          
+          isFirstLesson = (existingLessonCount ?? 0) === 0;
+          
           const insertData = {
             original_content: input.lessonContent,
             lesson_title: input.lessonName || 'Untitled Lesson',
@@ -214,6 +223,35 @@ export function useDifferentiationGenerator(
           if (!lessonError && savedLesson) {
             lessonId = savedLesson.id;
             setCurrentLessonId(lessonId);
+            
+            // Send first lesson celebration email if this was their first
+            if (isFirstLesson) {
+              // Get user profile for email
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('email, full_name, first_lesson_email_sent')
+                .eq('id', user.id)
+                .single();
+              
+              if (profile?.email && !profile.first_lesson_email_sent) {
+                console.log('Sending first lesson celebration email...');
+                supabase.functions.invoke('send-first-lesson-email', {
+                  body: {
+                    email: profile.email,
+                    userName: profile.full_name,
+                    lessonTitle: input.lessonName || 'Your First Lesson',
+                  },
+                }).then(response => {
+                  if (response.error) {
+                    console.error('Failed to send first lesson email:', response.error);
+                  } else {
+                    console.log('First lesson email sent successfully');
+                  }
+                }).catch(err => {
+                  console.error('Error sending first lesson email:', err);
+                });
+              }
+            }
           }
         }
       } catch (saveError) {
