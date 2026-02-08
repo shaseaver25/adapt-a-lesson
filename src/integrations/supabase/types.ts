@@ -764,6 +764,8 @@ export type Database = {
           created_at: string
           email: string | null
           failed_login_attempts: number | null
+          feedback_request_sent_at: string | null
+          first_lesson_email_sent: boolean | null
           full_name: string | null
           id: string
           last_login_at: string | null
@@ -780,6 +782,8 @@ export type Database = {
           created_at?: string
           email?: string | null
           failed_login_attempts?: number | null
+          feedback_request_sent_at?: string | null
+          first_lesson_email_sent?: boolean | null
           full_name?: string | null
           id: string
           last_login_at?: string | null
@@ -796,6 +800,8 @@ export type Database = {
           created_at?: string
           email?: string | null
           failed_login_attempts?: number | null
+          feedback_request_sent_at?: string | null
+          first_lesson_email_sent?: boolean | null
           full_name?: string | null
           id?: string
           last_login_at?: string | null

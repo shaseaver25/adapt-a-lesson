@@ -12,7 +12,8 @@ import { UpgradePromptModal } from '@/components/UpgradePromptModal';
 import { GetStartedModal } from '@/components/GetStartedModal';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, LogIn, LogOut, Settings, UserCircle, Loader2, MessageSquare, HelpCircle } from 'lucide-react';
+import { BookOpenCheck, ShieldCheck, TableProperties, Users, FolderOpen, Volume2, LogIn, LogOut, Settings, UserCircle, Loader2, MessageSquare, HelpCircle, UserPlus } from 'lucide-react';
+import { InviteColleagueModal } from '@/components/InviteColleagueModal';
 import { Logo } from '@/components/ui/Logo';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useDifferentiation } from '@/contexts/DifferentiationContext';
@@ -223,6 +224,14 @@ const Index = () => {
                 <span className="hidden sm:inline">Help</span>
               </Button>
             </Link>
+            <InviteColleagueModal 
+              trigger={
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Invite</span>
+                </Button>
+              }
+            />
             {showResults && <button onClick={handleReset} className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium">
                 ← Start Over
               </button>}
