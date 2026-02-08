@@ -1,139 +1,231 @@
 
-
-# Welcome Email Implementation Plan
+# User Lifecycle Email Templates Implementation
 
 ## Overview
-Implement a welcome email that triggers automatically when new users register. The email will use the template you provided, with dynamic content from the `profiles` table.
-
-## Architecture Decision: Resend vs Gmail
-
-| Option | Pros | Cons |
-|--------|------|------|
-| **Resend (Recommended)** | Already configured, domain verified, reliable delivery, simple | Not Gmail directly |
-| Gmail API | Sends from actual Gmail | Complex OAuth, token refresh, 500/day limit, not designed for transactional email |
-
-**Recommendation**: Continue using Resend but change the "from" address to `support@realpathlearning.com`. This way:
-- Emails send reliably from your verified domain
-- When users click "reply", it goes to your Google Workspace inbox
-- No additional API keys or OAuth needed
+Create three new email templates for key user lifecycle events, following the established pattern from `send-welcome-email` and `send-free-month-email`.
 
 ---
 
-## Implementation Steps
+## Email Templates to Create
 
-### Step 1: Create Welcome Email Edge Function
-**New file**: `supabase/functions/send-welcome-email/index.ts`
+### 1. First Lesson Celebration Email
+**Trigger**: When a user saves their first differentiated lesson
 
-**Request payload**:
-```text
-{
-  email: string
-  userName: string | null
-}
-```
+**Subject**: "You Did It! Your First Lesson is Ready"
 
-**Email content** (based on your template):
-- **From**: `RealPath Learning <support@realpathlearning.com>`
-- **Subject**: "Welcome to RealPath Learning : Let's Build Your First Lesson"
-- **Dynamic fields**:
-  - `${userName}` → pulled from `profiles.full_name`
-- **Links**:
-  - CTA button → `https://realpathlearning.com/studio`
-  - Support email → `mailto:support@realpathlearning.com`
+**Content Highlights**:
+- Congratulatory message with celebration tone
+- Quick tips for next steps (download, share with students)
+- CTA: "View Your Lessons" → `https://realpathlearning.com/saved-lessons`
+- Secondary: Create next lesson → `/studio`
 
-### Step 2: Trigger Welcome Email After Registration
-**Option A - Database Trigger (Recommended)**
+**Dynamic Fields**:
+- `userName` (from profiles.full_name)
+- `lessonTitle` (from generated_lessons.lesson_title)
 
-Create a Postgres trigger on `profiles` table INSERT that calls the edge function. This ensures welcome emails are sent even for admin-created users.
+---
 
-**Option B - Frontend Trigger**
+### 2. Feedback Request Email
+**Trigger**: Manually triggered from Admin panel OR scheduled after 5 days of activity
 
-Call the edge function from `useAuth.ts` after successful signup. Simpler but only works for self-registration.
+**Subject**: "How's Your Experience So Far? Share Your Thoughts"
 
-**Recommendation**: Use Option A (database trigger) for consistency.
+**Content Highlights**:
+- Personalized ask for feedback
+- Highlight the 30-day free extension incentive
+- CTA: "Share Feedback" → `https://realpathlearning.com/feedback`
+- Mention it takes only 3 minutes
 
-### Step 3: HTML Email Template
-Convert your Gmail template to an inline-styled HTML email:
+**Dynamic Fields**:
+- `userName` (from profiles.full_name)
 
-```text
-Subject: Welcome to RealPath Learning : Let's build your first lesson
+---
 
-Body structure:
-- Header with logo and welcome message
-- Personalized greeting: "Hi [full_name]!"
-- Value proposition
-- Primary CTA button: "Create your first student group and lesson now"
-  → Links to https://realpathlearning.com/studio
-- Secondary link: "We're just a click away"
-  → mailto:support@realpathlearning.com
-- Footer with social links
-```
+### 3. Invite a Fellow Educator Email
+**Trigger**: Manually triggered by user (share button) or admin campaign
 
-### Step 4: Update config.toml
-Add the new function configuration:
+**Subject**: "[UserName] Thinks You'll Love RealPath Learning"
+
+**Content Highlights**:
+- Personal referral message from the inviting educator
+- Brief product value proposition
+- CTA: "Try It Free" → `https://realpathlearning.com/register`
+- Optional: Custom message from the referrer
+
+**Dynamic Fields**:
+- `inviterName` (referring user's name)
+- `recipientEmail` (colleague's email)
+- `personalMessage` (optional custom note)
+
+---
+
+## Technical Implementation
+
+### Files to Create
+
+| File | Purpose |
+|------|---------|
+| `supabase/functions/send-first-lesson-email/index.ts` | First lesson celebration |
+| `supabase/functions/send-feedback-request-email/index.ts` | Feedback request with incentive |
+| `supabase/functions/send-invite-educator-email/index.ts` | Referral/invite email |
+
+### Config Updates
+
+Add to `supabase/config.toml`:
 ```toml
-[functions.send-welcome-email]
+[functions.send-first-lesson-email]
 verify_jwt = false
+
+[functions.send-feedback-request-email]
+verify_jwt = false
+
+[functions.send-invite-educator-email]
+verify_jwt = true  # Requires auth to prevent abuse
 ```
 
 ---
 
-## Files to Create/Modify
+## Trigger Mechanisms
 
-| Action | File Path |
-|--------|-----------|
-| Create | `supabase/functions/send-welcome-email/index.ts` |
-| Modify | `supabase/config.toml` |
-| Create | Database trigger via migration (optional, for auto-send) |
+### First Lesson Email
+**Option A - Database Trigger (Recommended)**
+- Add trigger on `generated_lessons` INSERT
+- Check if user's lesson count becomes 1 (first lesson)
+- Call edge function automatically
+
+**Option B - Frontend Call**
+- Call from `useDifferentiationGenerator.ts` after successful save
+- Check lesson count first to ensure it's the first
+
+### Feedback Request Email
+- **Admin Panel**: Add "Send Feedback Request" button in AdminUsers
+- **Scheduled**: Could use Supabase pg_cron for users after X days (future enhancement)
+
+### Invite Educator Email
+- **Frontend Component**: Create "Invite a Colleague" modal/form
+- **User Profile or Dashboard**: Add share/invite button
+- User enters colleague's email + optional message
+- Edge function sends the invitation
 
 ---
 
-## Technical Details
+## Email Template Specifications
 
-### Edge Function Structure
+### Design Consistency
+All emails will follow the established pattern:
+- **Header**: Brand gradient (#2F4F2F → #4F7F4F) with logo
+- **Body**: Clean white background, 16px body text
+- **CTA Button**: Green (#2F4F2F)
+- **Footer**: copyright, support email
+- **From Address**: `RealPath Learning <support@realpathlearning.com>`
+
+### Email Dimensions
+- Max width: 600px
+- Padding: 40px (desktop), responsive on mobile
+- Border radius: 12px for cards
+
+---
+
+## Database Changes (Optional Enhancement)
+
+To properly track first lesson events, we could add a tracking column:
+
+```sql
+-- Track milestone emails sent to prevent duplicates
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS first_lesson_email_sent BOOLEAN DEFAULT FALSE;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS feedback_request_sent_at TIMESTAMP WITH TIME ZONE;
+```
+
+This prevents duplicate emails if the trigger fires multiple times.
+
+---
+
+## Implementation Order
+
+1. **First**: Create `send-first-lesson-email` edge function
+2. **Second**: Create database trigger for first lesson detection
+3. **Third**: Create `send-feedback-request-email` edge function
+4. **Fourth**: Add admin UI button to send feedback requests
+5. **Fifth**: Create `send-invite-educator-email` edge function
+6. **Sixth**: Create frontend "Invite a Colleague" component
+
+---
+
+## Sample Email Copy
+
+### First Lesson Email
 ```text
-1. Parse request (email, userName)
-2. Validate required fields
-3. Build HTML email with inline styles
-4. Send via Resend API from support@realpathlearning.com
-5. Return success/error response
+Subject: You Did It! Your First Lesson is Ready
+
+Hi [Name]!
+
+Congratulations! You just created your first differentiated lesson:
+"[Lesson Title]"
+
+You're now part of a community of educators using RealPath Learning 
+to support every learner in their classroom.
+
+What's Next?
+• Download and print your student handouts
+• Review your Teacher Guide for facilitation tips
+• Create another lesson for a different topic
+
+[View Your Lessons Button]
+
+Keep up the amazing work!
+The RealPath Learning Team
 ```
 
-### Email Template Features
-- Mobile-responsive inline CSS
-- Brand colors matching REAL Path Learning
-- Clear CTA buttons
-- Accessible alt text for images
-- Plain text fallback (optional)
+### Feedback Request Email
+```text
+Subject: How's Your Experience So Far? 
 
----
+Hi [Name]!
 
-## Alternative: Gmail Integration (Not Recommended)
+You've been using RealPath Learning, and we'd love to hear from you!
 
-If you specifically want to send from Gmail itself (not just use the address as "from"):
+Your feedback shapes our roadmap and helps us build better tools 
+for educators everywhere.
 
-1. **Gmail API approach** requires:
-   - Google Cloud project with Gmail API enabled
-   - OAuth2 service account or user consent
-   - Token refresh mechanism
-   - Additional secret: `GOOGLE_SERVICE_ACCOUNT_KEY`
-   - Significantly more complex code
+As a thank you, complete our 3-minute survey or let us know if we can have a 1:1 discussion with you to influence our building roadmap!
 
-2. **SMTP relay** (using Gmail as SMTP):
-   - Gmail allows SMTP relay for Google Workspace
-   - Would need to store Gmail app password as secret
-   - Less reliable than Resend
+[Share Your Feedback Button]
 
-**Recommendation**: Stick with Resend. Using `support@realpathlearning.com` as the "from" address gives you the professional appearance, and replies will go to your Google Workspace inbox.
+Questions? We're just a click away.
+The RealPath Learning Team
+```
+
+### Invite Educator Email
+```text
+Subject: [Inviter Name] Thinks You'll Love RealPath Learning
+
+Hi there!
+
+[Inviter Name] invited you to try RealPath Learning, the AI-powered 
+platform that helps educators create differentiated lessons in minutes.
+
+[Optional: Personal message from inviter]
+
+With RealPath Learning, you can:
+• Differentiate any lesson for multiple reading levels
+• Generate authentic assessments and rubrics
+• Support multilingual learners with audio features
+• Create lessons according to students IEPs
+
+[Try It Free Button]
+
+Questions? Reply to this email.
+The RealPath Learning Team
+```
 
 ---
 
 ## Summary
 
-- **New edge function**: `send-welcome-email`
-- **Triggered**: After user registration (via database trigger or frontend call)
-- **Sender**: `REAL Path Learning <support@realpathlearning.com>` (via Resend)
-- **Dynamic content**: User's name from `profiles.full_name`
-- **Links**: Studio link + support email
-- **No additional secrets needed** (Resend is already configured)
+| Email | Trigger | Edge Function | Config |
+|-------|---------|---------------|--------|
+| First Lesson | DB trigger on `generated_lessons` | `send-first-lesson-email` | verify_jwt = false |
+| Feedback Request | Admin button / scheduled | `send-feedback-request-email` | verify_jwt = false |
+| Invite Educator | User-initiated via UI | `send-invite-educator-email` | verify_jwt = true |
 
+All emails use the existing Resend integration with `RESEND_API_KEY` secret, sending from `support@realpathlearning.com`.
