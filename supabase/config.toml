@@ -62,3 +62,12 @@ verify_jwt = false
 
 [functions.send-welcome-email]
 verify_jwt = false
+
+[functions.send-first-lesson-email]
+verify_jwt = false
+
+[functions.send-feedback-request-email]
+verify_jwt = false
+
+[functions.send-invite-educator-email]
+verify_jwt = true
