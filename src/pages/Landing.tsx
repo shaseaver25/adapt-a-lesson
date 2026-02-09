@@ -113,7 +113,10 @@ export default function Landing() {
             <button onClick={() => scrollToSection('videos')} className="text-foreground/80 hover:text-primary transition-colors font-medium">
               Demos
             </button>
-            
+            <button onClick={() => scrollToSection('compliance-check')} className="px-4 py-2 border-2 border-secondary/40 text-secondary rounded-full font-semibold text-sm hover:bg-secondary/10 transition-all flex items-center gap-1.5">
+              <Shield className="w-4 h-4" />
+              WCAG Compliant?
+            </button>
             <button onClick={() => setLoginOpen(true)} className="px-6 py-2.5 bg-primary text-white rounded-full font-semibold shadow-lg shadow-primary/30 hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all">
               Login
             </button>
@@ -142,9 +145,9 @@ export default function Landing() {
             <div className="flex flex-wrap gap-4 mb-10">
               <button onClick={() => setLoginOpen(true)} className="px-8 py-4 bg-primary text-white rounded-full font-semibold text-lg shadow-lg shadow-primary/30 hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2">Try It Free<ArrowRight className="w-5 h-5" />
               </button>
-              <button onClick={() => scrollToSection('compliance-check')} className="px-6 py-4 border-2 border-secondary/40 text-secondary rounded-full font-semibold hover:bg-secondary/10 transition-all flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                Are You WCAG 2.1 AA Compliant?
+              <button onClick={() => scrollToSection('videos')} className="px-6 py-4 border-2 border-foreground/20 text-foreground rounded-full font-semibold hover:bg-muted transition-all flex items-center gap-2">
+                <Play className="w-5 h-5" />
+                Watch 2-Min Demo
               </button>
             </div>
             
