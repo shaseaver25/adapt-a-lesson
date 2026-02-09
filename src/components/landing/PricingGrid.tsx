@@ -41,7 +41,8 @@ const tiers = [
     interval: '+/month',
     description: 'Enterprise solution for districts',
     features: [
-      'Unlimited teachers',
+      '6,000 shared tokens/month',
+      'Up to 100 teachers',
       'SSO integration',
       'Dedicated success manager',
       'Custom training & onboarding',
