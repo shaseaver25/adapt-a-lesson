@@ -220,11 +220,10 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
         </div>
 
         {/* Stats */}
-        <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="mt-10 grid grid-cols-3 gap-4">
           {[
             { value: '100%', label: 'Compliance-Native' },
             { value: '100+', label: 'Certified Teachers' },
-            { value: '$19K', label: 'Monthly Revenue' },
             { value: 'Zero', label: 'Compliance Risk' },
           ].map((stat, i) => (
             <div key={i} className="text-center p-4 bg-card rounded-xl border border-border/50">
