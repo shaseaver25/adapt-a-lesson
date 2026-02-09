@@ -5,6 +5,8 @@ import { LoginModal } from '@/components/LoginModal';
 import { StickyCtaBar } from '@/components/landing/StickyCtaBar';
 import { SocialProofBar } from '@/components/landing/SocialProofBar';
 import { ComplianceChecklist } from '@/components/landing/ComplianceChecklist';
+import { PricingGrid } from '@/components/landing/PricingGrid';
+import { CostComparison } from '@/components/landing/CostComparison';
 import { ProductPreview } from '@/components/landing/ProductPreview';
 import { TestimonialCarousel } from '@/components/landing/TestimonialCarousel';
 import { Play, Clock, Globe, Shield, Users, Sparkles, FileDown, ArrowRight, Zap, Languages, CheckCircle2, FileText, Linkedin, Mail } from 'lucide-react';
@@ -178,6 +180,12 @@ export default function Landing() {
 
       {/* Compliance Checklist */}
       <ComplianceChecklist onCtaClick={() => setLoginOpen(true)} />
+
+      {/* Pricing */}
+      <PricingGrid onCtaClick={() => setLoginOpen(true)} />
+
+      {/* Cost Comparison */}
+      <CostComparison />
 
       {/* How It Works Section */}
       <section id="how-it-works" className="py-24 px-4 md:px-8 bg-card">
