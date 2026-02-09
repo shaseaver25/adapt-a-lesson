@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { LoginModal } from '@/components/LoginModal';
 import { StickyCtaBar } from '@/components/landing/StickyCtaBar';
 import { SocialProofBar } from '@/components/landing/SocialProofBar';
+import { ComplianceChecklist } from '@/components/landing/ComplianceChecklist';
 import { ProductPreview } from '@/components/landing/ProductPreview';
 import { TestimonialCarousel } from '@/components/landing/TestimonialCarousel';
 import { Play, Clock, Globe, Shield, Users, Sparkles, FileDown, ArrowRight, Zap, Languages, CheckCircle2, FileText, Linkedin, Mail } from 'lucide-react';
@@ -171,6 +172,9 @@ export default function Landing() {
 
       {/* Social Proof Bar */}
       <SocialProofBar />
+
+      {/* Compliance Checklist */}
+      <ComplianceChecklist onCtaClick={() => setLoginOpen(true)} />
 
       {/* How It Works Section */}
       <section id="how-it-works" className="py-24 px-4 md:px-8 bg-card">
