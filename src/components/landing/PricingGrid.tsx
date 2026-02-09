@@ -27,7 +27,7 @@ const tiers = [
     interval: '/month',
     description: 'For departments & grade levels',
     features: [
-      '400 shared tokens/month',
+      '600 shared tokens/month',
       'Up to 10 teachers',
       'Admin dashboard & reporting',
       'Priority support',
