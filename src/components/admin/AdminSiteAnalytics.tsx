@@ -98,70 +98,25 @@ export function AdminSiteAnalytics() {
         toast.error('Failed to refresh analytics');
       }
       
-      // Set fallback data
-      setAnalytics(getFallbackData());
+      // Set empty data instead of fake fallback
+      setAnalytics(getEmptyData());
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }
 
-  function getFallbackData(): SiteAnalytics {
+  function getEmptyData(): SiteAnalytics {
     return {
-      visitors: { 
-        total: 116, 
-        daily: [
-          { date: '2026-01-07', value: 34 },
-          { date: '2026-01-08', value: 5 },
-          { date: '2026-01-09', value: 32 },
-          { date: '2026-01-10', value: 23 },
-          { date: '2026-01-11', value: 1 },
-          { date: '2026-01-12', value: 4 },
-          { date: '2026-01-13', value: 12 },
-          { date: '2026-01-14', value: 5 },
-        ]
-      },
-      pageviews: { 
-        total: 290, 
-        daily: [
-          { date: '2026-01-07', value: 90 },
-          { date: '2026-01-08', value: 15 },
-          { date: '2026-01-09', value: 92 },
-          { date: '2026-01-10', value: 25 },
-          { date: '2026-01-11', value: 1 },
-          { date: '2026-01-12', value: 4 },
-          { date: '2026-01-13', value: 19 },
-          { date: '2026-01-14', value: 44 },
-        ]
-      },
-      pageviewsPerVisit: { total: 2.5, daily: [] },
-      sessionDuration: { total: 577, daily: [] },
-      bounceRate: { total: 80, daily: [] },
-      topPages: [
-        { name: '/', value: 96 },
-        { name: '/studio', value: 15 },
-        { name: '/feedback', value: 11 },
-        { name: '/register', value: 9 },
-        { name: '/student-groups', value: 7 },
-      ],
-      topSources: [
-        { name: 'Direct', value: 71 },
-        { name: 'linkedin.com', value: 30 },
-        { name: 'kare11.com', value: 8 },
-        { name: 'google.com', value: 4 },
-        { name: 'Other', value: 3 },
-      ],
-      devices: [
-        { name: 'Desktop', value: 79 },
-        { name: 'Mobile', value: 36 },
-      ],
-      countries: [
-        { name: 'US', value: 67 },
-        { name: 'Unknown', value: 11 },
-        { name: 'GB', value: 8 },
-        { name: 'SE', value: 5 },
-        { name: 'CA', value: 4 },
-      ],
+      visitors: { total: 0, daily: [] },
+      pageviews: { total: 0, daily: [] },
+      pageviewsPerVisit: { total: 0, daily: [] },
+      sessionDuration: { total: 0, daily: [] },
+      bounceRate: { total: 0, daily: [] },
+      topPages: [],
+      topSources: [],
+      devices: [],
+      countries: [{ name: 'Not tracked (privacy)', value: 0 }],
     };
   }
 
@@ -215,6 +170,11 @@ export function AdminSiteAnalytics() {
 
   return (
     <div className="space-y-6">
+      {/* Accuracy banner */}
+      <div className="rounded-lg border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground">
+        Data reflects authenticated user activity only. Anonymous visitors are not tracked.
+      </div>
+
       {/* Header with refresh button */}
       <div className="flex items-center justify-between">
         <div>

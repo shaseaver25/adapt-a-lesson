@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { usePageViewTracker } from "@/hooks/usePageViewTracker";
 import { DifferentiationProvider } from "@/contexts/DifferentiationContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { I18nProvider } from "@/i18n";
@@ -35,6 +36,11 @@ import TicketDetail from "./pages/TicketDetail";
 
 const queryClient = new QueryClient();
 
+function PageViewTracker() {
+  usePageViewTracker();
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <I18nProvider>
@@ -44,6 +50,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <PageViewTracker />
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/studio" element={<Index />} />
