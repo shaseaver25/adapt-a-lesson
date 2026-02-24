@@ -756,6 +756,75 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_surveys: {
+        Row: {
+          created_at: string
+          features_used: string[] | null
+          grade_levels: string[] | null
+          id: string
+          improvement_suggestion: string | null
+          incentive_claim_date: string | null
+          incentive_claimed: boolean | null
+          lesson_quality_satisfaction: number | null
+          lessons_per_week: string | null
+          most_valuable_thing: string | null
+          multilingual_satisfaction: number | null
+          nps_score: number | null
+          ocr_complaint: string | null
+          previous_method: string | null
+          primary_role: string
+          student_impact: string | null
+          time_saved_rating: number | null
+          usage_duration: string | null
+          user_id: string | null
+          wcag_adoption_factor: string | null
+        }
+        Insert: {
+          created_at?: string
+          features_used?: string[] | null
+          grade_levels?: string[] | null
+          id?: string
+          improvement_suggestion?: string | null
+          incentive_claim_date?: string | null
+          incentive_claimed?: boolean | null
+          lesson_quality_satisfaction?: number | null
+          lessons_per_week?: string | null
+          most_valuable_thing?: string | null
+          multilingual_satisfaction?: number | null
+          nps_score?: number | null
+          ocr_complaint?: string | null
+          previous_method?: string | null
+          primary_role: string
+          student_impact?: string | null
+          time_saved_rating?: number | null
+          usage_duration?: string | null
+          user_id?: string | null
+          wcag_adoption_factor?: string | null
+        }
+        Update: {
+          created_at?: string
+          features_used?: string[] | null
+          grade_levels?: string[] | null
+          id?: string
+          improvement_suggestion?: string | null
+          incentive_claim_date?: string | null
+          incentive_claimed?: boolean | null
+          lesson_quality_satisfaction?: number | null
+          lessons_per_week?: string | null
+          most_valuable_thing?: string | null
+          multilingual_satisfaction?: number | null
+          nps_score?: number | null
+          ocr_complaint?: string | null
+          previous_method?: string | null
+          primary_role?: string
+          student_impact?: string | null
+          time_saved_rating?: number | null
+          usage_duration?: string | null
+          user_id?: string | null
+          wcag_adoption_factor?: string | null
+        }
+        Relationships: []
+      }
       page_views: {
         Row: {
           created_at: string

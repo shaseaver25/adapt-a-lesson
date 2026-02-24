@@ -13,7 +13,8 @@ import { AdminComplianceEvents } from '@/components/admin/AdminComplianceEvents'
 import AdminFeedback from '@/components/admin/AdminFeedback';
 import AdminHelpArticles from '@/components/admin/AdminHelpArticles';
 import AdminSupportTickets from '@/components/admin/AdminSupportTickets';
-import { Shield, Users, BarChart3, DollarSign, ToggleLeft, AlertTriangle, Activity, FolderOpen, TableProperties, ShieldCheck, Users as UsersIcon, Volume2, Home, MessageSquare, BookOpen, TicketCheck, FileWarning } from 'lucide-react';
+import AdminMarketingSurvey from '@/components/admin/AdminMarketingSurvey';
+import { Shield, Users, BarChart3, DollarSign, ToggleLeft, AlertTriangle, Activity, FolderOpen, TableProperties, ShieldCheck, Users as UsersIcon, Volume2, Home, MessageSquare, BookOpen, TicketCheck, FileWarning, ClipboardList } from 'lucide-react';
 import { useAdmin } from '@/hooks/useAdmin';
 
 export default function Admin() {
@@ -98,7 +99,7 @@ export default function Admin() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-11 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-12 lg:w-auto lg:inline-grid">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -138,6 +139,10 @@ export default function Admin() {
             <TabsTrigger value="features" className="flex items-center gap-2">
               <ToggleLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Features</span>
+            </TabsTrigger>
+            <TabsTrigger value="marketing" className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" />
+              <span className="hidden sm:inline">Survey</span>
             </TabsTrigger>
             <TabsTrigger value="errors" className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
@@ -183,6 +188,10 @@ export default function Admin() {
 
           <TabsContent value="features">
             <AdminFeatureFlags />
+          </TabsContent>
+
+          <TabsContent value="marketing">
+            <AdminMarketingSurvey />
           </TabsContent>
 
           <TabsContent value="errors">
