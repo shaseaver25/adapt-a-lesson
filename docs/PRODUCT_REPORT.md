@@ -4,8 +4,8 @@
 
 *Season 2 Winners - Lovable SheBuilds 48-Hour Buildathon 2025*
 
-> **Last Updated:** January 2026  
-> **Version:** 2.0
+> **Last Updated:** February 2026  
+> **Version:** 2.1
 
 ---
 
@@ -160,6 +160,7 @@ Let's Get REAL is an AI-powered educator toolkit designed to help teachers creat
 - **Activity Logs**: Full audit trail
 - **Error Logs**: Track and debug issues
 - **Feedback Review**: View user survey responses
+- **Compliance Events**: View and filter PII detection events for FERPA auditing
 
 **Edge Function:** `admin-create-user`
 
@@ -206,17 +207,29 @@ Let's Get REAL is an AI-powered educator toolkit designed to help teachers creat
 
 **What it does:**
 - Manages user subscriptions via Stripe
-- Provides pricing tiers and upgrade prompts
+- Provides token-based pricing tiers and upgrade prompts
+
+**Pricing Tiers (Token-Based Model):**
+
+| Tier | Price | Tokens | Teachers | Key Features |
+|------|-------|--------|----------|--------------|
+| **Individual** | $19/month | 60 tokens/month | 1 | Full access to all AI tools |
+| **School Team** | $149/month | 600 shared tokens/month | Up to 10 | Admin dashboard & reporting |
+| **District** | $2,000+/month | 6,000 shared tokens/month | Up to 100 | SSO, dedicated success manager, custom training |
+
+**Token Consumption:** Each AI-generation task (differentiation, assessment, rubric, graphic organizer, translation) consumes tokens from the user's or team's monthly pool.
 
 **Key capabilities:**
 - **Stripe Integration**: Checkout, customer portal, subscription management
-- **Usage Limits**: Feature gating based on subscription tier
+- **Token-Based Usage Limits**: Feature gating based on remaining token balance
 - **Upgrade Prompts**: Smart prompts when users hit limits
 - **Admin Overrides**: Manual subscription overrides
 
 **Edge Functions:** `create-checkout`, `customer-portal`, `check-subscription`
 
 **Database Table:** `subscription_overrides`
+
+> **⚠️ Implementation Note:** The `src/lib/pricing.ts` file currently references legacy Stripe price IDs ($10/mo and $99/yr). These need to be updated in Stripe to match the new three-tier token-based pricing model above.
 
 ---
 
@@ -236,6 +249,42 @@ Let's Get REAL is an AI-powered educator toolkit designed to help teachers creat
 **Edge Function:** `track-login-attempt`
 
 **Database Tables:** `profiles`, `user_roles`, `user_sessions`, `login_attempts`
+
+---
+
+### 1.13 Email Notification System
+
+**What it does:**
+- Sends automated transactional emails for key user lifecycle events
+- Uses Resend API for reliable delivery
+
+**Email Types:**
+- **Welcome Email**: Sent on account creation
+- **First Lesson Email**: Sent after a user generates their first differentiated lesson
+- **Feedback Request Email**: Sent to gather user feedback after usage milestones
+- **Invite Educator Email**: Allows users to invite colleagues
+- **Free Month Email**: Promotional email for referral rewards
+- **Ticket Reply Notification**: Alerts users when admin replies to support tickets
+
+**Edge Functions:** `send-welcome-email`, `send-first-lesson-email`, `send-feedback-request-email`, `send-invite-educator-email`, `send-free-month-email`, `send-ticket-reply-notification`
+
+---
+
+### 1.14 Site Analytics
+
+**What it does:**
+- Tracks page views and user engagement across the platform
+- Provides aggregate analytics for admin reporting
+
+**Key capabilities:**
+- **Page View Tracking**: Logs page visits with referrer and user agent data
+- **Session Duration Tracking**: Monitors time spent on platform
+- **Usage Analytics**: Aggregate metrics by date and metric type
+- **Admin Analytics API**: Server-side analytics aggregation
+
+**Edge Function:** `get-site-analytics`
+
+**Database Tables:** `page_views`, `usage_analytics`, `user_time_stats`
 
 ---
 
@@ -277,7 +326,7 @@ Let's Get REAL is an AI-powered educator toolkit designed to help teachers creat
 
 | Service | Cost | Usage |
 |---------|------|-------|
-| Resend API | Free tier: 100 emails/day | Support ticket notifications |
+| Resend API | Free tier: 100 emails/day | Support ticket notifications, lifecycle emails |
 
 ---
 
@@ -362,6 +411,7 @@ Let's Get REAL is an AI-powered educator toolkit designed to help teachers creat
 - Comprehensive support ticket system
 - User activity and session monitoring
 - Role-based access control
+- FERPA compliance event auditing
 
 **Why it matters:** Schools need enterprise-grade management capabilities.
 
@@ -375,10 +425,11 @@ Let's Get REAL is an AI-powered educator toolkit designed to help teachers creat
 - React Router for navigation
 - React Query for data fetching
 - Framer Motion for animations
+- i18n support (English, Spanish, Vietnamese, Chinese, Somali)
 
 ### Backend (Lovable Cloud)
 - PostgreSQL database with RLS
-- 19 Edge Functions (Deno)
+- 25 Edge Functions (Deno)
 - Supabase Storage for audio/images
 - Supabase Auth for user management
 - Supabase Realtime for live updates
@@ -427,11 +478,93 @@ Let's Get REAL is an AI-powered educator toolkit designed to help teachers creat
 | `error_logs` | Error tracking |
 | `login_attempts` | Security logging |
 | `usage_analytics` | Aggregate analytics |
+| `page_views` | Page view tracking |
 | `rubric_verifications` | Rubric verification records |
+| `compliance_events` | FERPA PII detection audit log |
 
 ---
 
-## 6. Key Metrics
+## 6. Edge Functions Reference
+
+| # | Function | Auth Required | Purpose |
+|---|----------|---------------|---------|
+| 1 | `differentiate-lesson` | Yes | Lesson differentiation via AI |
+| 2 | `generate-assessment` | Yes | AI-resistant assessment creation |
+| 3 | `generate-rubric` | Yes | Rubric generation with AI-proof criteria |
+| 4 | `analyze-assessment-vulnerability` | Yes | AI vulnerability scoring |
+| 5 | `translate-content` | Yes | Multilingual content translation |
+| 6 | `generate-graphic-organizer` | Yes | Graphic organizer prompt generation |
+| 7 | `generate-lesson-diagram` | Yes | Lesson diagram generation |
+| 8 | `elevenlabs-tts` | Yes | Text-to-speech via ElevenLabs |
+| 9 | `generate-lesson-audio` | Yes | Full lesson audio generation |
+| 10 | `generate-group-audio` | Yes | Group-specific audio generation |
+| 11 | `get-lesson-audio-status` | Yes | Audio generation progress polling |
+| 12 | `get-lesson-with-audio` | Yes | Retrieve lesson with audio data |
+| 13 | `retry-audio-generation` | Yes | Retry failed audio generation |
+| 14 | `admin-create-user` | Yes | Admin user creation |
+| 15 | `send-invite-educator-email` | Yes | Colleague invitation emails |
+| 16 | `track-login-attempt` | No | Login attempt logging |
+| 17 | `create-checkout` | No | Stripe checkout session |
+| 18 | `check-subscription` | No | Subscription status check |
+| 19 | `customer-portal` | No | Stripe customer portal |
+| 20 | `get-site-analytics` | No | Analytics data retrieval |
+| 21 | `send-ticket-reply-notification` | No | Support ticket email |
+| 22 | `send-welcome-email` | No | New user welcome email |
+| 23 | `send-first-lesson-email` | No | First lesson milestone email |
+| 24 | `send-feedback-request-email` | No | Feedback survey email |
+| 25 | `send-free-month-email` | No | Referral reward email |
+
+---
+
+## 7. Security & Compliance
+
+### 7.1 Data Protection
+- Row Level Security (RLS) on all tables
+- Role-based access control (super_admin, admin, moderator, user)
+- Session management and monitoring
+- Account lockout protection
+- Activity logging for audit trails
+
+### 7.2 Authentication
+- Email/password authentication
+- Failed login tracking with automatic lockout
+- Session termination capabilities
+- IP address and device logging
+
+### 7.3 FERPA Compliance Architecture
+
+The platform implements a three-layer FERPA compliance framework designed so non-compliance is structurally impossible:
+
+#### Architectural Guarantees
+- **PII Detection System**: Client-side regex-based scanner checks all user inputs for potential student PII (emails, phone numbers, DOBs, SSNs, student IDs, name-like patterns) before data reaches AI or storage
+- **Risk-Based Blocking**: High-risk PII (SSN, student ID, plausible DOB) blocks submission entirely; medium-risk (email, phone, 2+ name patterns) requires admin override
+- **No PII in Logs**: Compliance events log only metadata (finding types, risk level, match count) — never actual PII content
+- **De-identification Before AI**: Student data is encoded as generation parameters (reading level, ELL status, accommodations) rather than identifiable information sent to AI models
+- **IEP Accommodations as Rules**: IEP/504 accommodations are encoded as content generation rules, not optional settings
+
+#### Operational Guarantees
+- **Compliance Event Logging**: All PII detection events recorded in `compliance_events` table with truncated user IDs
+- **Admin Compliance Dashboard**: Filterable view of all compliance events for auditing
+- **Data Minimization**: Only essential data stored; no raw student names or identifiers in AI prompts
+- **Role-Based Access**: Tiered permissions prevent unauthorized data access
+
+#### PII Detection Patterns
+| Pattern | Risk Level | Action |
+|---------|-----------|--------|
+| SSN-like (XXX-XX-XXXX) | High | Blocks submission |
+| Student ID patterns | High | Blocks submission |
+| Plausible DOB (student age range) | High | Blocks submission |
+| Email addresses | Medium | Requires override |
+| Phone numbers | Medium | Requires override |
+| 2+ name-like patterns | Medium | Requires override |
+
+**Database Table:** `compliance_events`
+
+**Scanned Fields:** `assessment_name`, `assessment_objective`, `assessment_context`, `assessment_content`, `rubric_name`, `rubric_context`, `rubric_content`
+
+---
+
+## 8. Key Metrics
 
 ### Differentiation Options Available
 - 6 reading levels (Pre-K through Grade 11+)
@@ -449,15 +582,15 @@ Let's Get REAL is an AI-powered educator toolkit designed to help teachers creat
 - Multiple assessment method categories
 
 ### Platform Capabilities
-- 19 Edge Functions
-- 25+ Database Tables
+- 25 Edge Functions
+- 30+ Database Tables
 - 4 User Roles
 - 5 UI Languages
 - 15+ Content Languages
 
 ---
 
-## 7. User Journeys
+## 9. User Journeys
 
 ### Teacher Creating Differentiated Lesson
 1. Create student groups with reading levels and languages
@@ -483,28 +616,11 @@ Let's Get REAL is an AI-powered educator toolkit designed to help teachers creat
 4. Update help center content
 5. Toggle feature flags
 6. Export user data
-7. Review activity logs
+7. Review activity and compliance logs
 
 ---
 
-## 8. Security & Compliance
-
-### Data Protection
-- Row Level Security (RLS) on all tables
-- Role-based access control
-- Session management and monitoring
-- Account lockout protection
-- Activity logging for audit trails
-
-### Authentication
-- Email/password authentication
-- Auto-confirm for development
-- Failed login tracking
-- Session termination capabilities
-
----
-
-## 9. Future Roadmap Considerations
+## 10. Future Roadmap Considerations
 
 1. **Classroom Sync**: Real-time collaboration between teachers
 2. **Student Self-Assessment**: Verification checkpoints students complete
@@ -521,4 +637,4 @@ Let's Get REAL is an AI-powered educator toolkit designed to help teachers creat
 
 *Report generated for Let's Get REAL - An Educator Tools Suite*  
 *Built at Lovable SheBuilds 48-Hour Buildathon 2025*  
-*Last Updated: January 2026*
+*Last Updated: February 2026*
