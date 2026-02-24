@@ -1,45 +1,79 @@
 
 
-# Plan: Create Updated Full Product Report
+# Plan: Marketing Survey & Analytics
 
-I've reviewed the existing `docs/PRODUCT_REPORT.md` and the current state of the codebase. The existing report is already comprehensive but needs updates to reflect recent changes. Here's what I'll do:
+## Overview
 
-## What Will Be Updated
+Build a dedicated Marketing Survey system separate from the existing product feedback form. This includes a new multi-step survey page at `/marketing-survey`, a new database table, and a new admin tab to view/analyze responses with NPS tracking.
 
-The report file `docs/PRODUCT_REPORT.md` will be updated with the following changes:
+## Database Changes
 
-### 1. Updated Pricing Section (Section 1.11)
-The current report doesn't reflect the new token-based pricing model. I'll update it to match:
-- **Individual**: $19/month, 60 tokens/month
-- **School Team**: $149/month, 600 shared tokens/month, up to 10 teachers
-- **District**: $2,000+/month, 6,000 shared tokens/month, up to 100 teachers
+**New table: `marketing_surveys`**
 
-### 2. Updated Edge Function Count
-The report says 19 edge functions, but the actual count is **25** (including email functions like `send-welcome-email`, `send-first-lesson-email`, `send-free-month-email`, `send-invite-educator-email`, and `send-feedback-request-email` that weren't listed).
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK |
+| user_id | uuid | nullable (allow anonymous if shared externally) |
+| created_at | timestamptz | default now() |
+| primary_role | text | required |
+| grade_levels | text[] | checkboxes |
+| usage_duration | text | how long using RealPath |
+| lessons_per_week | text | |
+| features_used | text[] | checkboxes |
+| time_saved_rating | integer | 1-10 scale |
+| previous_method | text | multiple choice |
+| lesson_quality_satisfaction | integer | 1-5 |
+| multilingual_satisfaction | integer | 1-5 |
+| student_impact | text | Yes/No/Too early |
+| nps_score | integer | 0-10, the critical metric |
+| wcag_adoption_factor | text | Yes/No/Not sure |
+| ocr_complaint | text | Yes/No/Prefer not to say |
+| most_valuable_thing | text | open-ended |
+| improvement_suggestion | text | open-ended |
+| incentive_claimed | boolean | default false |
+| incentive_claim_date | timestamptz | |
 
-### 3. Updated Version & Date
-- Version bumped to 2.1
-- Date updated to February 2026
+RLS policies: users can insert their own; admins can read all.
 
-### 4. FERPA/ADA Compliance Section Enhancement
-The report's security section will be expanded to reflect the PII detection system, compliance event logging, and FERPA architectural guarantees that are built into the platform.
+## New Files
 
-### 5. Updated Pricing Tiers Table
-A new section or updated section showing the three-tier token-based pricing model with feature comparisons.
+1. **`src/pages/MarketingSurvey.tsx`** - 4-step form:
+   - Step 1: About You (role, grade levels, usage duration)
+   - Step 2: Usage & Value (lessons/week, features used, time saved, previous method)
+   - Step 3: Satisfaction & Impact (lesson quality, multilingual, student impact, NPS 0-10)
+   - Step 4: Compliance & Open Feedback (WCAG factor, OCR complaint, most valuable thing, improvement suggestion)
 
-### 6. Note on Stripe Configuration Gap
-The `src/lib/pricing.ts` file still has the old $10/mo and $99/yr Stripe price IDs. I'll note this discrepancy so it can be addressed separately (updating Stripe products to match the new pricing).
+2. **`src/hooks/useMarketingSurveyForm.ts`** - Form state management with localStorage draft persistence (mirrors existing `useFeedbackForm` pattern)
 
-## File Changes
+3. **`src/components/admin/AdminMarketingSurvey.tsx`** - Admin analytics tab with:
+   - NPS score calculation and trend chart (Promoters 9-10, Passives 7-8, Detractors 0-6)
+   - Average time-saved rating
+   - Feature usage breakdown (bar chart)
+   - Role and grade level distribution (pie charts)
+   - Student impact breakdown
+   - WCAG/OCR compliance insights for enterprise sales
+   - Table of all responses with search, pagination, CSV export
+   - Detail modal for individual responses
 
-| File | Action |
+## Modified Files
+
+| File | Change |
 |------|--------|
-| `docs/PRODUCT_REPORT.md` | Rewrite with all updates above |
+| `src/App.tsx` | Add route `/marketing-survey` |
+| `src/pages/Admin.tsx` | Add "Marketing Survey" tab with icon |
+
+## Key Design Decisions
+
+- **Separate from existing feedback**: The existing `/feedback` form is product-focused. This survey is marketing/sales-focused with NPS, compliance questions, and interview-prep data.
+- **NPS calculation**: `NPS = %Promoters(9-10) - %Detractors(0-6)`, displayed prominently in admin view.
+- **Same incentive pattern**: Offer 30-day free extension for completing the survey (reuses `subscription_overrides` table).
+- **The interview questions are NOT included in the digital form** since they're designed for live conversations. They could be added as a downloadable guide or reference in the admin panel.
 
 ## Technical Details
 
-- The report is a standalone Markdown file with no code dependencies
-- No database or backend changes needed
-- The file will remain compatible with any Markdown renderer
-- Total estimated length: ~550-600 lines of Markdown
+- The NPS 0-10 slider will use the existing `@radix-ui/react-slider` component
+- Star ratings reuse existing `StarRating` component for 1-5 scales
+- Charts use existing `recharts` dependency
+- Form draft auto-saves to localStorage (same pattern as feedback form)
+- Survey responses exportable as CSV from admin panel
 
