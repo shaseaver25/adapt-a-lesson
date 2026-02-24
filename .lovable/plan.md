@@ -1,112 +1,45 @@
 
 
-# Fix Site Analytics to Show Accurate Data
+# Plan: Create Updated Full Product Report
 
-## Problem
+I've reviewed the existing `docs/PRODUCT_REPORT.md` and the current state of the codebase. The existing report is already comprehensive but needs updates to reflect recent changes. Here's what I'll do:
 
-The admin Site Traffic dashboard currently shows **fabricated numbers**. Specific issues:
+## What Will Be Updated
 
-1. **Visitors are inflated**: Each login attempt timestamp is treated as a unique visitor (e.g., 421 "visitors" from 3 real users)
-2. **Hardcoded fallback values**: Traffic sources, devices, countries, bounce rate, and session duration all use made-up numbers
-3. **No page view tracking**: Nothing in the app records which pages users visit
+The report file `docs/PRODUCT_REPORT.md` will be updated with the following changes:
 
-## Solution
+### 1. Updated Pricing Section (Section 1.11)
+The current report doesn't reflect the new token-based pricing model. I'll update it to match:
+- **Individual**: $19/month, 60 tokens/month
+- **School Team**: $149/month, 600 shared tokens/month, up to 10 teachers
+- **District**: $2,000+/month, 6,000 shared tokens/month, up to 100 teachers
 
-### Step 1: Create a `page_views` table
+### 2. Updated Edge Function Count
+The report says 19 edge functions, but the actual count is **25** (including email functions like `send-welcome-email`, `send-first-lesson-email`, `send-free-month-email`, `send-invite-educator-email`, and `send-feedback-request-email` that weren't listed).
 
-A new database table to track actual page views with real metadata:
+### 3. Updated Version & Date
+- Version bumped to 2.1
+- Date updated to February 2026
 
-- `user_id` (nullable for anonymous visits)
-- `page_path` (e.g., "/studio", "/saved-lessons")
-- `referrer` (where the user came from)
-- `user_agent` (to determine device type)
-- `session_id` (to calculate bounce rate and pages per visit)
-- `created_at`
+### 4. FERPA/ADA Compliance Section Enhancement
+The report's security section will be expanded to reflect the PII detection system, compliance event logging, and FERPA architectural guarantees that are built into the platform.
 
-RLS policies: authenticated users can insert their own page views; admins can read all.
+### 5. Updated Pricing Tiers Table
+A new section or updated section showing the three-tier token-based pricing model with feature comparisons.
 
-### Step 2: Add client-side page view tracker
+### 6. Note on Stripe Configuration Gap
+The `src/lib/pricing.ts` file still has the old $10/mo and $99/yr Stripe price IDs. I'll note this discrepancy so it can be addressed separately (updating Stripe products to match the new pricing).
 
-A small React hook (`usePageViewTracker`) that:
+## File Changes
 
-- Fires on every route change using `react-router-dom`'s `useLocation`
-- Inserts a row into `page_views` with the current path, referrer, user agent, and a session ID
-- Only tracks authenticated users (since anonymous tracking without consent raises privacy concerns)
-- Debounces/deduplicates rapid navigation
-
-### Step 3: Rewrite the Edge Function
-
-Update `get-site-analytics` to query **real data** from `page_views` and `user_sessions`:
-
-- **Visitors**: `COUNT(DISTINCT user_id)` from `page_views`
-- **Page Views**: `COUNT(*)` from `page_views`
-- **Top Pages**: `GROUP BY page_path` ordered by count
-- **Devices**: Parse `user_agent` for Desktop vs Mobile
-- **Traffic Sources**: Parse `referrer` field
-- **Session Duration**: Average from `user_sessions.session_duration_seconds`
-- **Bounce Rate**: Percentage of sessions with only 1 page view
-- **Countries**: Show "Not tracked" (we don't collect IP geolocation for privacy)
-
-Remove all hardcoded fallback values. Show zeros and "No data yet" when there is no data.
-
-### Step 4: Update the dashboard UI
-
-- Remove the hardcoded `getFallbackData()` function from `AdminSiteAnalytics.tsx`
-- Add a small banner: "Data shown reflects authenticated user activity only" so admins understand the scope
-- Show "No data yet" states instead of fake numbers
-- Countries section: display "Not tracked (privacy)" or remove entirely
-
-## What will be accurate vs. not tracked
-
-| Metric | Source | Accuracy |
-|--------|--------|----------|
-| Visitors | Unique user_ids in page_views | Accurate for logged-in users |
-| Page Views | Count of page_view rows | Accurate for logged-in users |
-| Top Pages | Grouped page_views | Accurate |
-| Session Duration | user_sessions table | Accurate |
-| Bounce Rate | Sessions with 1 page view | Accurate |
-| Devices | User agent parsing | Approximate |
-| Traffic Sources | Referrer header | Partial (often empty for direct) |
-| Countries | Not collected | Will show "Not tracked" |
+| File | Action |
+|------|--------|
+| `docs/PRODUCT_REPORT.md` | Rewrite with all updates above |
 
 ## Technical Details
 
-### New table SQL
+- The report is a standalone Markdown file with no code dependencies
+- No database or backend changes needed
+- The file will remain compatible with any Markdown renderer
+- Total estimated length: ~550-600 lines of Markdown
 
-```text
-CREATE TABLE public.page_views (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
-  page_path text NOT NULL,
-  referrer text,
-  user_agent text,
-  session_id text,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-ALTER TABLE public.page_views ENABLE ROW LEVEL SECURITY;
-
--- Users can insert their own page views
-CREATE POLICY "Users can insert own page views"
-  ON public.page_views FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
-
--- Admins can read all page views
-CREATE POLICY "Admins can view all page views"
-  ON public.page_views FOR SELECT
-  USING (is_admin(auth.uid()));
-```
-
-### Files to create
-- `src/hooks/usePageViewTracker.ts` — route change listener that inserts into `page_views`
-
-### Files to modify
-- `supabase/functions/get-site-analytics/index.ts` — rewrite to query `page_views` table
-- `src/components/admin/AdminSiteAnalytics.tsx` — remove fake fallback data, add "authenticated users only" note
-- `src/App.tsx` — add the `usePageViewTracker` hook
-
-### Privacy considerations
-- Only tracks logged-in users (no anonymous visitor tracking)
-- No IP-based geolocation
-- User agent is stored for device categorization only
-- Referrer is captured from the browser's standard header
