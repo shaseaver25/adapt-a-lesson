@@ -12,6 +12,7 @@ import { useHelpArticle, useArticleFeedback, useHelpArticles } from '@/hooks/use
 import { HELP_CATEGORIES } from '@/types/helpCenter';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
+import { Seo } from '@/components/Seo';
 
 export default function HelpArticle() {
   const { slug } = useParams<{ slug: string }>();
@@ -85,6 +86,22 @@ export default function HelpArticle() {
 
   return (
     <div className="min-h-screen bg-background">
+      {article && (
+        <Seo
+          title={`${article.title} — Help Center`}
+          description={article.excerpt || article.title}
+          path={`/help/article/${article.slug}`}
+          type="article"
+          jsonLd={{
+            "@context": "https://schema.org",
+            "@type": "Article",
+            headline: article.title,
+            datePublished: article.created_at,
+            dateModified: article.updated_at,
+            author: { "@type": "Organization", name: "Let's Get REAL" },
+          }}
+        />
+      )}
       <div className="container mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 mb-6 text-sm">

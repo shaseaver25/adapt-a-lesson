@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useHelpArticles } from '@/hooks/useHelpArticles';
 import { HELP_CATEGORIES, HelpArticleCategory } from '@/types/helpCenter';
 import { useAuth } from '@/hooks/useAuth';
+import { Seo } from '@/components/Seo';
 
 export default function HelpCenter() {
   const navigate = useNavigate();
@@ -43,6 +44,11 @@ export default function HelpCenter() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Help Center — Let's Get REAL"
+        description="Browse guides, tutorials, and answers about creating differentiated lessons, assessments, and rubrics."
+        path="/help"
+      />
       {/* Header */}
       <div className="bg-primary text-primary-foreground py-16">
         <div className="container mx-auto px-4">

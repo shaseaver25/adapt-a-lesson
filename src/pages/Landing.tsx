@@ -13,6 +13,7 @@ import { Play, Clock, Globe, Shield, Users, Sparkles, FileDown, ArrowRight, Zap,
 import shannonPhoto from '@/assets/shannon-seaver.jpg';
 import jenaPhoto from '@/assets/jena-zangs.jpg';
 import { Logo } from '@/components/ui/Logo';
+import { Seo } from '@/components/Seo';
 
 // Video player component for back-to-back videos
 function GettingStartedVideoPlayer() {
@@ -78,6 +79,11 @@ export default function Landing() {
     }
   };
   return <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      <Seo
+        title="Let's Get REAL — Differentiated lessons for every learner"
+        description="Responsive. Equitable. Adaptive. Learner. Create differentiated lessons, authentic assessments, and AI-proof rubrics in 60 seconds."
+        path="/"
+      />
       {/* Animated Background */}
       <div className="fixed inset-0 -z-10 opacity-40">
         <div className="absolute w-[600px] h-[600px] rounded-full bg-primary/30 blur-[100px] animate-pulse" style={{

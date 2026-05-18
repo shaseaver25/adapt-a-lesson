@@ -9,6 +9,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/hooks/useAuth';
 import { PRICING_TIERS } from '@/lib/pricing';
 import { toast } from 'sonner';
+import { Seo } from '@/components/Seo';
 
 const features = [
   "60-second differentiated lessons",
@@ -68,6 +69,11 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Pricing — Let's Get REAL"
+        description="Simple plans for educators and schools. Monthly, yearly, and team pricing for differentiated lessons, assessments, and rubrics."
+        path="/pricing"
+      />
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
