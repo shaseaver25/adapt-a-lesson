@@ -45,6 +45,26 @@ serve(async (req) => {
       localContext 
     } = await req.json();
 
+    // Input size validation
+    const objStr = Array.isArray(learningObjectives) ? learningObjectives.join("\n") : (learningObjectives || "");
+    if (objStr.length > 2000) {
+      return new Response(JSON.stringify({ error: "learningObjectives exceeds 2,000 character limit" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (typeof localContext === "string" && localContext.length > 5000) {
+      return new Response(JSON.stringify({ error: "localContext exceeds 5,000 character limit" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    for (const [k, v] of Object.entries({ lessonTitle, subject, gradeLevel, schoolName, city, state })) {
+      if (typeof v === "string" && v.length > 500) {
+        return new Response(JSON.stringify({ error: `${k} exceeds 500 character limit` }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
