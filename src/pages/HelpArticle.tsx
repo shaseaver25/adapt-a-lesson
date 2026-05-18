@@ -98,7 +98,7 @@ export default function HelpArticle() {
             headline: article.title,
             datePublished: article.created_at,
             dateModified: article.updated_at,
-            author: { "@type": "Organization", name: "Let's Get REAL" },
+            author: { "@type": "Organization", name: "RealPath Learning" },
           }}
         />
       )}

@@ -80,8 +80,8 @@ export default function Landing() {
   };
   return <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <Seo
-        title="Let's Get REAL — Differentiated lessons for every learner"
-        description="Responsive. Equitable. Adaptive. Learner. Create differentiated lessons, authentic assessments, and AI-proof rubrics in 60 seconds."
+        title="RealPath Learning — WCAG-compliant differentiated lessons"
+        description="RealPath Learning generates WCAG 2.1 AA compliant, differentiated lessons for K-12 teachers in 60 seconds. ADA Title II ready. Canvas and Schoology integrations."
         path="/"
       />
       {/* Animated Background */}
