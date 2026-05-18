@@ -6,7 +6,7 @@ import { useState } from 'react';
 interface SubscriptionBannerProps {
   isTrialing: boolean;
   daysRemaining: number | null;
-  tier: 'monthly' | 'yearly' | null;
+  tier: 'individual' | 'school' | 'district' | 'monthly' | 'yearly' | null;
   subscriptionEnd: string | null;
   isSubscribed?: boolean;
 }
