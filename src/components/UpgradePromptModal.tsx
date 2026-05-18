@@ -16,7 +16,7 @@ interface UpgradePromptModalProps {
   isOpen: boolean;
   onClose: () => void;
   reason: 'trial_expired' | 'subscription_expired' | 'no_subscription';
-  onCheckout: (tier: 'monthly' | 'yearly') => Promise<void>;
+  onCheckout: (tier: 'individual') => Promise<void>;
 }
 
 export function UpgradePromptModal({ 
@@ -25,9 +25,9 @@ export function UpgradePromptModal({
   reason,
   onCheckout 
 }: UpgradePromptModalProps) {
-  const [checkoutLoading, setCheckoutLoading] = useState<'monthly' | 'yearly' | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState<'individual' | null>(null);
 
-  const handleCheckout = async (tier: 'monthly' | 'yearly') => {
+  const handleCheckout = async (tier: 'individual') => {
     setCheckoutLoading(tier);
     try {
       await onCheckout(tier);
@@ -112,48 +112,23 @@ export function UpgradePromptModal({
 
           {/* Pricing Options */}
           <div className="grid gap-3">
-            {/* Monthly */}
-            <div className="border rounded-lg p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold">{PRICING_TIERS.monthly.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    ${PRICING_TIERS.monthly.price}/month • 7-day free trial
-                  </p>
-                </div>
-                <Button 
-                  onClick={() => handleCheckout('monthly')}
-                  disabled={checkoutLoading !== null}
-                  size="sm"
-                >
-                  {checkoutLoading === 'monthly' ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    'Start Trial'
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {/* Yearly */}
             <div className="border rounded-lg p-4 space-y-2 bg-primary/5 border-primary/20">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-semibold">{PRICING_TIERS.yearly.name}</p>
+                  <p className="font-semibold">{PRICING_TIERS.individual.name}</p>
                   <p className="text-sm text-muted-foreground">
-                    ${PRICING_TIERS.yearly.price}/year • Save $21!
+                    ${PRICING_TIERS.individual.price}/month • 7-day free trial
                   </p>
                 </div>
-                <Button 
-                  onClick={() => handleCheckout('yearly')}
+                <Button
+                  onClick={() => handleCheckout('individual')}
                   disabled={checkoutLoading !== null}
                   size="sm"
-                  variant="default"
                 >
-                  {checkoutLoading === 'yearly' ? (
+                  {checkoutLoading === 'individual' ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    'Subscribe'
+                    'Start Trial'
                   )}
                 </Button>
               </div>
