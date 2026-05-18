@@ -295,10 +295,10 @@ export default function Login() {
             <p className="brand-tagline">{t('login.subtitle')}</p>
             
             <h1 className="hero-headline">
-              <span className="text-forest">Let's Get </span>
-              <span className="text-gold">REAL</span>
+              <span className="text-forest">RealPath </span>
+              <span className="text-gold">Learning</span>
             </h1>
-            <p className="hero-subline">Responsive. Equitable. Adaptive. Learner.</p>
+            <p className="hero-subline">WCAG 2.1 AA compliant differentiation for every learner</p>
             <p className="hero-support">One lesson. Designed to accommodate every learner.</p>
           </header>
 

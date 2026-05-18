@@ -1,11 +1,11 @@
-# Let's Get REAL
+# RealPath Learning
 
-> Responsive. Equitable. Adaptive. Learner. Let's Get REAL helps K-12 educators create differentiated lessons, authentic assessments, and AI-proof rubrics in 60 seconds — with built-in ELL, IEP/504, and multilingual audio support.
+> RealPath Learning generates WCAG 2.1 AA compliant, differentiated lessons for K-12 teachers in 60 seconds. ADA Title II ready. Integrates with Canvas and Schoology LMS. Built-in ELL, IEP/504, and multilingual audio support.
 
 ## Pages
 
-- [Home](/): What Let's Get REAL is and how it helps teachers differentiate instruction.
-- [Pricing](/pricing): Plans for individual educators, yearly subscribers, and school teams.
+- [Home](/): What RealPath Learning is and how it helps teachers differentiate instruction.
+- [Pricing](/pricing): Plans for individual educators, school teams, and districts.
 - [Help Center](/help): Guides and tutorials for using the lesson, assessment, rubric, and audio tools.
 - [Sign in](/login): Existing user login.
 - [Create account](/register): Sign up for a free trial.

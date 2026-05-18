@@ -28,7 +28,7 @@ export function StickyCtaBar({ onGetStarted }: StickyCtaBarProps) {
             R
           </div>
           <span className="hidden sm:block font-display text-sm font-semibold text-foreground">
-            Let's Get <span className="text-accent">REAL</span>
+            RealPath <span className="text-accent">Learning</span>
           </span>
         </div>
         
