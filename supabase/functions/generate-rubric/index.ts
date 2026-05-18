@@ -177,6 +177,23 @@ serve(async (req) => {
   try {
     const { assessmentDescription, learningObjectives, numCriteria, vulnerabilityAnalysis } = await req.json();
 
+    if (typeof assessmentDescription !== "string" || assessmentDescription.length === 0) {
+      return new Response(JSON.stringify({ error: "assessmentDescription is required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (assessmentDescription.length > 5000) {
+      return new Response(JSON.stringify({ error: "assessmentDescription exceeds 5,000 character limit" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const _objStr = Array.isArray(learningObjectives) ? learningObjectives.join("\n") : (learningObjectives || "");
+    if (_objStr.length > 2000) {
+      return new Response(JSON.stringify({ error: "learningObjectives exceeds 2,000 character limit" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     console.log("Generating rubric for:", { 
       assessmentDescription, 
       learningObjectives, 
