@@ -58,6 +58,23 @@ serve(async (req) => {
   try {
     const { lessonContent, selectedGroups, options } = await req.json();
 
+    // Input size validation (cost-abuse prevention)
+    if (typeof lessonContent !== "string" || lessonContent.length === 0) {
+      return new Response(JSON.stringify({ error: "lessonContent is required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (lessonContent.length > 50000) {
+      return new Response(JSON.stringify({ error: "lessonContent exceeds 50,000 character limit" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!Array.isArray(selectedGroups) || selectedGroups.length === 0 || selectedGroups.length > 10) {
+      return new Response(JSON.stringify({ error: "selectedGroups must contain between 1 and 10 groups" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     console.log(`Differentiating lesson for ${selectedGroups.length} groups`);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
