@@ -156,10 +156,13 @@ export function useCreateTicketReply() {
       if (error) throw error;
 
       // Update last reply timestamp
-      const updateField = reply.is_admin ? 'last_admin_reply_at' : 'last_user_reply_at';
+      const now = new Date().toISOString();
+      const updatePayload = reply.is_admin
+        ? { last_admin_reply_at: now }
+        : { last_user_reply_at: now };
       await supabase
         .from('support_tickets')
-        .update({ [updateField]: new Date().toISOString() })
+        .update(updatePayload)
         .eq('id', reply.ticket_id);
 
       // Send email notification for admin replies (not internal notes)
