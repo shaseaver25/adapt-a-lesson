@@ -648,7 +648,7 @@ export default function LessonView() {
         {/* Footer - hidden on print */}
         <footer className="no-print border-t border-border py-6 mt-8">
           <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-            <p>Let's Get REAL — Responsive. Equitable. Adaptive. Learner.</p>
+            <p>RealPath Learning — WCAG 2.1 AA compliant differentiation for every learner</p>
           </div>
         </footer>
       </div>

@@ -118,7 +118,7 @@ export default function Pricing() {
                   <div>
                     <p className="text-sm text-muted-foreground">Current Plan</p>
                     <p className="font-display text-xl font-bold text-primary">
-                      {currentTier === 'monthly' ? "Let's Get REAL Monthly" : "Let's Get REAL Yearly"}
+                      {currentTier === 'monthly' ? 'Individual' : 'Individual'}
                     </p>
                     {subscriptionEnd && (
                       <p className="text-sm text-muted-foreground mt-1">

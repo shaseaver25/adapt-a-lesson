@@ -32,7 +32,7 @@ export default function PaymentSuccess() {
 
             {/* Title */}
             <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-              Welcome to Let's Get REAL!
+              Welcome to RealPath Learning!
             </h1>
 
             <p className="text-muted-foreground mb-6">
