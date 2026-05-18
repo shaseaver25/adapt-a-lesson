@@ -4,7 +4,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 
 export interface SubscriptionState {
   isSubscribed: boolean;
-  tier: 'monthly' | 'yearly' | null;
+  tier: 'individual' | 'school' | 'district' | 'monthly' | 'yearly' | null;
   subscriptionEnd: string | null;
   isTrialing: boolean;
   trialEnd: string | null;
@@ -59,7 +59,7 @@ export function useSubscription() {
       // isSubscribed: data.subscribed ?? false,
       setSubscriptionState({
         isSubscribed: true,
-        tier: data.tier ?? 'monthly',
+        tier: data.tier ?? 'individual',
         subscriptionEnd: data.subscriptionEnd ?? null,
         isTrialing: false,
         trialEnd: null,

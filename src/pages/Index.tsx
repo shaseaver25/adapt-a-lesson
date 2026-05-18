@@ -156,9 +156,11 @@ const Index = () => {
   const handleReset = () => {
     if (differentiatedLesson) handleResetDifferentiation();else if (generatedAssessment) handleResetAssessment();else if (generatedRubric) handleResetRubric();
   };
-  const handleUpgradeCheckout = async (selectedTier: 'monthly' | 'yearly') => {
+  const handleUpgradeCheckout = async (selectedTier: 'individual') => {
     const tierInfo = PRICING_TIERS[selectedTier];
-    await createCheckout(tierInfo.priceId, tierInfo.mode);
+    if (tierInfo.priceId) {
+      await createCheckout(tierInfo.priceId, tierInfo.mode);
+    }
   };
   const showResults = differentiatedLesson || generatedAssessment || generatedRubric;
 

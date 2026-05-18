@@ -163,9 +163,7 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
 
   const getPlanName = () => {
     if (!isSubscribed) return 'No Active Plan';
-    if (tier === 'monthly') return PRICING_TIERS.monthly.name;
-    if (tier === 'yearly') return PRICING_TIERS.yearly.name;
-    return 'Active Plan';
+    return PRICING_TIERS.individual.name;
   };
 
   return (
