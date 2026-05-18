@@ -45,7 +45,7 @@ export default function HelpCenter() {
   return (
     <div className="min-h-screen bg-background">
       <Seo
-        title="Help Center — Let's Get REAL"
+        title="Help Center — RealPath Learning"
         description="Browse guides, tutorials, and answers about creating differentiated lessons, assessments, and rubrics."
         path="/help"
       />

@@ -70,7 +70,7 @@ export default function Pricing() {
   return (
     <div className="min-h-screen bg-background">
       <Seo
-        title="Pricing — Let's Get REAL"
+        title="Pricing — RealPath Learning"
         description="Simple plans for educators and schools. Monthly, yearly, and team pricing for differentiated lessons, assessments, and rubrics."
         path="/pricing"
       />
