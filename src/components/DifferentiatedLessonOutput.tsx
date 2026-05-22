@@ -25,6 +25,7 @@ import { extractVisualDescriptions } from '@/lib/imageGeneration';
 import LessonImageFrame from '@/components/LessonImageFrame';
 import { LessonImageBrowser } from '@/components/LessonImageBrowser';
 import { ImageVariationPicker } from '@/components/ImageVariationPicker';
+import { getISOCode } from '@/lib/languageCodes';
 
 interface PreGeneratedAudioRecord {
   id: string;
