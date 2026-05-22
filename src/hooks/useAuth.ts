@@ -153,6 +153,12 @@ export function useAuth(): AuthState & AuthActions {
 
     if (data.user) {
       await trackLoginAttempt(email, true, data.user.id);
+      // Fire-and-forget welcome email (previously sent via a DB trigger).
+      supabase.functions
+        .invoke('send-welcome-email', {
+          body: { email, userName: options.fullName },
+        })
+        .catch((err) => console.error('send-welcome-email failed:', err));
     }
 
     return { error: null };
