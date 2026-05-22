@@ -649,34 +649,47 @@ export function DifferentiatedLessonOutput({
                     return (
                       <TabsContent key={handout.groupId} value={handout.groupId} className="mt-0">
                         {isBilingual ? (
-                          // Bilingual side-by-side layout
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Translated content (left) */}
-                            <div className={`p-4 rounded-lg border-l-4 border-primary bg-primary/5 ${isRTL ? 'text-right' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
-                              <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 pb-2 border-b">
-                                <span>🌍</span>
-                                <span>{handout.language}</span>
-                              </div>
-                              <div className="prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(combinedImageMap, handleGenerateVariations, isGeneratingVariations)}>
-                                  {processContentWithImages(handout.content, combinedImageMap)}
-                                </ReactMarkdown>
-                              </div>
-                            </div>
-                            
-                            {/* English content (right) */}
-                            <div className="p-4 rounded-lg border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-950/20">
-                              <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 pb-2 border-b">
-                                <span>🇺🇸</span>
-                                <span>English</span>
-                              </div>
-                              <div className="prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(combinedImageMap, handleGenerateVariations, isGeneratingVariations)}>
-                                  {processContentWithImages(handout.englishContent || '', combinedImageMap)}
-                                </ReactMarkdown>
-                              </div>
-                            </div>
-                          </div>
+                          // Bilingual side-by-side layout — semantic table for WCAG 3.1.2 + 1.3.1
+                          <table className="w-full border-separate border-spacing-x-6 border-spacing-y-0 md:table block">
+                            <caption className="sr-only">
+                              Side-by-side bilingual handout. Left column: {handout.language}. Right column: English. The two columns present the same lesson content in parallel.
+                            </caption>
+                            <thead className="md:table-header-group block">
+                              <tr className="md:table-row block">
+                                <th scope="col" lang={getISOCode(handout.language)} className="md:table-cell block w-full md:w-1/2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide pb-2 border-b">
+                                  🌍 {handout.language}
+                                </th>
+                                <th scope="col" lang="en" className="md:table-cell block w-full md:w-1/2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide pb-2 border-b">
+                                  🇺🇸 English
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="md:table-row-group block">
+                              <tr className="md:table-row block">
+                                <td
+                                  lang={getISOCode(handout.language)}
+                                  dir={isRTL ? 'rtl' : 'ltr'}
+                                  className={`md:table-cell block w-full md:w-auto mb-4 md:mb-0 align-top p-4 rounded-lg border-l-4 border-primary bg-primary/5 ${isRTL ? 'text-right' : ''}`}
+                                >
+                                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(combinedImageMap, handleGenerateVariations, isGeneratingVariations)}>
+                                      {processContentWithImages(handout.content, combinedImageMap)}
+                                    </ReactMarkdown>
+                                  </div>
+                                </td>
+                                <td
+                                  lang="en"
+                                  className="md:table-cell block w-full md:w-auto mb-4 md:mb-0 align-top p-4 rounded-lg border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-950/20"
+                                >
+                                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(combinedImageMap, handleGenerateVariations, isGeneratingVariations)}>
+                                      {processContentWithImages(handout.englishContent || '', combinedImageMap)}
+                                    </ReactMarkdown>
+                                  </div>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
                         ) : (
                           // Single column for English-only
                           <div className="prose prose-sm dark:prose-invert max-w-none">
