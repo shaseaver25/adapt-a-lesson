@@ -650,7 +650,7 @@ export function DifferentiatedLessonOutput({
                       <TabsContent key={handout.groupId} value={handout.groupId} className="mt-0">
                         {isBilingual ? (
                           // Bilingual side-by-side layout — semantic table for WCAG 3.1.2 + 1.3.1
-                          <table className="w-full border-separate border-spacing-x-6 border-spacing-y-0 md:table block">
+                          <table className="w-full table-fixed border-separate border-spacing-x-6 border-spacing-y-0 md:table block">
                             <caption className="sr-only">
                               Side-by-side bilingual handout. Left column: {handout.language}. Right column: English. The two columns present the same lesson content in parallel.
                             </caption>
@@ -669,7 +669,7 @@ export function DifferentiatedLessonOutput({
                                 <td
                                   lang={getISOCode(handout.language)}
                                   dir={isRTL ? 'rtl' : 'ltr'}
-                                  className={`md:table-cell block w-full md:w-auto mb-4 md:mb-0 align-top p-4 rounded-lg border-l-4 border-primary bg-primary/5 ${isRTL ? 'text-right' : ''}`}
+                                  className={`md:table-cell block w-full md:w-1/2 mb-4 md:mb-0 align-top p-4 rounded-lg border-l-4 border-primary bg-primary/5 ${isRTL ? 'text-right' : ''}`}
                                 >
                                   <div className="prose prose-sm dark:prose-invert max-w-none">
                                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(combinedImageMap, handleGenerateVariations, isGeneratingVariations)}>
@@ -679,7 +679,7 @@ export function DifferentiatedLessonOutput({
                                 </td>
                                 <td
                                   lang="en"
-                                  className="md:table-cell block w-full md:w-auto mb-4 md:mb-0 align-top p-4 rounded-lg border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-950/20"
+                                  className="md:table-cell block w-full md:w-1/2 mb-4 md:mb-0 align-top p-4 rounded-lg border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-950/20"
                                 >
                                   <div className="prose prose-sm dark:prose-invert max-w-none">
                                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(combinedImageMap, handleGenerateVariations, isGeneratingVariations)}>
