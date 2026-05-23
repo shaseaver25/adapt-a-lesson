@@ -170,6 +170,69 @@ export type Database = {
           },
         ]
       }
+      canvas_connections: {
+        Row: {
+          canvas_instance_url: string
+          canvas_user_id: number | null
+          created_at: string
+          encrypted_access_token: string
+          encrypted_refresh_token: string | null
+          id: string
+          scope: string | null
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          canvas_instance_url: string
+          canvas_user_id?: number | null
+          created_at?: string
+          encrypted_access_token: string
+          encrypted_refresh_token?: string | null
+          id?: string
+          scope?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          canvas_instance_url?: string
+          canvas_user_id?: number | null
+          created_at?: string
+          encrypted_access_token?: string
+          encrypted_refresh_token?: string | null
+          id?: string
+          scope?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      canvas_oauth_state: {
+        Row: {
+          canvas_instance_url: string
+          created_at: string
+          expires_at: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          canvas_instance_url: string
+          created_at?: string
+          expires_at: string
+          state: string
+          user_id: string
+        }
+        Update: {
+          canvas_instance_url?: string
+          created_at?: string
+          expires_at?: string
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       class_folders: {
         Row: {
           color: string | null
