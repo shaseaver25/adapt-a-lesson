@@ -122,7 +122,7 @@ export function PIIWarningModal({
               className="w-full sm:w-auto"
             >
               <ShieldCheck className="mr-2 h-4 w-4" />
-              Override and Continue
+              {isHighRisk ? 'Confirm No PII and Continue' : 'Continue Anyway'}
             </Button>
           )}
         </DialogFooter>

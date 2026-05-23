@@ -257,8 +257,8 @@ export function usePIIGuard(): UsePIIGuardReturn {
     checkText,
     modalState,
     handleEdit,
-    // Only provide override handler if user is admin
-    handleOverride: isAdmin ? handleOverride : undefined,
+    // Allow any signed-in user to override the warning (logged for compliance audit)
+    handleOverride,
     isChecking,
   };
 }
