@@ -71,3 +71,15 @@ verify_jwt = false
 
 [functions.send-invite-educator-email]
 verify_jwt = true
+
+[functions.canvas-oauth-start]
+verify_jwt = true
+
+[functions.canvas-oauth-callback]
+verify_jwt = false
+
+[functions.canvas-courses]
+verify_jwt = true
+
+[functions.canvas-push-lesson]
+verify_jwt = true
