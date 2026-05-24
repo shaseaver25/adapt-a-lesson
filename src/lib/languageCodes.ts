@@ -20,6 +20,7 @@ export const LANGUAGE_TO_ISO_639_1: Record<string, string> = {
   'Farsi': 'fa',
   'Hebrew': 'he',
   'Swahili': 'sw',
+  'Haitian Creole': 'ht',
 };
 
 export function getISOCode(languageName: string): string {
@@ -32,4 +33,10 @@ export function getISOCode(languageName: string): string {
   }
   console.warn(`[languageCodes] No ISO 639-1 code for "${languageName}", defaulting to 'und'`);
   return 'und';
+}
+
+const RTL_LANG_CODES = new Set(['ar', 'he', 'fa', 'ur']);
+
+export function isRTLLanguage(isoCode: string): boolean {
+  return RTL_LANG_CODES.has(isoCode);
 }
