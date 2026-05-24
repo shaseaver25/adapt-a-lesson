@@ -10,6 +10,8 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import LessonImageFrame from '@/components/LessonImageFrame';
+import { LessonValidationBanner } from '@/components/LessonValidationBanner';
+import { LessonValidationBadge } from '@/components/LessonValidationBadge';
 import { format } from 'date-fns';
 import { getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentHandout } from '@/types/differentiatedLesson';
@@ -167,6 +169,32 @@ export default function LessonView() {
     enabled: !!id && !authLoading && !!user,
     retry: false,
   });
+
+  // Latest validation result for this lesson (best-effort).
+  const { data: validation } = useQuery({
+    queryKey: ['lesson-validation', id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data, error } = await supabase
+        .from('lesson_validation_results')
+        .select('passed, hard_check_results, regen_attempts')
+        .eq('lesson_id', id)
+        .order('validated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!id && !authLoading && !!user,
+  });
+
+  const failedChecks = (() => {
+    if (!validation || validation.passed) return [];
+    const hc = (validation.hard_check_results ?? {}) as Record<string, { passed: boolean; details?: string }>;
+    return Object.entries(hc)
+      .filter(([, r]) => !r.passed)
+      .map(([name, r]) => ({ name, details: r.details }));
+  })();
 
   // Image fetching
   const { fetchImages } = useLessonImagesDB();
@@ -441,10 +469,24 @@ export default function LessonView() {
 
         {/* Lesson Content */}
         <main className="container mx-auto px-4 py-8">
+          <div className="max-w-5xl mx-auto">
+            {validation && !validation.passed && (
+              <div className="no-print">
+                <LessonValidationBanner failedChecks={failedChecks} />
+              </div>
+            )}
+          </div>
           <article className="lesson-content max-w-5xl mx-auto bg-card border border-border rounded-xl shadow-sm overflow-hidden">
             {/* Differentiation options badges - hidden on print */}
             {lesson.differentiation_options && (
               <div className="no-print flex flex-wrap gap-2 p-4 border-b border-border bg-muted/30">
+                {validation && (
+                  <LessonValidationBadge
+                    passed={validation.passed}
+                    failedChecks={failedChecks.map((c) => c.name)}
+                    regenAttempts={validation.regen_attempts ?? 0}
+                  />
+                )}
                 {lesson.differentiation_options.includeVocabularyScaffolding && (
                   <Badge variant="secondary">📚 Vocabulary Scaffolding</Badge>
                 )}

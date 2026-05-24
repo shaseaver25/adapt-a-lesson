@@ -5,6 +5,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+const MAX_REGEN_ATTEMPTS = 2;
+
 // Strengths-based naming system
 const LEVEL_MAP: Record<string, string> = {
   'Below Grade': 'embers',
@@ -34,15 +38,6 @@ interface StudentGroup {
   notes: string;
 }
 
-interface DifferentiationOptions {
-  includeVocabularyScaffolding: boolean;
-  generateComprehensionQuestions: boolean;
-  includeVisualPlaceholders: boolean;
-  includeGraphicOrganizers: boolean;
-  graphicOrganizerType: string;
-  outputFormat: string;
-}
-
 const READING_LEVEL_ORDER: Record<string, number> = {
   'Below Grade': 1,
   'On Grade': 2,
@@ -50,13 +45,48 @@ const READING_LEVEL_ORDER: Record<string, number> = {
   'Advanced': 4,
 };
 
+type ValidationResponse = {
+  passed: boolean;
+  hardCheckResults: Record<string, { passed: boolean; details?: string; skipped?: boolean }>;
+  rubricVersion: string;
+};
+
+// Call the stateless validate-lesson edge function.
+async function callValidate(
+  structuredLessonData: unknown,
+  gradeBand: string | null,
+  authHeader: string | null,
+): Promise<ValidationResponse | null> {
+  if (!SUPABASE_URL) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/validate-lesson`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader ?? `Bearer ${SUPABASE_ANON_KEY}`,
+        apikey: SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ structuredLessonData, gradeBand }),
+    });
+    if (!res.ok) {
+      console.error("validate-lesson returned", res.status, await res.text());
+      return null;
+    }
+    return await res.json();
+  } catch (e) {
+    console.error("validate-lesson call failed:", e);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { lessonContent, selectedGroups, options } = await req.json();
+    const { lessonContent, selectedGroups, options, gradeBand } = await req.json();
+    const authHeader = req.headers.get("Authorization");
 
     // Input size validation (cost-abuse prevention)
     if (typeof lessonContent !== "string" || lessonContent.length === 0) {
@@ -82,14 +112,12 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Sort groups from lowest to highest reading level
     const sortedGroups = [...(selectedGroups as StudentGroup[])].sort((a, b) => {
       const orderA = READING_LEVEL_ORDER[a.readingLevelLabel] || 2;
       const orderB = READING_LEVEL_ORDER[b.readingLevelLabel] || 2;
       return orderA - orderB;
     });
 
-    // Build the structured prompt
     const systemPrompt = `You are an expert educator creating differentiated lesson content.
 
 CRITICAL: You must respond with VALID JSON only. No markdown outside the JSON structure.
@@ -137,7 +165,7 @@ HANDOUT CONTENT STRUCTURE (both languages):
 - Start with: **Name:** _____ **Date:** _____
 - Include: 🎯 Learning Target (student-friendly)
 - Include: Lesson content
-- Include: Vocabulary box 
+- Include: Vocabulary box
 - Include: Practice section with answer lines
 - Include: Reflection section
 - Use markdown formatting
@@ -146,7 +174,7 @@ HANDOUT CONTENT STRUCTURE (both languages):
 
 LEVEL MAPPING:
 - "Below Grade" → "embers"
-- "On Grade" → "flames"  
+- "On Grade" → "flames"
 - "Above Grade" → "blazers"
 - "Advanced" → "supernovas"
 
@@ -161,38 +189,23 @@ CRITICAL FOR [VISUAL:] TAGS:
 
 ORDER: Always process groups from lowest to highest level (embers → supernovas).`;
 
-    // Build group descriptions
     const groupDescriptions = sortedGroups.map((g: StudentGroup) => {
       const levelKey = LEVEL_MAP[g.readingLevelLabel] || 'flames';
       const icon = LEVEL_ICONS[g.readingLevelLabel] || '📖';
-      
       let desc = `GROUP: "${g.groupName}"
 - ID: ${g.id}
 - Level: ${g.readingLevelLabel} (${levelKey}) ${icon}
 - Students: ${g.numStudents}
 - Language: ${g.homeLanguage}
 - Lexile: ${g.readingLevelLexile || 'Not specified'}`;
-
-      if (g.ellStatus !== 'None') {
-        desc += `\n- ELL Status: ${g.ellStatus}`;
-      }
-      if (g.iep504Status !== 'None') {
-        desc += `\n- IEP/504: ${g.iep504Status}`;
-      }
-      if (g.accommodations.length > 0) {
-        desc += `\n- Accommodations: ${g.accommodations.join(', ')}`;
-      }
-      if (g.learningPreferences.length > 0) {
-        desc += `\n- Learning Preferences: ${g.learningPreferences.join(', ')}`;
-      }
-      if (g.notes) {
-        desc += `\n- Notes: ${g.notes}`;
-      }
-      
+      if (g.ellStatus !== 'None') desc += `\n- ELL Status: ${g.ellStatus}`;
+      if (g.iep504Status !== 'None') desc += `\n- IEP/504: ${g.iep504Status}`;
+      if (g.accommodations.length > 0) desc += `\n- Accommodations: ${g.accommodations.join(', ')}`;
+      if (g.learningPreferences.length > 0) desc += `\n- Learning Preferences: ${g.learningPreferences.join(', ')}`;
+      if (g.notes) desc += `\n- Notes: ${g.notes}`;
       return desc;
     }).join('\n\n');
 
-    // Build options description
     let optionsDesc = 'OPTIONS:\n';
     if (options.includeVocabularyScaffolding) {
       optionsDesc += '- Include vocabulary scaffolding with bilingual glossaries\n';
@@ -227,184 +240,180 @@ Remember:
 5. Never put teacher directions in student handouts
 6. Use groupId exactly as provided in the input`;
 
-    console.log('Calling AI with structured JSON request...');
-    
-    // Pro handles 3+ groups or any non-English handout (bilingual doubles
-    // the output budget and Flash truncates ~10K chars). Flash for the
-    // common single-group / all-English case.
     const hasNonEnglish = selectedGroups.some((g: StudentGroup) => g.homeLanguage !== 'English');
     const modelToUse = (selectedGroups.length > 2 || hasNonEnglish)
-      ? "google/gemini-2.5-pro" 
+      ? "google/gemini-2.5-pro"
       : "google/gemini-2.5-flash";
-    
     console.log(`Using model: ${modelToUse} for ${selectedGroups.length} groups`);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: modelToUse,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
-        max_tokens: 65000, // Pro model supports larger outputs
-      }),
-    });
+    // Run AI generation + parse + fallback. Extracted so we can re-run on regen.
+    const generateOnce = async (): Promise<{ teacherGuide: string; studentHandouts: any[] }> => {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: modelToUse,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          response_format: { type: "json_object" },
+          max_tokens: 65000,
+        }),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "API credits exhausted. Please add credits to continue." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("AI gateway error:", response.status, errorText);
+        const err: any = new Error(`AI gateway error: ${response.status}`);
+        err.status = response.status;
+        throw err;
       }
 
-      throw new Error(`AI gateway error: ${response.status}`);
-    }
-
-    // Handle potentially empty or malformed response
-    let aiResponse;
-    try {
       const responseText = await response.text();
       console.log('Response text length:', responseText?.length || 0);
-      
       if (!responseText || responseText.trim() === '') {
         throw new Error("Empty response from AI gateway");
       }
-      
-      aiResponse = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Failed to parse AI gateway response:', parseError);
-      const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown parse error';
-      throw new Error(`Failed to parse AI response: ${errorMsg}`);
-    }
-
-    const rawContent = aiResponse.choices?.[0]?.message?.content;
-
-    if (!rawContent) {
-      console.error('AI response structure:', JSON.stringify(aiResponse).substring(0, 500));
-      throw new Error("No content generated from AI");
-    }
-
-    console.log('Raw AI response length:', rawContent.length);
-
-    // Parse the JSON response with fallback handling
-    let lessonData;
-    try {
-      // First, try direct parsing
-      lessonData = JSON.parse(rawContent);
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      console.error('Raw content preview:', rawContent.substring(0, 500));
-      
-      // Try to clean the content - sometimes there's markdown wrapper
-      let cleanedContent = rawContent.trim();
-      
-      // Remove markdown code blocks if present
-      if (cleanedContent.startsWith('```json')) {
-        cleanedContent = cleanedContent.slice(7);
-      } else if (cleanedContent.startsWith('```')) {
-        cleanedContent = cleanedContent.slice(3);
+      const aiResponse = JSON.parse(responseText);
+      const rawContent = aiResponse.choices?.[0]?.message?.content;
+      if (!rawContent) {
+        console.error('AI response structure:', JSON.stringify(aiResponse).substring(0, 500));
+        throw new Error("No content generated from AI");
       }
-      if (cleanedContent.endsWith('```')) {
-        cleanedContent = cleanedContent.slice(0, -3);
-      }
-      cleanedContent = cleanedContent.trim();
-      
+      console.log('Raw AI response length:', rawContent.length);
+
+      let lessonData: any;
       try {
-        lessonData = JSON.parse(cleanedContent);
-      } catch (secondError) {
-        // If still failing, try to extract teacherGuide at minimum
-        console.error('Second parse attempt failed:', secondError);
-        
-        // Try to extract content using regex as last resort
-        const teacherGuideMatch = rawContent.match(/"teacherGuide"\s*:\s*"([\s\S]*?)(?:","studentHandouts"|"\s*,\s*"studentHandouts")/);
-        const studentHandoutsMatch = rawContent.match(/"studentHandouts"\s*:\s*\[([\s\S]*?)\]\s*}/);
-        
-        if (teacherGuideMatch) {
-          console.log('Attempting regex extraction fallback...');
-          // Create a minimal valid structure
-          lessonData = {
-            teacherGuide: teacherGuideMatch[1]
-              .replace(/\\n/g, '\n')
-              .replace(/\\"/g, '"')
-              .replace(/\\\\/g, '\\'),
-            studentHandouts: []
-          };
-          
-          // Try to parse studentHandouts array if found
-          if (studentHandoutsMatch) {
-            try {
-              const handoutsStr = '[' + studentHandoutsMatch[1] + ']';
-              // Fix common JSON issues
-              const fixedHandouts = handoutsStr
-                .replace(/,\s*]/g, ']')  // Remove trailing commas
-                .replace(/,\s*,/g, ','); // Remove double commas
-              lessonData.studentHandouts = JSON.parse(fixedHandouts);
-            } catch (handoutsError) {
-              console.error('Failed to parse studentHandouts:', handoutsError);
+        lessonData = JSON.parse(rawContent);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        let cleanedContent = rawContent.trim();
+        if (cleanedContent.startsWith('```json')) cleanedContent = cleanedContent.slice(7);
+        else if (cleanedContent.startsWith('```')) cleanedContent = cleanedContent.slice(3);
+        if (cleanedContent.endsWith('```')) cleanedContent = cleanedContent.slice(0, -3);
+        cleanedContent = cleanedContent.trim();
+        try {
+          lessonData = JSON.parse(cleanedContent);
+        } catch (secondError) {
+          console.error('Second parse attempt failed:', secondError);
+          const teacherGuideMatch = rawContent.match(/"teacherGuide"\s*:\s*"([\s\S]*?)(?:","studentHandouts"|"\s*,\s*"studentHandouts")/);
+          const studentHandoutsMatch = rawContent.match(/"studentHandouts"\s*:\s*\[([\s\S]*?)\]\s*}/);
+          if (teacherGuideMatch) {
+            lessonData = {
+              teacherGuide: teacherGuideMatch[1]
+                .replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\'),
+              studentHandouts: [],
+            };
+            if (studentHandoutsMatch) {
+              try {
+                const handoutsStr = '[' + studentHandoutsMatch[1] + ']';
+                const fixedHandouts = handoutsStr
+                  .replace(/,\s*]/g, ']').replace(/,\s*,/g, ',');
+                lessonData.studentHandouts = JSON.parse(fixedHandouts);
+              } catch (handoutsError) {
+                console.error('Failed to parse studentHandouts:', handoutsError);
+              }
             }
+          } else {
+            throw new Error('Failed to parse AI response as JSON - content may be truncated');
           }
-        } else {
-          throw new Error('Failed to parse AI response as JSON - content may be truncated');
         }
       }
+
+      if (!lessonData.teacherGuide) {
+        throw new Error('AI response missing teacher guide');
+      }
+      if (!Array.isArray(lessonData.studentHandouts) || lessonData.studentHandouts.length === 0) {
+        console.warn('studentHandouts missing or empty, creating fallback handouts for each group');
+        lessonData.studentHandouts = sortedGroups.map((g: StudentGroup) => ({
+          groupId: g.id,
+          groupName: g.groupName,
+          level: LEVEL_MAP[g.readingLevelLabel] || 'flames',
+          language: g.homeLanguage,
+          content: `# ${g.groupName} Handout\n\n**Name:** _____ **Date:** _____\n\n🎯 **Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*`,
+          englishContent: g.homeLanguage !== 'English' ? `# ${g.groupName} Handout\n\n**Name:** _____ **Date:** _____\n\n🎯 **Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*` : null,
+        }));
+      }
+      return {
+        teacherGuide: lessonData.teacherGuide,
+        studentHandouts: lessonData.studentHandouts,
+      };
+    };
+
+    // Generate, validate, and auto-regenerate up to MAX_REGEN_ATTEMPTS times.
+    let structuredLessonData: { teacherGuide: string; studentHandouts: any[] } | null = null;
+    let validation: ValidationResponse | null = null;
+    let regenAttempts = 0;
+
+    for (let attempt = 0; attempt <= MAX_REGEN_ATTEMPTS; attempt += 1) {
+      try {
+        structuredLessonData = await generateOnce();
+      } catch (err: any) {
+        if (err?.status === 429) {
+          return new Response(
+            JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        if (err?.status === 402) {
+          return new Response(
+            JSON.stringify({ error: "API credits exhausted. Please add credits to continue." }),
+            { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        throw err;
+      }
+
+      console.log(
+        `Generated (attempt ${attempt}): teacherGuide ${structuredLessonData.teacherGuide.length} chars, ${structuredLessonData.studentHandouts.length} handouts`,
+      );
+
+      validation = await callValidate(structuredLessonData, gradeBand ?? null, authHeader);
+      if (!validation) {
+        console.warn("validate-lesson unavailable; returning without validation");
+        break;
+      }
+      regenAttempts = attempt;
+      if (validation.passed) {
+        console.log(`Validation passed on attempt ${attempt}`);
+        break;
+      }
+      const failed = Object.entries(validation.hardCheckResults)
+        .filter(([, r]) => !r.passed)
+        .map(([k]) => k);
+      console.warn(`Validation failed on attempt ${attempt}, failed checks: ${failed.join(", ")}`);
+      if (attempt === MAX_REGEN_ATTEMPTS) {
+        console.warn(`Reached max regen attempts (${MAX_REGEN_ATTEMPTS}); returning residual issues`);
+      }
     }
 
-    // Validate and fix structure
-    if (!lessonData.teacherGuide) {
-      console.error('Invalid structure - missing teacherGuide:', Object.keys(lessonData));
-      throw new Error('AI response missing teacher guide');
-    }
-
-    // If studentHandouts is missing or not an array, create fallback handouts
-    if (!Array.isArray(lessonData.studentHandouts) || lessonData.studentHandouts.length === 0) {
-      console.warn('studentHandouts missing or empty, creating fallback handouts for each group');
-      lessonData.studentHandouts = sortedGroups.map((g: StudentGroup) => ({
-        groupId: g.id,
-        groupName: g.groupName,
-        level: LEVEL_MAP[g.readingLevelLabel] || 'flames',
-        language: g.homeLanguage,
-        content: `# ${g.groupName} Handout\n\n**Name:** _____ **Date:** _____\n\n🎯 **Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*`,
-        englishContent: g.homeLanguage !== 'English' ? `# ${g.groupName} Handout\n\n**Name:** _____ **Date:** _____\n\n🎯 **Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*` : null
-      }));
-    }
-
-    console.log(`Generated: teacherGuide (${lessonData.teacherGuide.length} chars), ${lessonData.studentHandouts.length} handouts`);
-
-    // Return structured data
     return new Response(
       JSON.stringify({
         success: true,
-        data: {
-          teacherGuide: lessonData.teacherGuide,
-          studentHandouts: lessonData.studentHandouts,
-        }
+        data: structuredLessonData,
+        validation: validation
+          ? {
+              passed: validation.passed,
+              hardCheckResults: validation.hardCheckResults,
+              rubricVersion: validation.rubricVersion,
+              regenAttempts,
+            }
+          : null,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
     console.error("Error differentiating lesson:", error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error" 
+        error: error instanceof Error ? error.message : "Unknown error",
       }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });

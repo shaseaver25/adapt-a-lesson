@@ -169,6 +169,14 @@ export function useDifferentiationGenerator(
       }
 
       const lessonData: DifferentiatedLessonData = result.data;
+      const validation = result.validation as
+        | {
+            passed: boolean;
+            hardCheckResults: Record<string, { passed: boolean; details?: string; skipped?: boolean }>;
+            rubricVersion: string;
+            regenAttempts: number;
+          }
+        | null;
       
       console.log('Received structured lesson data:', {
         teacherGuideLength: lessonData.teacherGuide?.length,
@@ -223,7 +231,23 @@ export function useDifferentiationGenerator(
           if (!lessonError && savedLesson) {
             lessonId = savedLesson.id;
             setCurrentLessonId(lessonId);
-            
+
+            // Persist validation result (best-effort).
+            if (validation) {
+              try {
+                await supabase.from('lesson_validation_results').insert({
+                  lesson_id: lessonId,
+                  user_id: user.id,
+                  rubric_version: validation.rubricVersion,
+                  passed: validation.passed,
+                  hard_check_results: validation.hardCheckResults as any,
+                  regen_attempts: validation.regenAttempts ?? 0,
+                });
+              } catch (vErr) {
+                console.error('Failed to persist validation result:', vErr);
+              }
+            }
+
             // Send first lesson celebration email if this was their first
             if (isFirstLesson) {
               // Get user profile for email
