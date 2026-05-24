@@ -37,14 +37,15 @@ Deno.serve(async (req) => {
     if (userErr || !userData.user) return json({ error: "Invalid token" }, 401);
     const userId = userData.user.id;
 
-    const url = new URL(req.url);
-    const canvasInstanceUrl = (url.searchParams.get("canvasInstanceUrl") || "").replace(/\/+$/, "");
-    if (!canvasInstanceUrl) return json({ error: "canvasInstanceUrl required" }, 400);
-
     const { data: conn, error: connErr } = await admin
-      .from("canvas_connections").select("encrypted_access_token")
-      .eq("user_id", userId).eq("canvas_instance_url", canvasInstanceUrl).maybeSingle();
-    if (connErr || !conn) return json({ error: "Canvas not connected" }, 404);
+      .from("canvas_connections")
+      .select("encrypted_access_token, canvas_instance_url")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (connErr || !conn) return json({ error: "no_canvas_connection" }, 404);
+    const canvasInstanceUrl = String(conn.canvas_instance_url).replace(/\/+$/, "");
 
     const accessToken = await decrypt(conn.encrypted_access_token);
 
