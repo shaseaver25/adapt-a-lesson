@@ -83,3 +83,6 @@ verify_jwt = true
 
 [functions.canvas-push-lesson]
 verify_jwt = true
+
+[functions.validate-lesson]
+verify_jwt = true
