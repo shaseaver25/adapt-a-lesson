@@ -469,10 +469,24 @@ export default function LessonView() {
 
         {/* Lesson Content */}
         <main className="container mx-auto px-4 py-8">
+          <div className="max-w-5xl mx-auto">
+            {validation && !validation.passed && (
+              <div className="no-print">
+                <LessonValidationBanner failedChecks={failedChecks} />
+              </div>
+            )}
+          </div>
           <article className="lesson-content max-w-5xl mx-auto bg-card border border-border rounded-xl shadow-sm overflow-hidden">
             {/* Differentiation options badges - hidden on print */}
             {lesson.differentiation_options && (
               <div className="no-print flex flex-wrap gap-2 p-4 border-b border-border bg-muted/30">
+                {validation && (
+                  <LessonValidationBadge
+                    passed={validation.passed}
+                    failedChecks={failedChecks.map((c) => c.name)}
+                    regenAttempts={validation.regen_attempts ?? 0}
+                  />
+                )}
                 {lesson.differentiation_options.includeVocabularyScaffolding && (
                   <Badge variant="secondary">📚 Vocabulary Scaffolding</Badge>
                 )}
