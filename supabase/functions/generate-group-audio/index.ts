@@ -87,35 +87,57 @@ async function translateContent(text: string, targetLanguage: string, apiKey: st
     return translationCache.get(cacheKey)!;
   }
 
-  try {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a professional translator. Translate the following educational content from English to ${targetLanguage}. Only output the translation, nothing else.`
-          },
-          { role: 'user', content: text }
-        ],
-        temperature: 0.3,
-      }),
-    });
+  // Retry policy: 3 total attempts (initial + 2 retries) with 500ms / 1500ms backoff.
+  // Retry only on 429, 5xx, or network errors (TypeError / AbortError). 4xx (other) = fail fast.
+  const backoffs = [500, 1500];
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a professional translator. Translate the following educational content from English to ${targetLanguage}. Only output the translation, nothing else.`
+            },
+            { role: 'user', content: text }
+          ],
+          temperature: 0.3,
+        }),
+      });
 
-    if (!response.ok) return text;
-    const data = await response.json();
-    const translatedText = data.choices?.[0]?.message?.content?.trim() || text;
-    translationCache.set(cacheKey, translatedText);
-    return translatedText;
-  } catch (error) {
-    console.error('Translation error:', error);
-    return text;
+      if (response.ok) {
+        const data = await response.json();
+        const translatedText = data.choices?.[0]?.message?.content?.trim() || text;
+        translationCache.set(cacheKey, translatedText);
+        return translatedText;
+      }
+
+      const retryable = response.status === 429 || response.status >= 500;
+      if (retryable && attempt < 2) {
+        console.warn(`Translation transient error ${response.status}, retrying in ${backoffs[attempt]}ms (attempt ${attempt + 2}/3)`);
+        await new Promise((r) => setTimeout(r, backoffs[attempt]));
+        continue;
+      }
+      console.error(`Translation non-retryable error: ${response.status}`);
+      return text;
+    } catch (error) {
+      const isNetwork = error instanceof TypeError || (error as Error)?.name === 'AbortError';
+      if (isNetwork && attempt < 2) {
+        console.warn(`Translation network error, retrying in ${backoffs[attempt]}ms (attempt ${attempt + 2}/3):`, (error as Error).message);
+        await new Promise((r) => setTimeout(r, backoffs[attempt]));
+        continue;
+      }
+      console.error('Translation error:', error);
+      return text;
+    }
   }
+  return text;
 }
 
 function parseVocabularyItem(vocabLine: string): { term: string; definition: string } {
@@ -192,33 +214,52 @@ function chunkContent(content: string, maxChars = 2000): string[] {
 async function generateTTS(text: string, language: string, apiKey: string): Promise<ArrayBuffer | null> {
   if (!text || text.trim().length < 3) return null;
   const voiceConfig = getVoiceConfig(language);
-  
-  try {
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceConfig.voiceId}`, {
-      method: 'POST',
-      headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: text.substring(0, 5000),
-        model_id: 'eleven_multilingual_v2',
-        output_format: 'mp3_44100_128',
-        voice_settings: {
-          stability: voiceConfig.stability,
-          similarity_boost: voiceConfig.similarityBoost,
-          style: voiceConfig.style,
-          use_speaker_boost: true,
-        },
-      }),
-    });
 
-    if (!response.ok) {
-      console.error(`TTS API error: ${response.status}`);
+  // Retry policy: 3 total attempts (initial + 2 retries) with 500ms / 1500ms backoff.
+  // Retry only on 429, 5xx, or network errors (TypeError / AbortError). 4xx (other) = fail fast.
+  const backoffs = [500, 1500];
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceConfig.voiceId}`, {
+        method: 'POST',
+        headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: text.substring(0, 5000),
+          model_id: 'eleven_multilingual_v2',
+          output_format: 'mp3_44100_128',
+          voice_settings: {
+            stability: voiceConfig.stability,
+            similarity_boost: voiceConfig.similarityBoost,
+            style: voiceConfig.style,
+            use_speaker_boost: true,
+          },
+        }),
+      });
+
+      if (response.ok) {
+        return await response.arrayBuffer();
+      }
+
+      const retryable = response.status === 429 || response.status >= 500;
+      if (retryable && attempt < 2) {
+        console.warn(`TTS transient error ${response.status}, retrying in ${backoffs[attempt]}ms (attempt ${attempt + 2}/3)`);
+        await new Promise((r) => setTimeout(r, backoffs[attempt]));
+        continue;
+      }
+      console.error(`TTS non-retryable error: ${response.status}`);
+      return null;
+    } catch (error) {
+      const isNetwork = error instanceof TypeError || (error as Error)?.name === 'AbortError';
+      if (isNetwork && attempt < 2) {
+        console.warn(`TTS network error, retrying in ${backoffs[attempt]}ms (attempt ${attempt + 2}/3):`, (error as Error).message);
+        await new Promise((r) => setTimeout(r, backoffs[attempt]));
+        continue;
+      }
+      console.error('TTS generation error:', error);
       return null;
     }
-    return await response.arrayBuffer();
-  } catch (error) {
-    console.error('TTS generation error:', error);
-    return null;
   }
+  return null;
 }
 
 async function storeAudio(supabase: any, lessonId: string, groupName: string, sectionId: string, language: string, audioBuffer: ArrayBuffer): Promise<{ storagePath: string; signedUrl: string } | null> {
