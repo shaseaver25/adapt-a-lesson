@@ -79,17 +79,21 @@ Deno.serve(async (req) => {
     const userId = userData.user.id;
 
     const body = await req.json().catch(() => ({}));
-    const canvasInstanceUrl = String(body.canvasInstanceUrl || "").replace(/\/+$/, "");
     const courseId = Number(body.courseId);
     const title = String(body.title || "Untitled Lesson");
     const bodyHtmlIn = String(body.bodyHtml || "");
     const imageUrls: string[] = Array.isArray(body.imageUrls) ? body.imageUrls.map(String) : [];
-    if (!canvasInstanceUrl || !courseId) return json({ error: "canvasInstanceUrl and courseId required" }, 400);
+    if (!courseId) return json({ error: "courseId required" }, 400);
 
     const { data: conn, error: connErr } = await admin
-      .from("canvas_connections").select("encrypted_access_token")
-      .eq("user_id", userId).eq("canvas_instance_url", canvasInstanceUrl).maybeSingle();
-    if (connErr || !conn) return json({ error: "Canvas not connected" }, 404);
+      .from("canvas_connections")
+      .select("encrypted_access_token, canvas_instance_url")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (connErr || !conn) return json({ error: "no_canvas_connection" }, 404);
+    const canvasInstanceUrl = String(conn.canvas_instance_url).replace(/\/+$/, "");
     const accessToken = await decrypt(conn.encrypted_access_token);
 
     let rewritten = bodyHtmlIn;
