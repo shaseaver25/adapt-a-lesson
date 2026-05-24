@@ -229,9 +229,11 @@ Remember:
 
     console.log('Calling AI with structured JSON request...');
     
-    // Use Pro model for multiple groups (larger output needed)
-    // Flash model truncates at ~10K chars even with high max_tokens
-    const modelToUse = selectedGroups.length > 2 
+    // Pro handles 3+ groups or any non-English handout (bilingual doubles
+    // the output budget and Flash truncates ~10K chars). Flash for the
+    // common single-group / all-English case.
+    const hasNonEnglish = selectedGroups.some((g: StudentGroup) => g.homeLanguage !== 'English');
+    const modelToUse = (selectedGroups.length > 2 || hasNonEnglish)
       ? "google/gemini-2.5-pro" 
       : "google/gemini-2.5-flash";
     
