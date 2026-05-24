@@ -34,6 +34,7 @@ import SubmitTicket from "./pages/SubmitTicket";
 import MyTickets from "./pages/MyTickets";
 import TicketDetail from "./pages/TicketDetail";
 import MarketingSurvey from "./pages/MarketingSurvey";
+import SettingsCanvas from "./pages/SettingsCanvas";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const App = () => (
                 <Route path="/help/tickets/new" element={<SubmitTicket />} />
                 <Route path="/help/tickets/:ticketId" element={<TicketDetail />} />
                 <Route path="/marketing-survey" element={<MarketingSurvey />} />
+                <Route path="/settings/canvas" element={<SettingsCanvas />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
