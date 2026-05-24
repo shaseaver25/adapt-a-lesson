@@ -786,6 +786,50 @@ export type Database = {
           },
         ]
       }
+      lesson_validation_results: {
+        Row: {
+          hard_check_results: Json
+          id: string
+          lesson_id: string
+          passed: boolean
+          regen_attempts: number
+          rubric_version: string
+          soft_check_results: Json | null
+          user_id: string
+          validated_at: string
+        }
+        Insert: {
+          hard_check_results: Json
+          id?: string
+          lesson_id: string
+          passed: boolean
+          regen_attempts?: number
+          rubric_version: string
+          soft_check_results?: Json | null
+          user_id: string
+          validated_at?: string
+        }
+        Update: {
+          hard_check_results?: Json
+          id?: string
+          lesson_id?: string
+          passed?: boolean
+          regen_attempts?: number
+          rubric_version?: string
+          soft_check_results?: Json | null
+          user_id?: string
+          validated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_validation_results_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "generated_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       login_attempts: {
         Row: {
           created_at: string
