@@ -45,7 +45,17 @@ serve(async (req) => {
     logStep("Authorization header found");
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    // Retry getUser to tolerate transient "Connection reset by peer" from auth endpoint
+    let userData: { user: { id: string; email?: string } | null } | null = null;
+    let userError: { message: string } | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const result = await supabaseClient.auth.getUser(token);
+      userData = result.data as typeof userData;
+      userError = result.error as typeof userError;
+      if (!userError) break;
+      logStep("getUser failed, retrying", { attempt: attempt + 1, error: userError.message });
+      await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+    }
     if (userError) {
       throw new Error(`Authentication error: ${userError.message}`);
     }
