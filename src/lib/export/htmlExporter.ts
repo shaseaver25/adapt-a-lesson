@@ -369,7 +369,7 @@ export function generateStudentHTML(data: LessonExportData): string {
       padding-left: 1.5rem;
     }
     
-    .rtl .column-content ul, .rtl .column-content ol {
+    [dir="rtl"] .column-content ul, [dir="rtl"] .column-content ol {
       padding-left: 0;
       padding-right: 1.5rem;
     }
@@ -391,7 +391,7 @@ export function generateStudentHTML(data: LessonExportData): string {
       border: 1px solid var(--color-border);
     }
     
-    .rtl .column-content th, .rtl .column-content td {
+    [dir="rtl"] .column-content th, [dir="rtl"] .column-content td {
       text-align: right;
     }
     
