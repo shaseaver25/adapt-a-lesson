@@ -1,4 +1,5 @@
 import { marked } from 'marked';
+import { getISOCode, isRTLLanguage } from '@/lib/languageCodes';
 
 interface StudentGroup {
   id: string;
@@ -75,13 +76,12 @@ export function generateStudentHTML(data: LessonExportData): string {
   
   // Detect if this is a bilingual export
   const isBilingual = group.homeLanguage !== 'English' && englishContent && englishContent.trim().length > 0;
-  
-  // Detect RTL languages
-  const rtlLanguages = ['Arabic', 'Hebrew', 'Farsi', 'Urdu', 'العربية'];
-  const isRTL = rtlLanguages.some(lang => 
-    group.homeLanguage.toLowerCase().includes(lang.toLowerCase())
-  );
-  const direction = isRTL ? 'rtl' : 'ltr';
+
+  // Language codes + direction
+  const translatedLangCode = getISOCode(group.homeLanguage);
+  const isRTL = isRTLLanguage(translatedLangCode);
+  const dirAttr = isRTL ? 'rtl' : 'ltr';
+  const direction = dirAttr;
   const textAlign = isRTL ? 'right' : 'left';
   
   // Process content - convert [VISUAL: ...] and [NANOBANANA: "..."] to images or styled placeholders
@@ -144,24 +144,37 @@ export function generateStudentHTML(data: LessonExportData): string {
   const levelColors = getLevelColors(levelKey);
   
   // Build body content based on bilingual or single-column
-  const bodyContent = isBilingual 
+  // Bilingual uses a semantic <table> for WCAG 2.1 AA (SC 1.3.1 Info & Relationships)
+  // with per-cell `lang` attributes (SC 3.1.2 Language of Parts).
+  const bodyContent = isBilingual
     ? `
-      <div class="bilingual-container">
-        <div class="bilingual-column translated ${isRTL ? 'rtl' : 'ltr'}">
-          <div class="column-header">
-            <span class="column-flag">🌍</span>
-            ${escapeHtml(group.homeLanguage)}
-          </div>
-          <div class="column-content">${translatedHTML}</div>
-        </div>
-        <div class="bilingual-column english ltr">
-          <div class="column-header">
-            <span class="column-flag">🇺🇸</span>
-            English
-          </div>
-          <div class="column-content">${englishHTML}</div>
-        </div>
-      </div>
+      <table class="bilingual-container" role="table" aria-describedby="bilingual-desc">
+        <caption id="bilingual-desc" class="sr-only">
+          Side-by-side bilingual handout. Left column: ${escapeHtml(group.homeLanguage)}. Right column: English. The two columns present the same lesson content in parallel.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" lang="${translatedLangCode}" dir="${dirAttr}" class="bilingual-header translated">
+              <span class="column-flag" aria-hidden="true">🌍</span>
+              ${escapeHtml(group.homeLanguage)}
+            </th>
+            <th scope="col" lang="en" dir="ltr" class="bilingual-header english">
+              <span class="column-flag" aria-hidden="true">🇺🇸</span>
+              English
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td lang="${translatedLangCode}" dir="${dirAttr}" class="bilingual-cell translated">
+              <div class="column-content">${translatedHTML}</div>
+            </td>
+            <td lang="en" dir="ltr" class="bilingual-cell english">
+              <div class="column-content">${englishHTML}</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     `
     : `<div class="single-column-content">${translatedHTML}</div>`;
   
@@ -261,40 +274,34 @@ export function generateStudentHTML(data: LessonExportData): string {
     
     /* ===== BILINGUAL LAYOUT ===== */
     .bilingual-container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2rem;
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 2rem 0;
       margin-top: 1.5rem;
+      table-layout: fixed;
     }
-    
-    .bilingual-column {
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .bilingual-container th,
+    .bilingual-container td {
+      width: 50%;
+      vertical-align: top;
       padding: 1.5rem;
       border-radius: 0.75rem;
-      background: var(--color-bg);
-      min-height: 400px;
     }
-    
-    .bilingual-column.translated {
-      border-left: 4px solid var(--color-primary);
-      background: var(--color-primary-light);
-    }
-    
-    .bilingual-column.english {
-      border-left: 4px solid var(--color-english);
-      background: var(--color-english-light);
-    }
-    
-    .bilingual-column.rtl {
-      direction: rtl;
-      text-align: right;
-    }
-    
-    .bilingual-column.ltr {
-      direction: ltr;
-      text-align: left;
-    }
-    
-    .column-header {
+
+    .bilingual-header {
       display: flex;
       align-items: center;
       gap: 0.5rem;
@@ -303,11 +310,26 @@ export function generateStudentHTML(data: LessonExportData): string {
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--color-text-muted);
-      margin-bottom: 1rem;
-      padding-bottom: 0.75rem;
+      padding: 0.75rem 1.5rem;
       border-bottom: 1px solid var(--color-border);
+      text-align: left;
     }
-    
+
+    .bilingual-cell {
+      background: var(--color-bg);
+      min-height: 400px;
+    }
+
+    .bilingual-cell.translated {
+      border-left: 4px solid var(--color-primary);
+      background: var(--color-primary-light);
+    }
+
+    .bilingual-cell.english {
+      border-left: 4px solid var(--color-english);
+      background: var(--color-english-light);
+    }
+
     .column-flag {
       font-size: 1rem;
     }
@@ -456,23 +478,29 @@ export function generateStudentHTML(data: LessonExportData): string {
       color: var(--color-text-muted);
     }
     
-    /* Mobile: Stack columns vertically */
+    /* Mobile: Stack table cells vertically while preserving semantics */
     @media (max-width: 768px) {
-      .bilingual-container {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
+      .bilingual-container,
+      .bilingual-container thead,
+      .bilingual-container tbody,
+      .bilingual-container tr,
+      .bilingual-container th,
+      .bilingual-container td {
+        display: block;
+        width: 100%;
       }
-      .bilingual-column {
-        min-height: auto;
-      }
+      .bilingual-container { border-spacing: 0; }
+      .bilingual-container thead { margin-bottom: 1rem; }
+      .bilingual-container td { margin-bottom: 1.5rem; }
+      .bilingual-container tbody td { min-height: auto; }
     }
-    
-    /* Print styles */
+
+    /* Print: keep table semantics, allow cell breaks */
     @media print {
       body { font-size: 10pt; }
       .lesson-container { max-width: 100%; padding: 0; }
-      .bilingual-container { gap: 1rem; }
-      .bilingual-column { 
+      .bilingual-container { border-spacing: 1rem 0; }
+      .bilingual-container td {
         padding: 0.75rem;
         font-size: 9pt;
         page-break-inside: avoid;
@@ -486,7 +514,7 @@ export function generateStudentHTML(data: LessonExportData): string {
       h2, h3 { page-break-after: avoid; }
       table { page-break-inside: avoid; }
     }
-    
+
     /* Dark mode */
     @media (prefers-color-scheme: dark) {
       :root {
@@ -496,10 +524,10 @@ export function generateStudentHTML(data: LessonExportData): string {
         --color-bg-subtle: #1f2937;
         --color-border: #374151;
       }
-      .bilingual-column.translated {
+      .bilingual-cell.translated {
         background: rgba(239, 68, 68, 0.1);
       }
-      .bilingual-column.english {
+      .bilingual-cell.english {
         background: rgba(59, 130, 246, 0.1);
       }
     }
