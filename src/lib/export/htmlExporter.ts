@@ -48,6 +48,101 @@ export function readingLevelLabelFromKey(level: string): string {
 }
 
 /**
+ * Build just the inner-body HTML fragment for one lesson section
+ * (heading + bilingual <table> or single-column <div>). Reused by the
+ * Canvas push flow so what we send matches the direct HTML export — same
+ * <table>, <caption>, <th scope="col">, <td lang="..."> structure.
+ *
+ * No <html>/<head>/<style> wrapper; intended to be embedded inside another
+ * document (a Canvas Page body, a parent HTML doc, etc.).
+ */
+export function buildLessonSectionHTML(data: {
+  heading: string;
+  content: string;
+  englishContent?: string;
+  homeLanguage: string;
+  imageMap?: Map<string, string>;
+}): string {
+  const { heading, content, englishContent, homeLanguage, imageMap } = data;
+  const isBilingual =
+    homeLanguage !== 'English' && !!englishContent && englishContent.trim().length > 0;
+
+  const translatedLangCode = getISOCode(homeLanguage);
+  const isRTL = isRTLLanguage(translatedLangCode);
+  const dirAttr = isRTL ? 'rtl' : 'ltr';
+
+  const processMarkdown = (md: string): string => {
+    let processed = md;
+    const findImageUrl = (description: string): string | undefined => {
+      const trimmedDesc = description.trim();
+      if (imageMap?.has(trimmedDesc)) return imageMap.get(trimmedDesc);
+      if (imageMap) {
+        const lowerDesc = trimmedDesc.toLowerCase();
+        for (const [key, url] of imageMap.entries()) {
+          if (key.toLowerCase() === lowerDesc) return url;
+        }
+      }
+      return undefined;
+    };
+    const replaceVisual = (_m: string, description: string) => {
+      const imageUrl = findImageUrl(description);
+      if (imageUrl) {
+        return `<figure class="lesson-figure">
+          <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(description)}" class="lesson-image" loading="lazy" />
+          <figcaption>${escapeHtml(description)}</figcaption>
+        </figure>`;
+      }
+      return `<div class="visual-placeholder">
+        <span class="visual-icon">📐</span>
+        <span class="visual-label">${escapeHtml(description)}</span>
+        <span class="teacher-note">Teacher: Insert diagram or use whiteboard</span>
+      </div>`;
+    };
+    processed = processed.replace(/\[VISUAL:\s*(.+?)\]/g, replaceVisual);
+    processed = processed.replace(/\[NANOBANANA:\s*"(.+?)"\]/g, replaceVisual);
+    processed = processed.replace(/_{10,}/g, '<div class="answer-line"></div>');
+    return marked.parse(processed) as string;
+  };
+
+  const translatedHTML = processMarkdown(content);
+  const englishHTML = isBilingual && englishContent ? processMarkdown(englishContent) : '';
+
+  const body = isBilingual
+    ? `
+      <table class="bilingual-container" role="table" aria-describedby="bilingual-desc-${escapeHtml(translatedLangCode)}">
+        <caption id="bilingual-desc-${escapeHtml(translatedLangCode)}" class="sr-only">
+          Side-by-side bilingual handout. Left column: ${escapeHtml(homeLanguage)}. Right column: English. The two columns present the same lesson content in parallel.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" lang="${translatedLangCode}" dir="${dirAttr}" class="bilingual-header translated">
+              <span class="column-flag" aria-hidden="true">🌍</span>
+              ${escapeHtml(homeLanguage)}
+            </th>
+            <th scope="col" lang="en" dir="ltr" class="bilingual-header english">
+              <span class="column-flag" aria-hidden="true">🇺🇸</span>
+              English
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td lang="${translatedLangCode}" dir="${dirAttr}" class="bilingual-cell translated">
+              <div class="column-content">${translatedHTML}</div>
+            </td>
+            <td lang="en" dir="ltr" class="bilingual-cell english">
+              <div class="column-content">${englishHTML}</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    `
+    : `<div class="single-column-content" lang="${translatedLangCode}" dir="${dirAttr}">${translatedHTML}</div>`;
+
+  return `<section class="lesson-section"><h2>${escapeHtml(heading)}</h2>${body}</section>`;
+}
+
+/**
  * Get color scheme based on student level
  */
 function getLevelColors(level: string): { primary: string; light: string; dark: string } {
