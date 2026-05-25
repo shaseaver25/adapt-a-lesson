@@ -19,6 +19,10 @@ function json(b: unknown, status = 200) {
   return new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
 
+function err(code: string, message: string, status = 400, detail?: unknown) {
+  return json({ error: message, code, detail }, status);
+}
+
 async function uploadImageToCanvas(
   canvasInstanceUrl: string, accessToken: string, courseId: number, imageUrl: string,
 ): Promise<{ canvasUrl: string; fileId: number } | null> {
@@ -80,10 +84,11 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const courseId = Number(body.courseId);
+    const moduleId = body.moduleId != null ? Number(body.moduleId) : null;
     const title = String(body.title || "Untitled Lesson");
     const bodyHtmlIn = String(body.bodyHtml || "");
     const imageUrls: string[] = Array.isArray(body.imageUrls) ? body.imageUrls.map(String) : [];
-    if (!courseId) return json({ error: "courseId required" }, 400);
+    if (!courseId) return err("BAD_REQUEST", "courseId required", 400);
 
     const { data: conn, error: connErr } = await admin
       .from("canvas_connections")
@@ -92,7 +97,7 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (connErr || !conn) return json({ error: "no_canvas_connection" }, 404);
+    if (connErr || !conn) return err("NO_CONNECTION", "No Canvas connection found for this user.", 404);
     const canvasInstanceUrl = String(conn.canvas_instance_url).replace(/\/+$/, "");
     const accessToken = await decrypt(conn.encrypted_access_token);
 
@@ -103,6 +108,8 @@ Deno.serve(async (req) => {
       if (r) {
         uploaded++;
         rewritten = rewritten.split(src).join(r.canvasUrl);
+      } else {
+        return err("IMAGE_UPLOAD_FAILED", `Failed to upload image to Canvas: ${src}`, 502, { src });
       }
     }
 
@@ -114,9 +121,24 @@ Deno.serve(async (req) => {
     if (!pageRes.ok) {
       const txt = await pageRes.text();
       console.error("Canvas page create failed", pageRes.status, txt.slice(0, 200));
-      return json({ error: "Canvas page create failed", status: pageRes.status }, 502);
+      const code = pageRes.status === 401 ? "TOKEN_EXPIRED" : "CANVAS_API_ERROR";
+      return err(code, "Canvas rejected the page create request.", 502, { status: pageRes.status, body: txt.slice(0, 500) });
     }
     const page = await pageRes.json() as { url: string; page_id: number; html_url?: string };
+
+    if (moduleId) {
+      const modRes = await fetch(`${canvasInstanceUrl}/api/v1/courses/${courseId}/modules/${moduleId}/items`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ module_item: { type: "Page", page_url: page.url, title } }),
+      });
+      if (!modRes.ok) {
+        const txt = await modRes.text();
+        console.error("Canvas module attach failed", modRes.status, txt.slice(0, 200));
+        // Page is created — return success with a warning instead of failing hard.
+      }
+    }
+
     return json({
       pageUrl: page.html_url ?? `${canvasInstanceUrl}/courses/${courseId}/pages/${page.url}`,
       pageId: page.page_id,
@@ -125,6 +147,6 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     console.error("canvas-push-lesson error", (e as Error).message);
-    return json({ error: "Internal error" }, 500);
+    return err("INTERNAL", (e as Error).message || "Internal error", 500);
   }
 });

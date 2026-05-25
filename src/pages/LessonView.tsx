@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevelNames';
 import type { StudentHandout } from '@/types/differentiatedLesson';
 import { useLessonImagesDB } from '@/hooks/useLessonImagesDB';
+import { PushToCanvasDialog } from '@/components/PushToCanvasDialog';
 import { 
   ArrowLeft, 
   Printer, 
@@ -27,7 +28,8 @@ import {
   FileText,
   CheckCircle,
   BookOpen,
-  GraduationCap
+  GraduationCap,
+  Upload
 } from 'lucide-react';
 
 interface SavedLesson {
@@ -151,6 +153,22 @@ export default function LessonView() {
   const [copied, setCopied] = useState(false);
   const [printMode, setPrintMode] = useState<'teacher' | 'handouts' | null>(null);
   const [activeGroupTab, setActiveGroupTab] = useState<string>('');
+  const [pushOpen, setPushOpen] = useState(false);
+
+  const { data: hasCanvas } = useQuery({
+    queryKey: ['canvas-connection', user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase
+        .from('canvas_connections')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!user,
+  });
 
   const { data: lesson, isLoading, error } = useQuery({
     queryKey: ['lesson', id],
@@ -462,10 +480,35 @@ export default function LessonView() {
                   <Download className="h-4 w-4" />
                   Download
                 </Button>
+                {hasCanvas && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setPushOpen(true)}
+                    className="gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Push to Canvas
+                  </Button>
+                )}
               </div>
             </div>
           </div>
         </header>
+
+        <PushToCanvasDialog
+          open={pushOpen}
+          onOpenChange={setPushOpen}
+          lessonTitle={lesson.lesson_title || 'Untitled Lesson'}
+          markdownSections={[
+            ...(lesson.teacher_guide ? [{ heading: 'Teacher Guide', content: processContentWithImages(lesson.teacher_guide) }] : []),
+            ...studentHandouts.map((h) => ({
+              heading: `${h.groupName}${h.language && h.language !== 'English' ? ` (${h.language})` : ''}`,
+              content: processContentWithImages(h.content || ''),
+            })),
+          ]}
+          imageUrls={Array.from(imageMap.values())}
+        />
 
         {/* Lesson Content */}
         <main className="container mx-auto px-4 py-8">
