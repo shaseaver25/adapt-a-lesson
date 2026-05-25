@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { marked } from "marked";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -10,6 +9,16 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { buildLessonSectionHTML } from "@/lib/export/htmlExporter";
+
+export interface PushSection {
+  heading: string;
+  content: string;
+  /** Required for bilingual side-by-side rendering. */
+  englishContent?: string;
+  /** Defaults to "English" if omitted. */
+  homeLanguage?: string;
+}
 
 interface CanvasCourse { id: number; name: string; courseCode?: string }
 interface CanvasModule { id: number; name: string }
@@ -18,27 +27,34 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   lessonTitle: string;
-  /** Markdown content sections to concatenate into the Canvas page body. */
-  markdownSections: Array<{ heading?: string; content: string }>;
-  /** Image URLs (Supabase signed) referenced in the body — will be re-uploaded to Canvas. */
-  imageUrls: string[];
-}
-
-function buildHtml(title: string, sections: Array<{ heading?: string; content: string }>): string {
-  const parts = sections
-    .filter((s) => s.content && s.content.trim())
-    .map((s) => {
-      const h = s.heading ? `<h2>${escapeHtml(s.heading)}</h2>` : "";
-      return h + (marked.parse(s.content) as string);
-    });
-  return `<h1>${escapeHtml(title)}</h1>` + parts.join("\n<hr/>\n");
+  /** Lesson sections (teacher guide + per-group handouts). Rendered via the
+   *  shared htmlExporter so the Canvas HTML matches the direct export. */
+  sections: PushSection[];
+  /** [VISUAL: description] -> signed URL. Used both for inlining images and
+   *  for re-uploading them to Canvas. */
+  imageMap?: Map<string, string>;
 }
 
 function escapeHtml(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-export function PushToCanvasDialog({ open, onOpenChange, lessonTitle, markdownSections, imageUrls }: Props) {
+function buildHtml(title: string, sections: PushSection[], imageMap?: Map<string, string>): string {
+  const parts = sections
+    .filter((s) => s.content && s.content.trim())
+    .map((s) =>
+      buildLessonSectionHTML({
+        heading: s.heading,
+        content: s.content,
+        englishContent: s.englishContent,
+        homeLanguage: s.homeLanguage || "English",
+        imageMap,
+      })
+    );
+  return `<h1>${escapeHtml(title)}</h1>` + parts.join("\n<hr/>\n");
+}
+
+export function PushToCanvasDialog({ open, onOpenChange, lessonTitle, sections, imageMap }: Props) {
   const [courses, setCourses] = useState<CanvasCourse[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(false);
   const [coursesError, setCoursesError] = useState<string | null>(null);
@@ -82,7 +98,8 @@ export function PushToCanvasDialog({ open, onOpenChange, lessonTitle, markdownSe
   const handleSubmit = async () => {
     if (!courseId) return;
     setSubmitting(true); setErrorMsg(null);
-    const bodyHtml = buildHtml(lessonTitle, markdownSections);
+    const bodyHtml = buildHtml(lessonTitle, sections, imageMap);
+    const imageUrls = imageMap ? Array.from(imageMap.values()) : [];
     const { data, error } = await supabase.functions.invoke("canvas-push-lesson", {
       method: "POST",
       body: {

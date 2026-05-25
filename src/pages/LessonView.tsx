@@ -500,14 +500,18 @@ export default function LessonView() {
           open={pushOpen}
           onOpenChange={setPushOpen}
           lessonTitle={lesson.lesson_title || 'Untitled Lesson'}
-          markdownSections={[
-            ...(lesson.teacher_guide ? [{ heading: 'Teacher Guide', content: processContentWithImages(lesson.teacher_guide) }] : []),
+          sections={[
+            ...(lesson.teacher_guide
+              ? [{ heading: 'Teacher Guide', content: lesson.teacher_guide, homeLanguage: 'English' }]
+              : []),
             ...studentHandouts.map((h) => ({
-              heading: `${h.groupName}${h.language && h.language !== 'English' ? ` (${h.language})` : ''}`,
-              content: processContentWithImages(h.content || ''),
+              heading: h.groupName,
+              content: h.content || '',
+              englishContent: h.englishContent,
+              homeLanguage: h.language || 'English',
             })),
           ]}
-          imageUrls={Array.from(imageMap.values())}
+          imageMap={imageMap}
         />
 
         {/* Lesson Content */}
