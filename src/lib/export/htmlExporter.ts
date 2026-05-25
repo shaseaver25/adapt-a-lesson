@@ -33,6 +33,21 @@ function getLevelKey(readingLevel: string): string {
 }
 
 /**
+ * Reverse map: internal level key -> human-readable reading level label.
+ * Used when callers (e.g. Canvas push) only have the level key.
+ */
+export function readingLevelLabelFromKey(level: string): string {
+  const labels: Record<string, string> = {
+    embers: 'Below Grade',
+    sparks: 'Below Grade',
+    flames: 'On Grade',
+    blazers: 'Above Grade',
+    supernovas: 'Advanced',
+  };
+  return labels[level] || 'On Grade';
+}
+
+/**
  * Get color scheme based on student level
  */
 function getLevelColors(level: string): { primary: string; light: string; dark: string } {
