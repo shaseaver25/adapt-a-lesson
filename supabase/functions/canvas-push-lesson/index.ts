@@ -85,10 +85,28 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const courseId = Number(body.courseId);
     const moduleId = body.moduleId != null ? Number(body.moduleId) : null;
-    const title = String(body.title || "Untitled Lesson");
-    const bodyHtmlIn = String(body.bodyHtml || "");
     const imageUrls: string[] = Array.isArray(body.imageUrls) ? body.imageUrls.map(String) : [];
+
+    // New multi-page contract: pages: [{ title, bodyHtml, published, groupKey? }]
+    // Backwards-compat with single-page: { title, bodyHtml }
+    type PageIn = { title: string; bodyHtml: string; published?: boolean; groupKey?: string };
+    let pages: PageIn[] = [];
+    if (Array.isArray(body.pages) && body.pages.length > 0) {
+      pages = body.pages.map((p: any) => ({
+        title: String(p.title || "Untitled"),
+        bodyHtml: String(p.bodyHtml || ""),
+        published: p.published !== false,
+        groupKey: p.groupKey ? String(p.groupKey) : undefined,
+      }));
+    } else if (body.bodyHtml) {
+      pages = [{
+        title: String(body.title || "Untitled Lesson"),
+        bodyHtml: String(body.bodyHtml || ""),
+        published: true,
+      }];
+    }
     if (!courseId) return err("BAD_REQUEST", "courseId required", 400);
+    if (pages.length === 0) return err("BAD_REQUEST", "pages required", 400);
 
     const { data: conn, error: connErr } = await admin
       .from("canvas_connections")
@@ -101,49 +119,85 @@ Deno.serve(async (req) => {
     const canvasInstanceUrl = String(conn.canvas_instance_url).replace(/\/+$/, "");
     const accessToken = await decrypt(conn.encrypted_access_token);
 
-    let rewritten = bodyHtmlIn;
+    // ---- Upload all unique images ONCE, cache the rewrite map ----
+    const urlMap = new Map<string, string>();
     let uploaded = 0;
-    for (const src of imageUrls) {
+    const uniqueImageUrls = Array.from(new Set(imageUrls));
+    for (const src of uniqueImageUrls) {
       const r = await uploadImageToCanvas(canvasInstanceUrl, accessToken, courseId, src);
-      if (r) {
-        uploaded++;
-        rewritten = rewritten.split(src).join(r.canvasUrl);
-      } else {
-        return err("IMAGE_UPLOAD_FAILED", `Failed to upload image to Canvas: ${src}`, 502, { src });
+      if (r) { uploaded++; urlMap.set(src, r.canvasUrl); }
+      else { return err("IMAGE_UPLOAD_FAILED", `Failed to upload image to Canvas: ${src}`, 502, { src }); }
+    }
+
+    // ---- Create each page; don't roll back on partial failure ----
+    type PageResult = {
+      title: string; groupKey?: string; published: boolean;
+      success: boolean; pageUrl?: string; pageId?: number;
+      error?: { code: string; message: string };
+    };
+    const results: PageResult[] = [];
+    for (const p of pages) {
+      let rewritten = p.bodyHtml;
+      for (const [src, dst] of urlMap.entries()) rewritten = rewritten.split(src).join(dst);
+
+      try {
+        const pageRes = await fetch(`${canvasInstanceUrl}/api/v1/courses/${courseId}/pages`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            wiki_page: { title: p.title, body: rewritten, published: p.published, editing_roles: "teachers" },
+          }),
+        });
+        if (!pageRes.ok) {
+          const txt = await pageRes.text();
+          console.error("Canvas page create failed", pageRes.status, txt.slice(0, 200));
+          const code = pageRes.status === 401 ? "TOKEN_EXPIRED" : "CANVAS_API_ERROR";
+          results.push({
+            title: p.title, groupKey: p.groupKey, published: p.published,
+            success: false,
+            error: { code, message: `Canvas rejected the page (${pageRes.status}): ${txt.slice(0, 200)}` },
+          });
+          // If the token is expired every subsequent call will also fail — fail fast.
+          if (code === "TOKEN_EXPIRED") break;
+          continue;
+        }
+        const page = await pageRes.json() as { url: string; page_id: number; html_url?: string };
+        const pageUrl = page.html_url ?? `${canvasInstanceUrl}/courses/${courseId}/pages/${page.url}`;
+
+        if (moduleId) {
+          const modRes = await fetch(`${canvasInstanceUrl}/api/v1/courses/${courseId}/modules/${moduleId}/items`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ module_item: { type: "Page", page_url: page.url, title: p.title } }),
+          });
+          if (!modRes.ok) {
+            const txt = await modRes.text();
+            console.error("Canvas module attach failed", modRes.status, txt.slice(0, 200));
+            // Page is created — keep going.
+          }
+        }
+
+        results.push({
+          title: p.title, groupKey: p.groupKey, published: p.published,
+          success: true, pageUrl, pageId: page.page_id,
+        });
+      } catch (e) {
+        results.push({
+          title: p.title, groupKey: p.groupKey, published: p.published,
+          success: false,
+          error: { code: "INTERNAL", message: (e as Error).message || "Unknown error" },
+        });
       }
     }
 
-    const pageRes = await fetch(`${canvasInstanceUrl}/api/v1/courses/${courseId}/pages`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ wiki_page: { title, body: rewritten, published: true, editing_roles: "teachers" } }),
-    });
-    if (!pageRes.ok) {
-      const txt = await pageRes.text();
-      console.error("Canvas page create failed", pageRes.status, txt.slice(0, 200));
-      const code = pageRes.status === 401 ? "TOKEN_EXPIRED" : "CANVAS_API_ERROR";
-      return err(code, "Canvas rejected the page create request.", 502, { status: pageRes.status, body: txt.slice(0, 500) });
-    }
-    const page = await pageRes.json() as { url: string; page_id: number; html_url?: string };
-
-    if (moduleId) {
-      const modRes = await fetch(`${canvasInstanceUrl}/api/v1/courses/${courseId}/modules/${moduleId}/items`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ module_item: { type: "Page", page_url: page.url, title } }),
-      });
-      if (!modRes.ok) {
-        const txt = await modRes.text();
-        console.error("Canvas module attach failed", modRes.status, txt.slice(0, 200));
-        // Page is created — return success with a warning instead of failing hard.
-      }
-    }
-
+    const partialFailure = results.some((r) => !r.success);
     return json({
-      pageUrl: page.html_url ?? `${canvasInstanceUrl}/courses/${courseId}/pages/${page.url}`,
-      pageId: page.page_id,
+      results,
       imagesUploaded: uploaded,
-      imagesAttempted: imageUrls.length,
+      imagesAttempted: uniqueImageUrls.length,
+      partialFailure,
+      // Convenience: a course-level deep link.
+      courseUrl: `${canvasInstanceUrl}/courses/${courseId}/pages`,
     });
   } catch (e) {
     console.error("canvas-push-lesson error", (e as Error).message);
