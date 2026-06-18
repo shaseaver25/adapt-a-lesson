@@ -303,7 +303,7 @@ export function AdminCosts() {
   );
 }
 
-function StatCard({ icon, title, value, sub }: { icon: React.ReactNode; title: string; value: string; sub: string }) {
+function StatCard({ icon, title, value, sub }: { icon: ReactNode; title: string; value: string; sub: string }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
