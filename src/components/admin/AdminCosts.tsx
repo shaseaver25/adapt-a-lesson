@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { DollarSign, Cpu, TrendingUp, RefreshCw, RotateCw, Layers } from 'lucide-react';
+import { DollarSign, TrendingUp, RefreshCw, RotateCw, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   PRICING_TIERS, computeLessonStats, computeAudioStats, marginColorClass,
@@ -327,5 +327,3 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-// Unused but referenced in original imports
-void Cpu;
