@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,7 +8,39 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const MAX_REGEN_ATTEMPTS = 2;
+
+// Public list-price estimates (USD per 1,000,000 tokens).
+// Actual Lovable AI gateway billing may differ; these are used only for
+// admin-facing cost comparison/reporting in ai_cost_logs.
+const PRICING_PER_M_TOKENS = {
+  "google/gemini-2.5-flash": { input: 0.30, output: 2.50 },
+  "google/gemini-2.5-pro":   { input: 1.25, output: 10.00 },
+  "claude-haiku-4.5":        { input: 1.00, output: 5.00 },
+  "claude-sonnet-4.6":       { input: 3.00, output: 15.00 },
+} as const;
+
+function computeCost(model: keyof typeof PRICING_PER_M_TOKENS, inputTokens: number, outputTokens: number): number {
+  const rate = PRICING_PER_M_TOKENS[model];
+  if (!rate) return 0;
+  return (inputTokens / 1_000_000) * rate.input + (outputTokens / 1_000_000) * rate.output;
+}
+
+function decodeUserIdFromJwt(authHeader: string | null): string | null {
+  if (!authHeader) return null;
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+    );
+    return typeof payload.sub === "string" ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
 
 // Strengths-based naming system
 const LEVEL_MAP: Record<string, string> = {
@@ -247,7 +280,7 @@ Remember:
     console.log(`Using model: ${modelToUse} for ${selectedGroups.length} groups`);
 
     // Run AI generation + parse + fallback. Extracted so we can re-run on regen.
-    const generateOnce = async (): Promise<{ teacherGuide: string; studentHandouts: any[] }> => {
+    const generateOnce = async (): Promise<{ teacherGuide: string; studentHandouts: any[]; usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } }> => {
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -285,6 +318,11 @@ Remember:
         throw new Error("No content generated from AI");
       }
       console.log('Raw AI response length:', rawContent.length);
+      const usage = {
+        prompt_tokens: Number(aiResponse?.usage?.prompt_tokens) || 0,
+        completion_tokens: Number(aiResponse?.usage?.completion_tokens) || 0,
+        total_tokens: Number(aiResponse?.usage?.total_tokens) || 0,
+      };
 
       let lessonData: any;
       try {
@@ -341,6 +379,7 @@ Remember:
       return {
         teacherGuide: lessonData.teacherGuide,
         studentHandouts: lessonData.studentHandouts,
+        usage,
       };
     };
 
@@ -348,10 +387,13 @@ Remember:
     let structuredLessonData: { teacherGuide: string; studentHandouts: any[] } | null = null;
     let validation: ValidationResponse | null = null;
     let regenAttempts = 0;
+    let totalPromptTokens = 0;
+    let totalCompletionTokens = 0;
 
     for (let attempt = 0; attempt <= MAX_REGEN_ATTEMPTS; attempt += 1) {
+      let attemptResult: { teacherGuide: string; studentHandouts: any[]; usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } };
       try {
-        structuredLessonData = await generateOnce();
+        attemptResult = await generateOnce();
       } catch (err: any) {
         if (err?.status === 429) {
           return new Response(
@@ -367,6 +409,12 @@ Remember:
         }
         throw err;
       }
+      totalPromptTokens += attemptResult.usage.prompt_tokens;
+      totalCompletionTokens += attemptResult.usage.completion_tokens;
+      structuredLessonData = {
+        teacherGuide: attemptResult.teacherGuide,
+        studentHandouts: attemptResult.studentHandouts,
+      };
 
       console.log(
         `Generated (attempt ${attempt}): teacherGuide ${structuredLessonData.teacherGuide.length} chars, ${structuredLessonData.studentHandouts.length} handouts`,
@@ -389,6 +437,44 @@ Remember:
       if (attempt === MAX_REGEN_ATTEMPTS) {
         console.warn(`Reached max regen attempts (${MAX_REGEN_ATTEMPTS}); returning residual issues`);
       }
+    }
+
+    // Log AI cost — never let logging failures affect the lesson response.
+    try {
+      const claudeModel: "claude-haiku-4.5" | "claude-sonnet-4.6" =
+        modelToUse === "google/gemini-2.5-pro" ? "claude-sonnet-4.6" : "claude-haiku-4.5";
+      const estimatedCost = computeCost(modelToUse as keyof typeof PRICING_PER_M_TOKENS, totalPromptTokens, totalCompletionTokens);
+      const claudeEstimatedCost = computeCost(claudeModel, totalPromptTokens, totalCompletionTokens);
+      const userId = decodeUserIdFromJwt(authHeader);
+
+      if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+        const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        });
+        const { error: logError } = await admin.from("ai_cost_logs").insert({
+          user_id: userId,
+          function_name: "differentiate-lesson",
+          model: modelToUse,
+          input_tokens: totalPromptTokens,
+          output_tokens: totalCompletionTokens,
+          estimated_cost: Number(estimatedCost.toFixed(6)),
+          claude_estimated_cost: Number(claudeEstimatedCost.toFixed(6)),
+          metadata: {
+            regen_attempts: regenAttempts,
+            num_groups: selectedGroups.length,
+            had_non_english: hasNonEnglish,
+            gemini_model: modelToUse,
+            claude_model: claudeModel,
+          },
+        });
+        if (logError) {
+          console.error("ai_cost_logs insert error:", logError);
+        }
+      } else {
+        console.error("ai_cost_logs skipped: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+      }
+    } catch (logErr) {
+      console.error("ai_cost_logs unexpected error:", logErr);
     }
 
     return new Response(
