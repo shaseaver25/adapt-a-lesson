@@ -49,31 +49,37 @@ export type Database = {
       }
       ai_cost_logs: {
         Row: {
+          claude_estimated_cost: number | null
           created_at: string | null
           estimated_cost: number | null
           function_name: string
           id: string
           input_tokens: number | null
+          metadata: Json | null
           model: string
           output_tokens: number | null
           user_id: string | null
         }
         Insert: {
+          claude_estimated_cost?: number | null
           created_at?: string | null
           estimated_cost?: number | null
           function_name: string
           id?: string
           input_tokens?: number | null
+          metadata?: Json | null
           model: string
           output_tokens?: number | null
           user_id?: string | null
         }
         Update: {
+          claude_estimated_cost?: number | null
           created_at?: string | null
           estimated_cost?: number | null
           function_name?: string
           id?: string
           input_tokens?: number | null
+          metadata?: Json | null
           model?: string
           output_tokens?: number | null
           user_id?: string | null
