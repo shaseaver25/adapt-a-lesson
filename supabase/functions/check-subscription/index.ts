@@ -57,7 +57,19 @@ serve(async (req) => {
       await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
     }
     if (userError) {
-      throw new Error(`Authentication error: ${userError.message}`);
+      logStep("Auth failed, returning unsubscribed", { error: userError.message });
+      return new Response(
+        JSON.stringify({
+          subscribed: false,
+          tier: null,
+          subscriptionEnd: null,
+          isTrialing: false,
+          trialEnd: null,
+          daysRemaining: null,
+          authError: userError.message,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
     }
     const user = userData.user;
     if (!user?.email) {
