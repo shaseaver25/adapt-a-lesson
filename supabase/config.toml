@@ -89,3 +89,12 @@ verify_jwt = true
 
 [functions.canvas-modules]
 verify_jwt = true
+
+[functions.schoology-connect]
+verify_jwt = true
+
+[functions.schoology-sections]
+verify_jwt = true
+
+[functions.schoology-push-lesson]
+verify_jwt = true

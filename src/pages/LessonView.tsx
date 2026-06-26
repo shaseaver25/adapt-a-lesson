@@ -17,6 +17,7 @@ import { getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevel
 import type { StudentHandout } from '@/types/differentiatedLesson';
 import { useLessonImagesDB } from '@/hooks/useLessonImagesDB';
 import { PushToCanvasDialog } from '@/components/PushToCanvasDialog';
+import { PushToSchoologyDialog } from '@/components/PushToSchoologyDialog';
 import { 
   ArrowLeft, 
   Printer, 
@@ -154,6 +155,7 @@ export default function LessonView() {
   const [printMode, setPrintMode] = useState<'teacher' | 'handouts' | null>(null);
   const [activeGroupTab, setActiveGroupTab] = useState<string>('');
   const [pushOpen, setPushOpen] = useState(false);
+  const [pushSchoologyOpen, setPushSchoologyOpen] = useState(false);
 
   const { data: hasCanvas } = useQuery({
     queryKey: ['canvas-connection', user?.id],
@@ -161,6 +163,21 @@ export default function LessonView() {
       if (!user) return false;
       const { data } = await supabase
         .from('canvas_connections')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!user,
+  });
+
+  const { data: hasSchoology } = useQuery({
+    queryKey: ['schoology-connection', user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase
+        .from('schoology_connections')
         .select('id')
         .eq('user_id', user.id)
         .limit(1)
@@ -491,6 +508,17 @@ export default function LessonView() {
                     Push to Canvas
                   </Button>
                 )}
+                {hasSchoology && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setPushSchoologyOpen(true)}
+                    className="gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Push to Schoology
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -499,6 +527,20 @@ export default function LessonView() {
         <PushToCanvasDialog
           open={pushOpen}
           onOpenChange={setPushOpen}
+          lessonTitle={lesson.lesson_title || 'Untitled Lesson'}
+          teacherGuide={lesson.teacher_guide ?? undefined}
+          handouts={studentHandouts.map((h) => ({
+            groupName: h.groupName,
+            content: h.content || '',
+            englishContent: h.englishContent,
+            homeLanguage: h.language || 'English',
+          }))}
+          imageMap={imageMap}
+        />
+
+        <PushToSchoologyDialog
+          open={pushSchoologyOpen}
+          onOpenChange={setPushSchoologyOpen}
           lessonTitle={lesson.lesson_title || 'Untitled Lesson'}
           teacherGuide={lesson.teacher_guide ?? undefined}
           handouts={studentHandouts.map((h) => ({
