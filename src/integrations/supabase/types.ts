@@ -215,6 +215,42 @@ export type Database = {
         }
         Relationships: []
       }
+      schoology_connections: {
+        Row: {
+          created_at: string
+          encrypted_consumer_key: string
+          encrypted_consumer_secret: string
+          encrypted_token: string | null
+          encrypted_token_secret: string | null
+          id: string
+          schoology_user_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          encrypted_consumer_key: string
+          encrypted_consumer_secret: string
+          encrypted_token?: string | null
+          encrypted_token_secret?: string | null
+          id?: string
+          schoology_user_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          encrypted_consumer_key?: string
+          encrypted_consumer_secret?: string
+          encrypted_token?: string | null
+          encrypted_token_secret?: string | null
+          id?: string
+          schoology_user_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       canvas_oauth_state: {
         Row: {
           canvas_instance_url: string
