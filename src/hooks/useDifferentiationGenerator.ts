@@ -101,9 +101,10 @@ export function useDifferentiationGenerator(
     setIsLessonSaved(false);
 
     // Determine audio needs
-    const groupsNeedingAudio = input.selectedGroups.filter(g => 
+    const audioOptIn = input.options?.generateAudio === true;
+    const groupsNeedingAudio = audioOptIn ? input.selectedGroups.filter(g =>
       g.accommodations?.includes('Read Aloud') || g.homeLanguage !== 'English'
-    );
+    ) : [];
     const audioLanguages = [...new Set(
       groupsNeedingAudio.flatMap(g => [
         'English',
@@ -193,7 +194,7 @@ export function useDifferentiationGenerator(
         groupsProcessed: prev.totalGroups,
       }));
 
-      const needsAudio = input.selectedGroups.some(g => 
+      const needsAudio = audioOptIn && input.selectedGroups.some(g =>
         g.accommodations?.includes('Read Aloud') || g.homeLanguage !== 'English'
       );
 

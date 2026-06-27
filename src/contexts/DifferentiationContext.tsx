@@ -19,6 +19,7 @@ export interface DifferentiationOptions {
   includeVisualPlaceholders: boolean;
   includeGraphicOrganizers: boolean;
   graphicOrganizerType: GraphicOrganizerType;
+  generateAudio: boolean;
 }
 
 interface DifferentiationState {
@@ -58,6 +59,7 @@ const defaultOptions: DifferentiationOptions = {
   includeVisualPlaceholders: true,
   includeGraphicOrganizers: false,
   graphicOrganizerType: 'auto',
+  generateAudio: false,
 };
 
 const DifferentiationContext = createContext<DifferentiationState | undefined>(undefined);

@@ -62,6 +62,7 @@ export interface DifferentiateInput {
     includeVisualPlaceholders: boolean;
     includeGraphicOrganizers: boolean;
     graphicOrganizerType: GraphicOrganizerType;
+    generateAudio: boolean;
   };
 }
 
@@ -482,6 +483,22 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
               </div>
             )}
           </div>
+
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-border bg-background hover:bg-muted/50 cursor-pointer transition-colors">
+            <Checkbox
+              checked={options.generateAudio}
+              onCheckedChange={(checked) => setOptions({ generateAudio: !!checked })}
+              className="mt-0.5"
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-medium text-foreground">🎧 Generate Audio</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Create read-aloud audio for groups that need it. Off by default — enable when you want audio.
+              </p>
+            </div>
+          </label>
 
         </div>
       </div>
