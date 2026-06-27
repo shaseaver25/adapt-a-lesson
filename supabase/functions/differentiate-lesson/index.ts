@@ -9,7 +9,7 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const MAX_REGEN_ATTEMPTS = 2;
+const MAX_REGEN_ATTEMPTS = 1;
 
 // Public list-price estimates (USD per 1,000,000 tokens).
 // Actual Lovable AI gateway billing may differ; these are used only for
@@ -294,7 +294,7 @@ Remember:
             { role: "user", content: userPrompt },
           ],
           response_format: { type: "json_object" },
-          max_tokens: 65000,
+          max_tokens: 20000,
         }),
       });
 
