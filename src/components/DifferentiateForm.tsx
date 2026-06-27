@@ -62,6 +62,7 @@ export interface DifferentiateInput {
     includeVisualPlaceholders: boolean;
     includeGraphicOrganizers: boolean;
     graphicOrganizerType: GraphicOrganizerType;
+    generateAudio: boolean;
   };
 }
 
