@@ -9,7 +9,7 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const MAX_REGEN_ATTEMPTS = 2;
+const MAX_REGEN_ATTEMPTS = 1;
 
 // Public list-price estimates (USD per 1,000,000 tokens).
 // Actual Lovable AI gateway billing may differ; these are used only for
@@ -281,106 +281,121 @@ Remember:
 
     // Run AI generation + parse + fallback. Extracted so we can re-run on regen.
     const generateOnce = async (): Promise<{ teacherGuide: string; studentHandouts: any[]; usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } }> => {
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: modelToUse,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          response_format: { type: "json_object" },
-          max_tokens: 65000,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("AI gateway error:", response.status, errorText);
-        const err: any = new Error(`AI gateway error: ${response.status}`);
-        err.status = response.status;
-        throw err;
-      }
-
-      const responseText = await response.text();
-      console.log('Response text length:', responseText?.length || 0);
-      if (!responseText || responseText.trim() === '') {
-        throw new Error("Empty response from AI gateway");
-      }
-      const aiResponse = JSON.parse(responseText);
-      const rawContent = aiResponse.choices?.[0]?.message?.content;
-      if (!rawContent) {
-        console.error('AI response structure:', JSON.stringify(aiResponse).substring(0, 500));
-        throw new Error("No content generated from AI");
-      }
-      console.log('Raw AI response length:', rawContent.length);
-      const usage = {
-        prompt_tokens: Number(aiResponse?.usage?.prompt_tokens) || 0,
-        completion_tokens: Number(aiResponse?.usage?.completion_tokens) || 0,
-        total_tokens: Number(aiResponse?.usage?.total_tokens) || 0,
-      };
-
-      let lessonData: any;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 110000);
       try {
-        lessonData = JSON.parse(rawContent);
-      } catch (parseError) {
-        console.error('JSON parse error:', parseError);
-        let cleanedContent = rawContent.trim();
-        if (cleanedContent.startsWith('```json')) cleanedContent = cleanedContent.slice(7);
-        else if (cleanedContent.startsWith('```')) cleanedContent = cleanedContent.slice(3);
-        if (cleanedContent.endsWith('```')) cleanedContent = cleanedContent.slice(0, -3);
-        cleanedContent = cleanedContent.trim();
+        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: modelToUse,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            response_format: { type: "json_object" },
+            max_tokens: 20000,
+          }),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("AI gateway error:", response.status, errorText);
+          const err: any = new Error(`AI gateway error: ${response.status}`);
+          err.status = response.status;
+          throw err;
+        }
+
+        const responseText = await response.text();
+        console.log('Response text length:', responseText?.length || 0);
+        if (!responseText || responseText.trim() === '') {
+          throw new Error("Empty response from AI gateway");
+        }
+        const aiResponse = JSON.parse(responseText);
+        const rawContent = aiResponse.choices?.[0]?.message?.content;
+        if (!rawContent) {
+          console.error('AI response structure:', JSON.stringify(aiResponse).substring(0, 500));
+          throw new Error("No content generated from AI");
+        }
+        console.log('Raw AI response length:', rawContent.length);
+        const usage = {
+          prompt_tokens: Number(aiResponse?.usage?.prompt_tokens) || 0,
+          completion_tokens: Number(aiResponse?.usage?.completion_tokens) || 0,
+          total_tokens: Number(aiResponse?.usage?.total_tokens) || 0,
+        };
+
+        let lessonData: any;
         try {
-          lessonData = JSON.parse(cleanedContent);
-        } catch (secondError) {
-          console.error('Second parse attempt failed:', secondError);
-          const teacherGuideMatch = rawContent.match(/"teacherGuide"\s*:\s*"([\s\S]*?)(?:","studentHandouts"|"\s*,\s*"studentHandouts")/);
-          const studentHandoutsMatch = rawContent.match(/"studentHandouts"\s*:\s*\[([\s\S]*?)\]\s*}/);
-          if (teacherGuideMatch) {
-            lessonData = {
-              teacherGuide: teacherGuideMatch[1]
-                .replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\'),
-              studentHandouts: [],
-            };
-            if (studentHandoutsMatch) {
-              try {
-                const handoutsStr = '[' + studentHandoutsMatch[1] + ']';
-                const fixedHandouts = handoutsStr
-                  .replace(/,\s*]/g, ']').replace(/,\s*,/g, ',');
-                lessonData.studentHandouts = JSON.parse(fixedHandouts);
-              } catch (handoutsError) {
-                console.error('Failed to parse studentHandouts:', handoutsError);
+          lessonData = JSON.parse(rawContent);
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          let cleanedContent = rawContent.trim();
+          if (cleanedContent.startsWith('```json')) cleanedContent = cleanedContent.slice(7);
+          else if (cleanedContent.startsWith('```')) cleanedContent = cleanedContent.slice(3);
+          if (cleanedContent.endsWith('```')) cleanedContent = cleanedContent.slice(0, -3);
+          cleanedContent = cleanedContent.trim();
+          try {
+            lessonData = JSON.parse(cleanedContent);
+          } catch (secondError) {
+            console.error('Second parse attempt failed:', secondError);
+            const teacherGuideMatch = rawContent.match(/"teacherGuide"\s*:\s*"([\s\S]*?)(?:","studentHandouts"|"\s*,\s*"studentHandouts")/);
+            const studentHandoutsMatch = rawContent.match(/"studentHandouts"\s*:\s*\[([\s\S]*?)\]\s*}/);
+            if (teacherGuideMatch) {
+              lessonData = {
+                teacherGuide: teacherGuideMatch[1]
+                  .replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\'),
+                studentHandouts: [],
+              };
+              if (studentHandoutsMatch) {
+                try {
+                  const handoutsStr = '[' + studentHandoutsMatch[1] + ']';
+                  const fixedHandouts = handoutsStr
+                    .replace(/,\s*]/g, ']').replace(/,\s*,/g, ',');
+                  lessonData.studentHandouts = JSON.parse(fixedHandouts);
+                } catch (handoutsError) {
+                  console.error('Failed to parse studentHandouts:', handoutsError);
+                }
               }
+            } else {
+              throw new Error('Failed to parse AI response as JSON - content may be truncated');
             }
-          } else {
-            throw new Error('Failed to parse AI response as JSON - content may be truncated');
           }
         }
-      }
 
-      if (!lessonData.teacherGuide) {
-        throw new Error('AI response missing teacher guide');
+        if (!lessonData.teacherGuide) {
+          throw new Error('AI response missing teacher guide');
+        }
+        if (!Array.isArray(lessonData.studentHandouts) || lessonData.studentHandouts.length === 0) {
+          console.warn('studentHandouts missing or empty, creating fallback handouts for each group');
+          lessonData.studentHandouts = sortedGroups.map((g: StudentGroup) => ({
+            groupId: g.id,
+            groupName: g.groupName,
+            level: LEVEL_MAP[g.readingLevelLabel] || 'flames',
+            language: g.homeLanguage,
+            content: `# ${g.groupName} Handout\n\n**Name:** _____ **Date:** _____\n\n🎯 **Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*`,
+            englishContent: g.homeLanguage !== 'English' ? `# ${g.groupName} Handout\n\n**Name:** _____ **Date:** _____\n\n🎯 **Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*` : null,
+          }));
+        }
+        return {
+          teacherGuide: lessonData.teacherGuide,
+          studentHandouts: lessonData.studentHandouts,
+          usage,
+        };
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if ((error as any).name === 'AbortError') {
+          const timeoutError: any = new Error("AI generation timed out");
+          timeoutError.status = 504;
+          throw timeoutError;
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeoutId);
       }
-      if (!Array.isArray(lessonData.studentHandouts) || lessonData.studentHandouts.length === 0) {
-        console.warn('studentHandouts missing or empty, creating fallback handouts for each group');
-        lessonData.studentHandouts = sortedGroups.map((g: StudentGroup) => ({
-          groupId: g.id,
-          groupName: g.groupName,
-          level: LEVEL_MAP[g.readingLevelLabel] || 'flames',
-          language: g.homeLanguage,
-          content: `# ${g.groupName} Handout\n\n**Name:** _____ **Date:** _____\n\n🎯 **Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*`,
-          englishContent: g.homeLanguage !== 'English' ? `# ${g.groupName} Handout\n\n**Name:** _____ **Date:** _____\n\n🎯 **Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*` : null,
-        }));
-      }
-      return {
-        teacherGuide: lessonData.teacherGuide,
-        studentHandouts: lessonData.studentHandouts,
-        usage,
-      };
     };
 
     // Generate, validate, and auto-regenerate up to MAX_REGEN_ATTEMPTS times.
