@@ -386,7 +386,6 @@ Remember:
           usage,
         };
       } catch (error) {
-        clearTimeout(timeoutId);
         if ((error as any).name === 'AbortError') {
           const timeoutError: any = new Error("AI generation timed out");
           timeoutError.status = 504;
@@ -420,6 +419,12 @@ Remember:
           return new Response(
             JSON.stringify({ error: "API credits exhausted. Please add credits to continue." }),
             { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        if (err?.status === 504) {
+          return new Response(
+            JSON.stringify({ error: "Lesson generation took too long. Try fewer student groups or shorter lesson content." }),
+            { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } },
           );
         }
         throw err;
