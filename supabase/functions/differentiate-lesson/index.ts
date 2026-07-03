@@ -10,6 +10,12 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const MAX_REGEN_ATTEMPTS = 1;
+// Wall-clock budget so the whole request stays under Supabase's ~150s edge
+// function limit. A second (regeneration) pass runs only if enough time remains;
+// otherwise we return the first result with its validation flags instead of 504-ing.
+const TOTAL_BUDGET_MS = 135000;    // hard ceiling for all AI work in one request
+const GEN_HARD_CAP_MS = 110000;    // never let a single generation run longer than this
+const MIN_REGEN_BUDGET_MS = 70000; // only regenerate if at least this much budget remains
 
 // Public list-price estimates (USD per 1,000,000 tokens).
 // Actual Lovable AI gateway billing may differ; these are used only for
@@ -280,9 +286,9 @@ Remember:
     console.log(`Using model: ${modelToUse} for ${selectedGroups.length} groups`);
 
     // Run AI generation + parse + fallback. Extracted so we can re-run on regen.
-    const generateOnce = async (): Promise<{ teacherGuide: string; studentHandouts: any[]; usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } }> => {
+    const generateOnce = async (abortMs: number): Promise<{ teacherGuide: string; studentHandouts: any[]; usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } }> => {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 110000);
+      const timeoutId = setTimeout(() => controller.abort(), abortMs);
       try {
         const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -404,10 +410,21 @@ Remember:
     let totalPromptTokens = 0;
     let totalCompletionTokens = 0;
 
+    const startedAt = Date.now();
+    const remainingBudgetMs = () => TOTAL_BUDGET_MS - (Date.now() - startedAt);
+
     for (let attempt = 0; attempt <= MAX_REGEN_ATTEMPTS; attempt += 1) {
+      // Time-budget guard: skip a regeneration we cannot finish before the
+      // platform wall-clock limit; return the first result with its validation
+      // flags instead of letting the whole request 504.
+      if (attempt > 0 && remainingBudgetMs() < MIN_REGEN_BUDGET_MS) {
+        console.warn(`Skipping regen attempt ${attempt}: only ${remainingBudgetMs()}ms budget left`);
+        break;
+      }
+      const abortMs = Math.max(30000, Math.min(GEN_HARD_CAP_MS, remainingBudgetMs() - 8000));
       let attemptResult: { teacherGuide: string; studentHandouts: any[]; usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } };
       try {
-        attemptResult = await generateOnce();
+        attemptResult = await generateOnce(abortMs);
       } catch (err: any) {
         if (err?.status === 429) {
           return new Response(
