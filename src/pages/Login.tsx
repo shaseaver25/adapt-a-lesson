@@ -251,7 +251,10 @@ export default function Login() {
     setFormError(null);
     
     try {
-      const { error } = await signInWithOAuth(provider);
+      const oauthRedirect = nextPath
+        ? `${window.location.origin}/login?next=${encodeURIComponent(nextPath)}`
+        : undefined;
+      const { error } = await signInWithOAuth(provider, oauthRedirect);
       
       if (error) {
         setOauthLoading(null);
