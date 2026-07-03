@@ -433,7 +433,7 @@ That's why we built something that actually works.</p>
                 <h3 className="font-display text-2xl font-bold text-foreground mb-1">Shannon Seaver</h3>
                 <p className="text-secondary font-semibold mb-4">Founder & CEO</p>
                 <p className="text-muted-foreground text-sm leading-relaxed mb-6">
-                  Tekne Award-winning National Board Certified Teacher with 15+ years in the classroom. Building the future of differentiated learning.
+                  Tekne Award-winning National Board Certified Teacher with 18 years in K-12 classrooms and SheBuilds international hackathon winner. Building the future of differentiated learning.
                 </p>
                 <div className="flex justify-center gap-3">
                   <a href="https://www.linkedin.com/in/shannon-seaver-nbct-23a2a933/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors">

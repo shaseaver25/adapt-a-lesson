@@ -205,7 +205,7 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
                   <ArrowRight className="w-4 h-4" />
                 </Button>
                 <p className="text-xs text-muted-foreground mt-3">
-                  Join 100+ certified teachers creating compliant content automatically
+                  Built by an 18-year classroom veteran — live in teacher workflows today
                 </p>
               </div>
             </div>
@@ -223,7 +223,7 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
         <div className="mt-10 grid grid-cols-3 gap-4">
           {[
             { value: '100%', label: 'Compliance-Native' },
-            { value: '100+', label: 'Certified Teachers' },
+            { value: '18 yrs', label: 'Classroom Experience' },
             { value: 'Zero', label: 'Compliance Risk' },
           ].map((stat, i) => (
             <div key={i} className="text-center p-4 bg-card rounded-xl border border-border/50">
