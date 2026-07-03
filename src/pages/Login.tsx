@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -48,6 +48,11 @@ const LoginSkeleton = () => (
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Same-origin relative next target (e.g. the OAuth consent URL) — used to
+  // return the user to an in-progress MCP authorization after sign-in.
+  const rawNext = searchParams.get('next') ?? '';
+  const nextPath = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '';
   const { toast } = useToast();
   const { user, signInWithEmail, signInWithOAuth, loading: authLoading } = useAuth();
   const { checkSessionLimit, createSession } = useSessionManagement();
@@ -72,9 +77,10 @@ export default function Login() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      navigate('/studio');
+      if (nextPath) window.location.href = nextPath;
+      else navigate('/studio');
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, nextPath]);
 
   if (isCheckingSession || (authLoading && !isLoading)) {
     return (
@@ -229,7 +235,8 @@ export default function Login() {
         title: t('login.welcomeBack'),
         description: t('login.loginSuccess'),
       });
-      navigate('/studio');
+      if (nextPath) window.location.href = nextPath;
+      else navigate('/studio');
     } catch (error) {
       setIsLoading(false);
       console.error('Login error:', error);
@@ -244,7 +251,10 @@ export default function Login() {
     setFormError(null);
     
     try {
-      const { error } = await signInWithOAuth(provider);
+      const oauthRedirect = nextPath
+        ? `${window.location.origin}/login?next=${encodeURIComponent(nextPath)}`
+        : undefined;
+      const { error } = await signInWithOAuth(provider, oauthRedirect);
       
       if (error) {
         setOauthLoading(null);

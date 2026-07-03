@@ -24,7 +24,7 @@ export interface SignUpOptions {
 export interface AuthActions {
   signInWithEmail: (email: string, password: string) => Promise<{ error: AuthError | null; data?: { user: User | null } }>;
   signUpWithEmail: (email: string, password: string, options: SignUpOptions) => Promise<{ error: AuthError | null }>;
-  signInWithOAuth: (provider: 'google' | 'azure' | 'canvas') => Promise<{ error: AuthError | null }>;
+  signInWithOAuth: (provider: 'google' | 'azure' | 'canvas', redirectTo?: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<{ error: AuthError | null }>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
@@ -165,7 +165,7 @@ export function useAuth(): AuthState & AuthActions {
   }, [trackLoginAttempt]);
 
   // Sign in with OAuth provider
-  const signInWithOAuth = useCallback(async (provider: 'google' | 'azure' | 'canvas') => {
+  const signInWithOAuth = useCallback(async (provider: 'google' | 'azure' | 'canvas', redirectTo?: string) => {
     setError(null);
 
     // Map provider names to Supabase provider types
@@ -204,7 +204,7 @@ export function useAuth(): AuthState & AuthActions {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: supabaseProvider,
       options: {
-        redirectTo: getRedirectUrl(),
+        redirectTo: redirectTo ?? getRedirectUrl(),
         queryParams: provider === 'azure' ? {
           // Azure-specific: request offline access for refresh tokens
           prompt: 'consent',

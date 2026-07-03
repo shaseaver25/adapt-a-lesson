@@ -35,6 +35,7 @@ import MyTickets from "./pages/MyTickets";
 import TicketDetail from "./pages/TicketDetail";
 import MarketingSurvey from "./pages/MarketingSurvey";
 import SettingsCanvas from "./pages/SettingsCanvas";
+import OAuthConsent from "./pages/OAuthConsent";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +83,7 @@ const App = () => (
                 <Route path="/help/tickets/:ticketId" element={<TicketDetail />} />
                 <Route path="/marketing-survey" element={<MarketingSurvey />} />
                 <Route path="/settings/canvas" element={<SettingsCanvas />} />
+                <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
