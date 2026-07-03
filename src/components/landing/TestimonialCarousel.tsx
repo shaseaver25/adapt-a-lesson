@@ -3,12 +3,6 @@ import { ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 
 const testimonials = [
   {
-    quote: "This saved me 5+ hours of lesson prep this week. I finally have time to actually teach instead of just planning.",
-    author: "Sarah M.",
-    role: "5th Grade Math Teacher",
-    location: "Minneapolis, MN"
-  },
-  {
     quote: "My ELL students finally have materials in their home language. The multilingual audio is a game-changer.",
     author: "Maria G.",
     role: "ESL Specialist",
