@@ -43,15 +43,26 @@ export function useSubscription() {
 
     try {
       setSubscriptionState(prev => ({ ...prev, loading: true, error: null }));
-      
+
+      // Always pull a fresh token — the cached session token may be expired.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setSubscriptionState(prev => ({ ...prev, loading: false }));
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
 
-      if (error) {
-        throw new Error(error.message);
+      // Never hard-fail the app on subscription check errors (e.g. 401 expired token)
+      if (error || !data) {
+        console.warn('check-subscription failed:', error?.message);
+        setSubscriptionState(prev => ({ ...prev, loading: false, error: null }));
+        return;
       }
 
       // TEMPORARY: Bypass subscription check - all users get free access
