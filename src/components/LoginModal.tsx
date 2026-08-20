@@ -5,9 +5,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { signInSchema } from '@/lib/authValidation';
-import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from '@/i18n';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  checkEmailExists,
+  checkAccountLocked,
+  incrementFailedAttempts,
+  resetFailedAttempts,
+} from '@/lib/loginGuard';
 
 // OAuth provider icons
 const GoogleIcon = () => (
@@ -71,43 +76,6 @@ export function LoginModal({ isOpen, onClose, onSwitchToRegister }: LoginModalPr
     setFormError(t(errorKey));
   };
 
-  const checkEmailExists = async (email: string): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase.rpc('check_email_exists', { p_email: email });
-      if (error) return true;
-      return data ?? false;
-    } catch {
-      return true;
-    }
-  };
-
-  const checkAccountLocked = async (email: string): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase.rpc('check_account_locked', { p_email: email });
-      if (error) return false;
-      return data?.[0]?.is_locked ?? false;
-    } catch {
-      return false;
-    }
-  };
-
-  const incrementFailedAttempts = async (email: string): Promise<{ isLocked: boolean }> => {
-    try {
-      const { data, error } = await supabase.rpc('increment_failed_login', { p_email: email });
-      if (error) return { isLocked: false };
-      return { isLocked: data?.[0]?.is_locked ?? false };
-    } catch {
-      return { isLocked: false };
-    }
-  };
-
-  const resetFailedAttempts = async (userId: string) => {
-    try {
-      await supabase.rpc('reset_failed_login', { p_user_id: userId });
-    } catch (error) {
-      console.error('Error resetting failed login:', error);
-    }
-  };
 
   const handleEmailLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -169,7 +137,7 @@ export function LoginModal({ isOpen, onClose, onSwitchToRegister }: LoginModalPr
         }
 
         await createSession(data.user.id);
-        await resetFailedAttempts(data.user.id);
+        await resetFailedAttempts();
       }
 
       setIsLoading(false);
