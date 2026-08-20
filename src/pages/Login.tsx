@@ -5,7 +5,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useSessionManagement } from '@/hooks/useSessionManagement';
 import { signInSchema } from '@/lib/authValidation';
-import { supabase } from '@/integrations/supabase/client';
 import { useTranslation } from '@/i18n';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { Logo } from '@/components/ui/Logo';

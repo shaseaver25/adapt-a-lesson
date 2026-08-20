@@ -92,3 +92,6 @@ verify_jwt = true
 
 [functions.mcp]
 verify_jwt = false
+
+[functions.login-guard]
+verify_jwt = false
