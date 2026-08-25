@@ -364,6 +364,16 @@ export interface ConformanceRecord {
   rubricVersion: string;
   generatedAt: string;
   checks: ConformanceCheck[];
+  /**
+   * Present when a teacher exported this page despite a blocking failure. The
+   * record must say so: a district reading it needs to know the page ships with
+   * a known defect, not infer it from a "Failed" row.
+   */
+  override?: {
+    reason: string;
+    overriddenChecks: { name: string; label: string; details?: string }[];
+    overriddenAt: string;
+  };
 }
 
 function conformanceResultText(check: ConformanceCheck): string {
@@ -399,13 +409,35 @@ export function buildConformanceFooterHTML(record: ConformanceRecord): string {
     ? 'All checks in this rubric passed.'
     : `${failed} check${failed === 1 ? '' : 's'} did not pass. See the table for detail.`;
 
+  // A knowingly-shipped defect is stated up front, in words, before the table.
+  // Anything less would let this record read as a pass at a glance.
+  const overrideNotice = record.override
+    ? `
+  <div class="conformance-override" role="note" style="border:2px solid #b91c1c;padding:0.75rem 1rem;margin:1rem 0;">
+    <h3 style="margin-top:0;">Exported with a known accessibility failure</h3>
+    <p>A teacher chose to export this page while ${
+      record.override.overriddenChecks.length
+    } required check${
+      record.override.overriddenChecks.length === 1 ? '' : 's'
+    } ${
+      record.override.overriddenChecks.length === 1 ? 'was' : 'were'
+    } still failing, on <time datetime="${escapeHtml(record.override.overriddenAt)}">${
+      escapeHtml(record.override.overriddenAt)
+    }</time>. This page does not meet the rubric below and is pending repair.</p>
+    <p><strong>Checks overridden:</strong> ${
+      escapeHtml(record.override.overriddenChecks.map((c) => c.label).join(', '))
+    }</p>
+    <p><strong>Reason given:</strong> ${escapeHtml(record.override.reason)}</p>
+  </div>`
+    : '';
+
   return `
 <hr />
 <section class="accessibility-conformance" aria-labelledby="a11y-conformance-heading">
   <h2 id="a11y-conformance-heading">Accessibility conformance record</h2>
   <p>Rubric version <strong>${escapeHtml(record.rubricVersion)}</strong> · Generated <time datetime="${
     escapeHtml(record.generatedAt)
-  }">${escapeHtml(record.generatedAt)}</time></p>
+  }">${escapeHtml(record.generatedAt)}</time></p>${overrideNotice}
   <p>${escapeHtml(summary)}</p>
   <table style="border-collapse:collapse;">
     <caption class="sr-only" style="${SR_ONLY_STYLE}">

@@ -527,6 +527,7 @@ export default function LessonView() {
           }))}
           assets={assets}
           validation={exportValidation}
+          lessonId={lesson.id ?? id ?? null}
         />
 
         {/* Lesson Content */}
