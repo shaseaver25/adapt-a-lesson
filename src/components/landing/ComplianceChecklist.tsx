@@ -51,7 +51,7 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
           'Inconsistent: Human error leads to gaps',
           'Reactive: Problems found after publishing',
         ],
-        cta: 'RealPath Learning automates compliance so teachers create accessible content from the start—no extra work required.',
+        cta: 'RealPath Learning automates the repeatable parts so teachers create accessible content from the start—no extra work required.',
       };
     }
     if (compliancePercentage >= 75) {
@@ -66,7 +66,7 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
           '1,000s of existing materials in your LMS',
           'New lessons, worksheets, and assessments every week',
         ],
-        cta: 'RealPath Learning ensures 100% compliance automatically, protecting your district from risk while empowering your teachers.',
+        cta: 'RealPath Learning builds accessibility into generation: semantic HTML with bilingual language markup, validated against an accessibility rubric before export, with a conformance record on every exported page.',
       };
     }
     if (compliancePercentage >= 50) {
@@ -82,7 +82,7 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
           'Mandatory remediation of all existing content',
           'Reputational damage to your district',
         ],
-        cta: 'RealPath Learning eliminates compliance risk by building accessibility into every lesson from day one.',
+        cta: 'RealPath Learning builds accessibility into every lesson from the start, and blocks export when a lesson fails a required check.',
       };
     }
     return {
@@ -97,7 +97,7 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
         'Loss of federal funding',
         'Court-ordered remediation of all district content',
       ],
-      cta: 'RealPath Learning provides immediate compliance for new content and a clear path to remediating existing materials.',
+      cta: 'RealPath Learning gives new content accessible structure from the start, and a clear path to remediating existing materials.',
     };
   };
 
@@ -108,7 +108,7 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
         <div className="flex items-center justify-center gap-2 mb-8">
           <Badge variant="outline" className="gap-2 py-1.5 px-4 text-sm border-secondary/40 bg-secondary/5 text-secondary font-semibold">
             <Shield className="w-4 h-4" />
-            ADA Title II • DOJ WCAG 2.1 AA Compliance
+            ADA Title II • DOJ WCAG 2.1 AA
           </Badge>
         </div>
 
@@ -222,9 +222,9 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
         {/* Stats */}
         <div className="mt-10 grid grid-cols-3 gap-4">
           {[
-            { value: '100%', label: 'Compliance-Native' },
+            { value: '15', label: 'Automated Checks per Lesson' },
             { value: '18 yrs', label: 'Classroom Experience' },
-            { value: 'Zero', label: 'Compliance Risk' },
+            { value: '12+', label: 'Languages With Language Markup' },
           ].map((stat, i) => (
             <div key={i} className="text-center p-4 bg-card rounded-xl border border-border/50">
               <p className="font-display text-2xl font-bold text-primary">{stat.value}</p>

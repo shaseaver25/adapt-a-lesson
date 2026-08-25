@@ -80,8 +80,8 @@ export default function Landing() {
   };
   return <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <Seo
-        title="RealPath Learning — WCAG-compliant differentiated lessons"
-        description="RealPath Learning generates WCAG 2.1 AA compliant, differentiated lessons for K-12 teachers in 60 seconds. ADA Title II ready. Canvas and Schoology integrations."
+        title="RealPath Learning — differentiated lessons for every learner"
+        description="RealPath Learning generates differentiated lessons for K-12 teachers in 60 seconds. Semantic HTML with bilingual language markup, validated against an accessibility rubric before export to Canvas."
         path="/"
       />
       {/* Animated Background */}
@@ -123,7 +123,7 @@ export default function Landing() {
             </button>
             <button onClick={() => scrollToSection('compliance-check')} className="px-4 py-2 border-2 border-secondary/40 text-secondary rounded-full font-semibold text-sm hover:bg-secondary/10 transition-all flex items-center gap-1.5">
               <Shield className="w-4 h-4" />
-              WCAG Compliant?
+              Accessibility check
             </button>
             <button onClick={() => setLoginOpen(true)} className="px-6 py-2.5 bg-primary text-white rounded-full font-semibold shadow-lg shadow-primary/30 hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all">
               Login

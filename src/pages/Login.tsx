@@ -276,7 +276,7 @@ export default function Login() {
               <span className="text-forest">RealPath </span>
               <span className="text-gold">Learning</span>
             </h1>
-            <p className="hero-subline">WCAG 2.1 AA compliant differentiation for every learner</p>
+            <p className="hero-subline">Differentiation with bilingual language markup for every learner</p>
             <p className="hero-support">One lesson. Designed to accommodate every learner.</p>
           </header>
 

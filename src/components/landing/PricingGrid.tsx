@@ -16,7 +16,7 @@ const tiers = [
     features: [
       '60 tokens/month',
       'All differentiation features',
-      '100% WCAG 2.1 AA compliant',
+      'Semantic HTML with bilingual language markup',
     ],
     ctaLabel: 'Get Started',
     popular: false,
@@ -60,7 +60,8 @@ export function PricingGrid({ onCtaClick, onContactSales }: PricingGridProps) {
           Simple, Transparent Pricing
         </h2>
         <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-          Choose the plan that fits your needs. All plans include WCAG 2.1 AA compliance built in.
+          Choose the plan that fits your needs. Every plan generates semantic HTML with bilingual
+          language markup, validated against an accessibility rubric before export.
         </p>
 
         <div className="grid md:grid-cols-3 gap-6">
