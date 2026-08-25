@@ -1,5 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import {
+  buildConformanceFooterHTML,
+  type ConformanceRecord,
+} from "../_shared/lessonHtmlRenderer.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -87,6 +91,24 @@ Deno.serve(async (req) => {
     const moduleId = body.moduleId != null ? Number(body.moduleId) : null;
     const imageUrls: string[] = Array.isArray(body.imageUrls) ? body.imageUrls.map(String) : [];
 
+    // Every page carries its own conformance record: the district sees this,
+    // never the internal lesson_validation_results table.
+    const conformance = body.conformance as ConformanceRecord | undefined;
+    if (!conformance || !Array.isArray(conformance.checks) || conformance.checks.length === 0) {
+      return err("BAD_REQUEST", "conformance record required", 400);
+    }
+    const blockingFailures = conformance.checks.filter((c) => c.blocking && !c.skipped && !c.passed);
+    if (blockingFailures.length > 0) {
+      return err(
+        "VALIDATION_BLOCKED",
+        `Lesson has ${blockingFailures.length} blocking accessibility failure(s): ${
+          blockingFailures.map((c) => c.label).join(", ")
+        }`,
+        422,
+      );
+    }
+    const conformanceFooter = buildConformanceFooterHTML(conformance);
+
     // New multi-page contract: pages: [{ title, bodyHtml, published, groupKey? }]
     // Backwards-compat with single-page: { title, bodyHtml }
     type PageIn = { title: string; bodyHtml: string; published?: boolean; groupKey?: string };
@@ -137,7 +159,7 @@ Deno.serve(async (req) => {
     };
     const results: PageResult[] = [];
     for (const p of pages) {
-      let rewritten = p.bodyHtml;
+      let rewritten = p.bodyHtml + conformanceFooter;
       for (const [src, dst] of urlMap.entries()) rewritten = rewritten.split(src).join(dst);
 
       try {
