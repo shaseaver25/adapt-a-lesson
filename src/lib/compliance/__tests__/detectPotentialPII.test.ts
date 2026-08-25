@@ -165,3 +165,35 @@ describe('mightContainPII', () => {
     });
   });
 });
+
+// student_groups.notes is the only free-text field on a student group and it
+// feeds straight into the differentiation prompt, so it has to be covered by
+// the same detector the modal runs before saving.
+describe('student group notes', () => {
+  it('flags a note naming individual students', () => {
+    const result = detectPotentialPII(
+      'Maria Gonzalez and Ahmed Hassan both need extended time on written work.',
+    );
+    expect(result.risk).toBe('medium');
+    expect(result.findings).toContain('name_like_pattern');
+  });
+
+  it('flags a note carrying a student ID', () => {
+    const result = detectPotentialPII('Case notes for S12345678 are in the shared folder.');
+    expect(result.risk).toBe('high');
+    expect(result.findings).toContain('student_id');
+  });
+
+  it('flags a note carrying a guardian contact', () => {
+    const result = detectPotentialPII('Guardian prefers email: parent@district.org');
+    expect(result.risk).toBe('medium');
+    expect(result.findings).toContain('email');
+  });
+
+  it('leaves an accommodation-only note alone', () => {
+    const result = detectPotentialPII(
+      'This group benefits from sentence frames, visual supports, and extended time.',
+    );
+    expect(result.risk).toBe('low');
+  });
+});
