@@ -1,4 +1,13 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { VisualAssets } from '../../supabase/functions/_shared/lessonHtmlRenderer.ts';
+
+export interface GeneratedLessonImage {
+  url: string;
+  /** Written by a vision model from the finished image; null when that call failed. */
+  altText: string | null;
+  /** Visible long description for data-bearing diagrams; null for simple images. */
+  longDescription: string | null;
+}
 
 /**
  * Generate a single lesson diagram image using Nano Banana
@@ -8,7 +17,7 @@ export async function generateLessonImage(
   lessonId?: string,
   groupId?: string,
   subject?: string
-): Promise<string | null> {
+): Promise<GeneratedLessonImage | null> {
   try {
     console.log(`[ImageGen] Generating image for: "${description.substring(0, 100)}..."`);
     console.log(`[ImageGen] Calling edge function with params:`, { lessonId, groupId, subject });
@@ -44,7 +53,14 @@ export async function generateLessonImage(
     }
 
     console.log(`[ImageGen] SUCCESS - Image URL received (${data.imageUrl.length} chars)`);
-    return data.imageUrl;
+    return {
+      url: data.imageUrl,
+      altText: typeof data.altText === 'string' && data.altText.trim() ? data.altText.trim() : null,
+      longDescription:
+        typeof data.longDescription === 'string' && data.longDescription.trim()
+          ? data.longDescription.trim()
+          : null,
+    };
   } catch (error) {
     console.error('[ImageGen] Generation failed:', error);
     return null;
@@ -82,11 +98,13 @@ export async function generateAllLessonImages(
   groupId?: string,
   subject?: string,
   onProgress?: (completed: number, total: number) => void
-): Promise<Map<string, string>> {
+): Promise<VisualAssets> {
   const imageMap = new Map<string, string>();
-  
+  const altTextMap = new Map<string, string>();
+  const longDescriptionMap = new Map<string, string>();
+
   if (visualDescriptions.length === 0) {
-    return imageMap;
+    return { imageMap, altTextMap, longDescriptionMap };
   }
   
   // Process in batches of 2 to avoid rate limits
@@ -98,14 +116,16 @@ export async function generateAllLessonImages(
     
     const results = await Promise.all(
       batch.map(async (desc) => {
-        const url = await generateLessonImage(desc, lessonId, groupId, subject);
-        return { desc, url };
+        const image = await generateLessonImage(desc, lessonId, groupId, subject);
+        return { desc, image };
       })
     );
-    
-    results.forEach(({ desc, url }) => {
-      if (url) {
-        imageMap.set(desc, url);
+
+    results.forEach(({ desc, image }) => {
+      if (image) {
+        imageMap.set(desc, image.url);
+        if (image.altText) altTextMap.set(desc, image.altText);
+        if (image.longDescription) longDescriptionMap.set(desc, image.longDescription);
       }
       completed++;
       onProgress?.(completed, visualDescriptions.length);
@@ -117,89 +137,5 @@ export async function generateAllLessonImages(
     }
   }
   
-  return imageMap;
-}
-
-/**
- * Escape special regex characters in a string
- */
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/**
- * Process lesson text to find and replace visual tags with image HTML.
- * Handles both [VISUAL: ...] and [NANOBANANA: "..."] formats.
- */
-export async function processLessonImages(
-  lessonText: string,
-  lessonId?: string,
-  groupId?: string,
-  subject?: string,
-  onProgress?: (completed: number, total: number) => void
-): Promise<{ processedText: string; imageMap: Map<string, string> }> {
-  const imageMap = new Map<string, string>();
-  let processedText = lessonText;
-  
-  // Find all NANOBANANA matches
-  const nanobananaRegex = /\[NANOBANANA:\s*"(.*?)"\]/g;
-  const nanobananaMatches = [...lessonText.matchAll(nanobananaRegex)];
-  
-  // Find all VISUAL matches
-  const visualRegex = /\[VISUAL:\s*(.+?)\]/g;
-  const visualMatches = [...lessonText.matchAll(visualRegex)];
-  
-  const allMatches = [
-    ...nanobananaMatches.map(m => ({ fullTag: m[0], prompt: m[1] })),
-    ...visualMatches.map(m => ({ fullTag: m[0], prompt: m[1] }))
-  ];
-  
-  // Deduplicate by prompt
-  const uniquePrompts = [...new Set(allMatches.map(m => m.prompt))];
-  const total = uniquePrompts.length;
-  
-  if (total === 0) {
-    return { processedText, imageMap };
-  }
-  
-  let completed = 0;
-  
-  // Generate images for unique prompts
-  for (const prompt of uniquePrompts) {
-    try {
-      const imageUrl = await generateLessonImage(prompt, lessonId, groupId, subject);
-      
-      if (imageUrl) {
-        imageMap.set(prompt, imageUrl);
-        
-        // Create HTML replacement
-        const imageHtml = `
-<figure class="lesson-figure">
-  <img src="${imageUrl}" alt="${prompt}" class="lesson-image" loading="lazy" />
-  <figcaption>${prompt}</figcaption>
-</figure>`;
-        
-        // Replace all instances of this prompt (both formats)
-        const nanobananaPattern = new RegExp(`\\[NANOBANANA:\\s*"${escapeRegex(prompt)}"\\]`, 'g');
-        const visualPattern = new RegExp(`\\[VISUAL:\\s*${escapeRegex(prompt)}\\]`, 'g');
-        
-        processedText = processedText.replace(nanobananaPattern, imageHtml);
-        processedText = processedText.replace(visualPattern, imageHtml);
-      }
-      
-      completed++;
-      onProgress?.(completed, total);
-    } catch (error) {
-      console.error('Failed to generate image for prompt:', prompt, error);
-      completed++;
-      onProgress?.(completed, total);
-    }
-    
-    // Small delay between requests
-    if (completed < total) {
-      await new Promise(resolve => setTimeout(resolve, 300));
-    }
-  }
-  
-  return { processedText, imageMap };
+  return { imageMap, altTextMap, longDescriptionMap };
 }

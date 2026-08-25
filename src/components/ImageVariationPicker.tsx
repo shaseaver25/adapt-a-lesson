@@ -5,17 +5,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Check, RefreshCw, Loader2, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface ImageVariation {
-  url: string;
-  index: number;
-}
+import type { ImageVariation } from '@/hooks/useLessonImageVariations';
 
 interface ImageVariationPickerProps {
   description: string;
   variations: ImageVariation[];
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (url: string) => void;
+  onSelect: (variation: ImageVariation) => void;
   onRegenerate: () => void;
   isRegenerating: boolean;
 }
@@ -33,7 +30,7 @@ export function ImageVariationPicker({
 
   const handleConfirm = () => {
     if (selectedIndex !== null && variations[selectedIndex]) {
-      onSelect(variations[selectedIndex].url);
+      onSelect(variations[selectedIndex]);
       onClose();
     }
   };

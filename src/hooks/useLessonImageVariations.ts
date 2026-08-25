@@ -2,9 +2,11 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-interface ImageVariation {
+export interface ImageVariation {
   url: string;
   index: number;
+  altText: string | null;
+  longDescription: string | null;
 }
 
 interface VariationState {
@@ -16,6 +18,8 @@ interface VariationState {
 interface UseLessonImageVariationsReturn {
   variationsState: VariationState | null;
   selectedImages: Map<string, string>;
+  selectedAltText: Map<string, string>;
+  selectedLongDescriptions: Map<string, string>;
   isGenerating: boolean;
   generateVariations: (
     description: string,
@@ -23,13 +27,15 @@ interface UseLessonImageVariationsReturn {
     groupId?: string,
     subject?: string
   ) => Promise<void>;
-  selectImage: (description: string, url: string) => void;
+  selectImage: (description: string, variation: ImageVariation) => void;
   clearVariations: () => void;
 }
 
 export function useLessonImageVariations(): UseLessonImageVariationsReturn {
   const [variationsState, setVariationsState] = useState<VariationState | null>(null);
   const [selectedImages, setSelectedImages] = useState<Map<string, string>>(new Map());
+  const [selectedAltText, setSelectedAltText] = useState<Map<string, string>>(new Map());
+  const [selectedLongDescriptions, setSelectedLongDescriptions] = useState<Map<string, string>>(new Map());
   const [isGenerating, setIsGenerating] = useState(false);
 
   const generateVariations = useCallback(async (
@@ -66,7 +72,15 @@ export function useLessonImageVariations(): UseLessonImageVariationsReturn {
         }
 
         if (data?.imageUrl) {
-          return { url: data.imageUrl, index };
+          return {
+            url: data.imageUrl,
+            index,
+            altText: typeof data.altText === 'string' && data.altText.trim() ? data.altText.trim() : null,
+            longDescription:
+              typeof data.longDescription === 'string' && data.longDescription.trim()
+                ? data.longDescription.trim()
+                : null,
+          };
         }
         return null;
       });
@@ -99,10 +113,18 @@ export function useLessonImageVariations(): UseLessonImageVariationsReturn {
     }
   }, []);
 
-  const selectImage = useCallback((description: string, url: string) => {
-    setSelectedImages(prev => {
+  const selectImage = useCallback((description: string, variation: ImageVariation) => {
+    setSelectedImages(prev => new Map(prev).set(description, variation.url));
+    setSelectedAltText(prev => {
       const next = new Map(prev);
-      next.set(description, url);
+      if (variation.altText) next.set(description, variation.altText);
+      else next.delete(description);
+      return next;
+    });
+    setSelectedLongDescriptions(prev => {
+      const next = new Map(prev);
+      if (variation.longDescription) next.set(description, variation.longDescription);
+      else next.delete(description);
       return next;
     });
     setVariationsState(null);
@@ -116,6 +138,8 @@ export function useLessonImageVariations(): UseLessonImageVariationsReturn {
   return {
     variationsState,
     selectedImages,
+    selectedAltText,
+    selectedLongDescriptions,
     isGenerating,
     generateVariations,
     selectImage,

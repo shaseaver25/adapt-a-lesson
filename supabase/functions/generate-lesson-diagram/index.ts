@@ -38,6 +38,73 @@ REQUIREMENTS:
 DO NOT describe the image - CREATE IT NOW.`;
 }
 
+const ALT_TEXT_SYSTEM = `You write alt text for K-12 classroom materials that must meet WCAG 2.1 SC 1.1.1.
+
+Rules:
+- Describe what the finished image actually shows. Do not describe the instructions used to make it.
+- Do not begin with "Image of", "Picture of", "A diagram showing", or similar.
+- Name the labels and relationships a sighted student would read off the image.
+- One sentence, under 150 characters. No trailing period is required.`;
+
+const LONG_DESCRIPTION_SYSTEM = `You write the visible long description that sits beneath a data-bearing classroom diagram.
+
+Rules:
+- One or two sentences a student reads instead of interpreting the graphic.
+- State the data or relationship the diagram carries, in order.
+- Plain classroom language. Under 300 characters.`;
+
+const COMPLEX_VISUAL_RE =
+  /\b(diagram|chart|graph|flowchart|timeline|map|cycle|process|infographic|plot|table|schematic|cross[-\s]section)\b/i;
+
+/**
+ * Ask a vision model what the generated image actually shows. The generation
+ * prompt is an instruction, not a description of the result, so using it as alt
+ * text does not satisfy SC 1.1.1.
+ */
+async function describeImage(
+  apiKey: string,
+  imageDataUrl: string,
+  system: string,
+  maxTokens: number,
+): Promise<string | null> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        max_tokens: maxTokens,
+        messages: [
+          { role: "system", content: system },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Write the description for this image." },
+              { type: "image_url", image_url: { url: imageDataUrl } },
+            ],
+          },
+        ],
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) {
+      console.error("alt text model error:", res.status, (await res.text()).slice(0, 200));
+      return null;
+    }
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (typeof text !== "string") return null;
+    const cleaned = text.replace(/^["'\s]+|["'\s]+$/g, "").replace(/\s+/g, " ").trim();
+    return cleaned.length > 0 ? cleaned : null;
+  } catch (e) {
+    console.error("alt text generation failed:", (e as Error).message);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -138,6 +205,15 @@ This MUST be a generated image file, not a description. Create a clear education
       throw new Error("No image generated in response");
     }
 
+    const isComplex = COMPLEX_VISUAL_RE.test(String(description ?? ""));
+    const [altText, longDescription] = await Promise.all([
+      describeImage(apiKey, imageData, ALT_TEXT_SYSTEM, 120),
+      isComplex ? describeImage(apiKey, imageData, LONG_DESCRIPTION_SYSTEM, 220) : Promise.resolve(null),
+    ]);
+    if (!altText) {
+      console.warn("Falling back to the generation prompt as alt text for:", description);
+    }
+
     // If we have a lessonId, save to Supabase Storage
     let storedUrl = imageData;
     if (lessonId) {
@@ -187,7 +263,8 @@ This MUST be a generated image file, not a description. Create a clear education
                 group_id: groupId || null,
                 storage_path: storagePath,
                 description: description,
-                alt_text: description.substring(0, 255),
+                alt_text: altText ? altText.substring(0, 255) : null,
+                long_description: longDescription,
                 file_size: imageBuffer.length,
               });
             
@@ -208,6 +285,8 @@ This MUST be a generated image file, not a description. Create a clear education
         success: true,
         imageUrl: storedUrl,
         description,
+        altText,
+        longDescription,
         variationIndex,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
