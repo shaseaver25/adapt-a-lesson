@@ -217,7 +217,7 @@ function checkHeadingHierarchy(rendered: RenderedLesson | null): CheckResult {
 }
 
 // ---------- 6. heading_text_has_no_leading_emoji ----------
-const LEADING_EMOJI_RE = /^[\s\u200d\ufe0f\u20e3]*(?:\p{Extended_Pictographic}|[\u2190-\u21ff\u2300-\u27bf\u2b00-\u2bff])/u;
+const LEADING_EMOJI_RE = /^(?:\s|\u200d|\ufe0f|\u20e3)*(?:\p{Extended_Pictographic}|[\u2190-\u21ff\u2300-\u27bf\u2b00-\u2bff])/u;
 
 function checkHeadingEmoji(rendered: RenderedLesson | null): CheckResult {
   if (!rendered) return NO_RENDER;
