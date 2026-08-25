@@ -108,7 +108,7 @@ export default function Landing() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-8 py-4 bg-background/80 backdrop-blur-xl border-b border-border/50">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <a href="#" className="flex items-center gap-3">
+          <a href="#main-content" aria-label="RealPath Learning — skip to main content" className="flex items-center gap-3">
             <Logo size="xlarge" />
           </a>
           <div className="hidden md:flex items-center gap-8">
@@ -132,6 +132,7 @@ export default function Landing() {
         </div>
       </nav>
 
+      <main id="main-content">
       {/* Hero Section - Redesigned */}
       <section className="min-h-screen flex items-center pt-24 pb-16 px-4 md:px-8">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
@@ -436,11 +437,11 @@ That's why we built something that actually works.</p>
                   Tekne Award-winning National Board Certified Teacher with 18 years in K-12 classrooms and SheBuilds international hackathon winner. Building the future of differentiated learning.
                 </p>
                 <div className="flex justify-center gap-3">
-                  <a href="https://www.linkedin.com/in/shannon-seaver-nbct-23a2a933/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors">
-                    <Linkedin className="w-5 h-5" />
+                  <a href="https://www.linkedin.com/in/shannon-seaver-nbct-23a2a933/" target="_blank" rel="noopener noreferrer" aria-label="Shannon Seaver on LinkedIn" className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors">
+                    <Linkedin className="w-5 h-5" aria-hidden="true" />
                   </a>
-                  <a href="mailto:shannon@realpathlearning.com" className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors">
-                    <Mail className="w-5 h-5" />
+                  <a href="mailto:shannon@realpathlearning.com" aria-label="Email Shannon Seaver" className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors">
+                    <Mail className="w-5 h-5" aria-hidden="true" />
                   </a>
                 </div>
               </div>
@@ -458,11 +459,11 @@ That's why we built something that actually works.</p>
                   Chief Data & AI Officer at the University of St. Thomas. 10+ years in Higher Education technology and passionate on meeting every learner where they need us with AI.
                 </p>
                 <div className="flex justify-center gap-3">
-                  <a href="https://www.linkedin.com/in/jenaz/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors">
-                    <Linkedin className="w-5 h-5" />
+                  <a href="https://www.linkedin.com/in/jenaz/" target="_blank" rel="noopener noreferrer" aria-label="Jena Zangs on LinkedIn" className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors">
+                    <Linkedin className="w-5 h-5" aria-hidden="true" />
                   </a>
-                  <a href="mailto:jena@realpathlearning.com" className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors">
-                    <Mail className="w-5 h-5" />
+                  <a href="mailto:jena@realpathlearning.com" aria-label="Email Jena Zangs" className="w-10 h-10 bg-muted rounded-full flex items-center justify-center text-foreground hover:bg-secondary hover:text-white transition-colors">
+                    <Mail className="w-5 h-5" aria-hidden="true" />
                   </a>
                 </div>
               </div>
@@ -492,6 +493,8 @@ That's why we built something that actually works.</p>
       </section>
 
       {/* Footer */}
+      </main>
+
       <footer className="py-12 px-4 md:px-8 bg-foreground text-white/70">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-3">

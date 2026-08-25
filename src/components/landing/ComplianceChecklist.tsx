@@ -138,28 +138,39 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
           {/* Items */}
           <div className="divide-y divide-border/50">
             {checklistItems.map((item) => (
-              <label
+              <div
                 key={item.id}
-                className="flex items-start gap-4 p-4 hover:bg-muted/30 transition-colors cursor-pointer"
+                className="flex items-start gap-4 p-4 hover:bg-muted/30 transition-colors"
               >
                 <Checkbox
+                  id={`checklist-${item.id}`}
                   checked={!!checkedItems[item.id]}
                   onCheckedChange={() => handleCheckbox(item.id)}
+                  aria-describedby={`checklist-${item.id}-category`}
                   className="mt-0.5"
                 />
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-foreground block">
+                  <label
+                    htmlFor={`checklist-${item.id}`}
+                    className="text-sm font-medium text-foreground block cursor-pointer"
+                  >
                     {item.label}
+                  </label>
+                  <span id={`checklist-${item.id}-category`} className="text-xs text-muted-foreground">
+                    {item.category}
                   </span>
-                  <span className="text-xs text-muted-foreground">{item.category}</span>
                 </div>
-              </label>
+              </div>
             ))}
           </div>
 
           {/* Progress + Submit */}
           <div className="p-5 border-t border-border bg-muted/20 space-y-4">
-            <Progress value={compliancePercentage} className="h-2" />
+            <Progress
+              value={compliancePercentage}
+              aria-label={`Checklist progress: ${checkedCount} of ${totalCount} items checked`}
+              className="h-2"
+            />
             <Button
               onClick={() => setShowResults(true)}
               size="lg"
