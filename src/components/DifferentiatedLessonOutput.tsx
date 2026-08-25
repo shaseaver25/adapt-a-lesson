@@ -26,6 +26,9 @@ import LessonImageFrame from '@/components/LessonImageFrame';
 import { LessonImageBrowser } from '@/components/LessonImageBrowser';
 import { ImageVariationPicker } from '@/components/ImageVariationPicker';
 import { getISOCode } from '@/lib/languageCodes';
+import { LessonValidationPanel } from '@/components/LessonValidationPanel';
+import { validateLessonForExport } from '@/lib/validation/validateLessonForExport';
+import type { GenerationValidation } from '@/hooks/useDifferentiationGenerator';
 
 interface PreGeneratedAudioRecord {
   id: string;
@@ -61,6 +64,7 @@ interface PreGeneratedVocabularyAudioRecord {
 
 interface DifferentiatedLessonOutputProps {
   lessonData: DifferentiatedLessonData;
+  generationValidation?: GenerationValidation | null;
   selectedGroups: (StudentGroup & { id: string })[];
   lessonTitle?: string;
   originalContent?: string;
@@ -201,6 +205,7 @@ const createMarkdownComponents = (
 
 export function DifferentiatedLessonOutput({
   lessonData,
+  generationValidation = null,
   selectedGroups, 
   lessonTitle = 'Lesson',
   originalContent = '',
@@ -218,10 +223,12 @@ export function DifferentiatedLessonOutput({
   const { toast } = useToast();
   const { user } = useAuth();
   const { options } = useDifferentiation();
-  const { imageMap, isGenerating: isGeneratingImages, progress: imageProgress, generateImages, hasVisuals } = useLessonImages();
+  const { assets, imageMap, isGenerating: isGeneratingImages, progress: imageProgress, generateImages, hasVisuals } = useLessonImages();
   const { 
     variationsState, 
-    selectedImages, 
+    selectedImages,
+    selectedAltText,
+    selectedLongDescriptions,
     isGenerating: isGeneratingVariations, 
     generateVariations, 
     selectImage, 
@@ -238,6 +245,22 @@ export function DifferentiatedLessonOutput({
     });
     return combined;
   }, [imageMap, selectedImages]);
+
+  const combinedAssets = useMemo(() => {
+    const altTextMap = new Map(assets.altTextMap);
+    selectedAltText.forEach((alt, desc) => altTextMap.set(desc, alt));
+    const longDescriptionMap = new Map(assets.longDescriptionMap);
+    selectedLongDescriptions.forEach((text, desc) => longDescriptionMap.set(desc, text));
+    return { imageMap: combinedImageMap, altTextMap, longDescriptionMap };
+  }, [combinedImageMap, assets.altTextMap, assets.longDescriptionMap, selectedAltText, selectedLongDescriptions]);
+
+  // Re-run the rubric against the markup that would actually be exported, with
+  // the real diagrams and alt text attached. Generation-time validation runs
+  // before any diagram exists, so it cannot settle the image checks.
+  const exportValidation = useMemo(
+    () => validateLessonForExport(lessonData, null, combinedAssets),
+    [lessonData, combinedAssets],
+  );
 
   // Check if audio already exists for this lesson
   const hasExistingAudio = preGeneratedAudio.length > 0;
@@ -449,13 +472,29 @@ export function DifferentiatedLessonOutput({
                 lessonTitle={lessonTitle}
                 getGroupContent={getGroupContent}
                 getGroupEnglishContent={getGroupEnglishContent}
-                imageMap={combinedImageMap}
+                assets={combinedAssets}
                 isGeneratingImages={isGeneratingImages || isGeneratingVariations}
+                blockingFailures={exportValidation.blocking}
               />
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          <LessonValidationPanel
+            hardCheckResults={exportValidation.hardCheckResults}
+            rubricVersion={exportValidation.rubricVersion}
+            blocking={exportValidation.blocking}
+            advisory={exportValidation.advisory}
+          />
+          {generationValidation ? (
+            <p className="text-xs text-muted-foreground">
+              Checked at generation against rubric {generationValidation.rubricVersion};
+              {' '}regenerated {generationValidation.regenAttempts} time
+              {generationValidation.regenAttempts === 1 ? '' : 's'}. The panel above re-runs the same
+              rubric against the diagrams currently attached.
+            </p>
+          ) : null}
+
           {/* Group summary badges */}
           <div className="flex flex-wrap gap-2">
             {selectedGroups.map((group) => (
@@ -740,7 +779,7 @@ export function DifferentiatedLessonOutput({
           variations={variationsState.variations}
           isOpen={true}
           onClose={clearVariations}
-          onSelect={(url) => selectImage(variationsState.description, url)}
+          onSelect={(variation) => selectImage(variationsState.description, variation)}
           onRegenerate={() => handleGenerateVariations(variationsState.description)}
           isRegenerating={variationsState.isGenerating}
         />

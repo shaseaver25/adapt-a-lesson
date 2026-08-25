@@ -7,9 +7,16 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle2, ExternalLink, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, ExternalLink, Loader2, ShieldAlert, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { buildLessonSectionHTML } from "@/lib/export/htmlExporter";
+import { LessonValidationPanel } from "@/components/LessonValidationPanel";
+import {
+  type ExportValidation,
+  toConformanceRecord,
+} from "@/lib/validation/validateLessonForExport";
+import { checkLabel } from "../../supabase/functions/_shared/lessonRubric.ts";
+import type { VisualAssets } from "../../supabase/functions/_shared/lessonHtmlRenderer.ts";
 
 /**
  * Architectural choice — Option A (frontend HTML generation):
@@ -40,8 +47,10 @@ interface Props {
   teacherGuide?: string;
   /** One published page per handout. */
   handouts: PushHandout[];
-  /** [VISUAL: description] -> signed URL. */
-  imageMap?: Map<string, string>;
+  /** Images, alt text, and long descriptions keyed by [VISUAL: description]. */
+  assets?: VisualAssets;
+  /** Rubric result for the markup about to be pushed. Blocking failures stop the push. */
+  validation: ExportValidation;
 }
 
 interface BuiltPage {
@@ -64,7 +73,7 @@ function buildPages(
   lessonTitle: string,
   teacherGuide: string | undefined,
   handouts: PushHandout[],
-  imageMap?: Map<string, string>,
+  assets?: VisualAssets,
 ): BuiltPage[] {
   const pages: BuiltPage[] = [];
   if (teacherGuide && teacherGuide.trim()) {
@@ -74,7 +83,7 @@ function buildPages(
         heading: "Teacher Guide",
         content: teacherGuide,
         homeLanguage: "English",
-        imageMap,
+        assets,
       }),
       published: false,
       groupKey: "teacher_guide",
@@ -89,7 +98,7 @@ function buildPages(
         content: h.content,
         englishContent: h.englishContent,
         homeLanguage: h.homeLanguage || "English",
-        imageMap,
+        assets,
       }),
       published: true,
       groupKey: `group_${h.groupName.replace(/[^a-z0-9]+/gi, "_").toLowerCase()}`,
@@ -99,7 +108,7 @@ function buildPages(
 }
 
 export function PushToCanvasDialog({
-  open, onOpenChange, lessonTitle, teacherGuide, handouts, imageMap,
+  open, onOpenChange, lessonTitle, teacherGuide, handouts, assets, validation,
 }: Props) {
   const [courses, setCourses] = useState<CanvasCourse[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(false);
@@ -115,7 +124,8 @@ export function PushToCanvasDialog({
   const [results, setResults] = useState<PageResult[] | null>(null);
   const [courseUrl, setCourseUrl] = useState<string | null>(null);
 
-  const builtPages = buildPages(lessonTitle, teacherGuide, handouts, imageMap);
+  const builtPages = buildPages(lessonTitle, teacherGuide, handouts, assets);
+  const isBlocked = validation.blocking.length > 0;
 
   const loadCourses = async () => {
     setCoursesLoading(true); setCoursesError(null);
@@ -147,10 +157,10 @@ export function PushToCanvasDialog({
   }, [courseId]);
 
   const handleSubmit = async () => {
-    if (!courseId || builtPages.length === 0) return;
+    if (!courseId || builtPages.length === 0 || isBlocked) return;
     setSubmitting(true); setErrorMsg(null); setResults(null); setCourseUrl(null);
 
-    const imageUrls = imageMap ? Array.from(imageMap.values()) : [];
+    const imageUrls = assets?.imageMap ? Array.from(assets.imageMap.values()) : [];
     const { data, error } = await supabase.functions.invoke("canvas-push-lesson", {
       method: "POST",
       body: {
@@ -160,6 +170,7 @@ export function PushToCanvasDialog({
           title, bodyHtml, published, groupKey,
         })),
         imageUrls,
+        conformance: toConformanceRecord(validation),
       },
     });
     setSubmitting(false);
@@ -170,6 +181,8 @@ export function PushToCanvasDialog({
       const msg = data?.error || error?.message || "Push failed";
       if (code === "TOKEN_EXPIRED" || code === "NO_CONNECTION") {
         setErrorMsg("Your Canvas connection has expired or is missing. Reconnect Canvas in Settings.");
+      } else if (code === "VALIDATION_BLOCKED") {
+        setErrorMsg(`${msg} Fix the blocking checks above, then push again.`);
       } else if (code === "IMAGE_UPLOAD_FAILED") {
         setErrorMsg(`An image failed to upload to Canvas. Details: ${msg}`);
       } else {
@@ -209,11 +222,29 @@ export function PushToCanvasDialog({
             This creates one Canvas page per part of the lesson — an
             unpublished Teacher Guide plus one published page per student
             group ({builtPages.length} page{builtPages.length === 1 ? "" : "s"} total).
-            Images upload to Canvas file storage so they don't expire.
+            Images upload to Canvas file storage so they don't expire. Each page carries an
+            accessibility conformance record recording the checks below.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          <LessonValidationPanel
+            hardCheckResults={validation.hardCheckResults}
+            rubricVersion={validation.rubricVersion}
+            blocking={validation.blocking}
+            advisory={validation.advisory}
+          />
+
+          {isBlocked && (
+            <p id="canvas-push-blocked" className="flex items-start gap-2 text-sm text-destructive">
+              <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
+              <span>
+                This lesson cannot be pushed to Canvas until{" "}
+                {validation.blocking.map(checkLabel).join(", ")} {validation.blocking.length === 1 ? "is" : "are"} fixed.
+              </span>
+            </p>
+          )}
+
           <div>
             <label className="text-sm font-medium mb-1 block">Course</label>
             {coursesLoading ? (
@@ -319,7 +350,11 @@ export function PushToCanvasDialog({
             {results ? "Close" : "Cancel"}
           </Button>
           {!results && (
-            <Button onClick={handleSubmit} disabled={!courseId || submitting || builtPages.length === 0}>
+            <Button
+              onClick={handleSubmit}
+              disabled={!courseId || submitting || builtPages.length === 0 || isBlocked}
+              aria-describedby={isBlocked ? "canvas-push-blocked" : undefined}
+            >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Push {builtPages.length} page{builtPages.length === 1 ? "" : "s"}
             </Button>

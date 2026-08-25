@@ -13,14 +13,18 @@ import { downloadGroupHTML, downloadAllAsZip } from '@/lib/export/htmlExporter';
 import { useToast } from '@/hooks/use-toast';
 import type { StudentGroup } from '@/types/studentGroup';
 import { extractVisualDescriptions } from '@/lib/imageGeneration';
+import { checkLabel, type HardCheckResults } from '../../../supabase/functions/_shared/lessonRubric.ts';
+import type { VisualAssets } from '../../../supabase/functions/_shared/lessonHtmlRenderer.ts';
 
 interface ExportForLMSButtonProps {
   groups: (StudentGroup & { id: string })[];
   lessonTitle: string;
   getGroupContent: (groupName: string) => string;
   getGroupEnglishContent?: (groupName: string) => string;
-  imageMap?: Map<string, string>;
+  assets?: VisualAssets;
   isGeneratingImages?: boolean;
+  /** Names of blocking rubric checks that failed. Any entry disables export. */
+  blockingFailures?: string[];
 }
 
 export function ExportForLMSButton({
@@ -28,8 +32,9 @@ export function ExportForLMSButton({
   lessonTitle,
   getGroupContent,
   getGroupEnglishContent,
-  imageMap,
-  isGeneratingImages = false
+  assets,
+  isGeneratingImages = false,
+  blockingFailures = []
 }: ExportForLMSButtonProps) {
   const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
@@ -47,11 +52,20 @@ export function ExportForLMSButton({
     const allContent = groups.map(g => getGroupContent(g.groupName)).join('\n');
     const visualDescriptions = extractVisualDescriptions(allContent);
     const hasVisuals = visualDescriptions.length > 0;
-    const hasImages = imageMap && imageMap.size > 0;
+    const hasImages = !!assets?.imageMap && assets.imageMap.size > 0;
     return hasVisuals && !hasImages;
   };
 
+  const isBlocked = blockingFailures.length > 0;
+  const blockedMessage = `Fix ${blockingFailures.length} blocking accessibility issue${
+    blockingFailures.length === 1 ? '' : 's'
+  } before exporting: ${blockingFailures.map(checkLabel).join(', ')}.`;
+
   const handleExportSingle = (group: StudentGroup & { id: string }) => {
+    if (isBlocked) {
+      toast({ title: 'Export blocked', description: blockedMessage, variant: 'destructive' });
+      return;
+    }
     if (isGeneratingImages) {
       toast({
         title: 'Please wait',
@@ -74,8 +88,6 @@ export function ExportForLMSButton({
       const englishContent = getGroupEnglishContent?.(group.groupName);
       const isBilingual = group.homeLanguage !== 'English' && englishContent;
       
-      console.log('Export - Group:', group.groupName, 'Content length:', content?.length, 'English length:', englishContent?.length, 'Images:', imageMap?.size || 0);
-      
       if (!content || content.trim().length === 0) {
         toast({
           title: 'No content found',
@@ -85,7 +97,7 @@ export function ExportForLMSButton({
         return;
       }
       
-      downloadGroupHTML(lessonTitle, content, group, englishContent, imageMap);
+      downloadGroupHTML(lessonTitle, content, group, englishContent, assets);
       
       toast({
         title: 'Downloaded!',
@@ -104,6 +116,10 @@ export function ExportForLMSButton({
   };
 
   const handleExportAll = async () => {
+    if (isBlocked) {
+      toast({ title: 'Export blocked', description: blockedMessage, variant: 'destructive' });
+      return;
+    }
     if (isGeneratingImages) {
       toast({
         title: 'Please wait',
@@ -128,15 +144,15 @@ export function ExportForLMSButton({
         content: getGroupContent(group.groupName),
         englishContent: getGroupEnglishContent?.(group.groupName)
       }));
-      await downloadAllAsZip(lessonTitle, groupContents, imageMap);
+      await downloadAllAsZip(lessonTitle, groupContents, assets);
       
       const bilingualCount = groupContents.filter(g => g.group.homeLanguage !== 'English' && g.englishContent).length;
       
       toast({
         title: 'Downloaded!',
         description: bilingualCount > 0 
-          ? `All ${groups.length} handouts exported (${bilingualCount} bilingual). Upload to Canvas, Schoology, or Google Classroom.`
-          : `All ${groups.length} handouts exported. Upload to Canvas, Schoology, or Google Classroom.`
+          ? `All ${groups.length} handouts exported (${bilingualCount} bilingual). Upload the files to your LMS.`
+          : `All ${groups.length} handouts exported. Upload the files to your LMS.`
       });
     } catch (error: any) {
       toast({
@@ -152,10 +168,30 @@ export function ExportForLMSButton({
   // Check if any group is bilingual
   const hasBilingualGroups = groups.some(g => g.homeLanguage !== 'English');
 
+  if (isBlocked) {
+    return (
+      <div className="flex flex-col items-start gap-1">
+        <Button variant="outline" size="sm" className="gap-2" disabled aria-describedby="export-blocked-reason">
+          <AlertTriangle className="h-4 w-4" />
+          Export blocked
+        </Button>
+        <p id="export-blocked-reason" className="max-w-xs text-xs text-destructive">
+          {blockedMessage}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2" disabled={exporting || groups.length === 0}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          disabled={exporting || groups.length === 0 || isBlocked}
+          aria-describedby={isBlocked ? 'export-blocked-reason' : undefined}
+        >
           {exporting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
@@ -168,7 +204,7 @@ export function ExportForLMSButton({
       
       <DropdownMenuContent align="end" className="w-72 bg-popover border shadow-lg z-50">
         <DropdownMenuLabel className="text-xs text-muted-foreground">
-          Download HTML files to upload to Canvas, Schoology, or Google Classroom
+          Download HTML files to upload to your LMS
         </DropdownMenuLabel>
         
         {hasBilingualGroups && (

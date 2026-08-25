@@ -104,6 +104,7 @@ const Index = () => {
   // Differentiation hook
   const {
     differentiatedLesson,
+    generationValidation,
     selectedGroups,
     originalLessonContent,
     isDifferentiating,
@@ -327,7 +328,7 @@ const Index = () => {
               </div>
             </div>
 
-            <DifferentiatedLessonOutput lessonData={differentiatedLesson} selectedGroups={selectedGroups} lessonTitle={lastDifferentiateInput?.lessonName || 'Differentiated Lesson'} originalContent={originalLessonContent} onSaved={handleLessonSaved} lessonId={currentLessonId} preGeneratedAudio={audioRecords} preGeneratedVocabularyAudio={vocabularyAudio} isGeneratingAudio={isGeneratingAudio} />
+            <DifferentiatedLessonOutput lessonData={differentiatedLesson} generationValidation={generationValidation} selectedGroups={selectedGroups} lessonTitle={lastDifferentiateInput?.lessonName || 'Differentiated Lesson'} originalContent={originalLessonContent} onSaved={handleLessonSaved} lessonId={currentLessonId} preGeneratedAudio={audioRecords} preGeneratedVocabularyAudio={vocabularyAudio} isGeneratingAudio={isGeneratingAudio} />
           </div> : generatedAssessment ? <div className="max-w-4xl mx-auto animate-slide-up">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-success/10">
