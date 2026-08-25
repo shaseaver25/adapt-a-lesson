@@ -11,7 +11,7 @@ export const PRICING_TIERS = {
     features: [
       "60 tokens/month",
       "All differentiation features",
-      "Semantic HTML with bilingual language markup",
+      "Bilingual handouts, accessibility-checked before export",
     ],
   },
   school: {

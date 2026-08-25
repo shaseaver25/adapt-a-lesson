@@ -158,3 +158,51 @@ describe('answer blanks', () => {
     expect(html.match(/class="answer-blank"/g)).toHaveLength(2);
   });
 });
+
+describe('downloaded handouts carry the conformance record', () => {
+  // The public claim is that every lesson "ships with a record of what passed".
+  // A downloaded file is uploaded to an LMS by hand and is just as
+  // district-facing as one pushed to Canvas, so it must carry the record too.
+  const conformance = {
+    rubricVersion: 'v2.0',
+    generatedAt: '2026-08-25T22:00:00.000Z',
+    checks: [
+      {
+        name: 'has_all_sections',
+        label: 'All required sections present',
+        passed: true,
+        blocking: true,
+      },
+    ],
+  };
+
+  const group = {
+    id: 'g1',
+    groupName: 'Sparks',
+    readingLevelLabel: 'Below Grade',
+    homeLanguage: 'English',
+  };
+
+  it('includes the record when one is supplied', () => {
+    const html = generateStudentHTML({
+      title: 'Water Cycle',
+      content: '# Water Cycle\n\nRain falls.',
+      group,
+      generatedDate: '25/08/2026',
+      conformance,
+    });
+    expect(html).toContain('Accessibility conformance record');
+    expect(html).toContain('All required sections present');
+    expect(html).toContain('v2.0');
+  });
+
+  it('omits it entirely when none is supplied, rather than implying a pass', () => {
+    const html = generateStudentHTML({
+      title: 'Water Cycle',
+      content: '# Water Cycle\n\nRain falls.',
+      group,
+      generatedDate: '25/08/2026',
+    });
+    expect(html).not.toContain('Accessibility conformance record');
+  });
+});

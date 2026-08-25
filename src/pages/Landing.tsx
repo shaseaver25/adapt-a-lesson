@@ -81,7 +81,7 @@ export default function Landing() {
   return <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <Seo
         title="RealPath Learning — differentiated lessons for every learner"
-        description="RealPath Learning generates differentiated lessons for K-12 teachers in 60 seconds. Semantic HTML with bilingual language markup, validated against an accessibility rubric before export to Canvas."
+        description="RealPath Learning generates differentiated lessons for K-12 teachers in 60 seconds. Every lesson is checked against 15 accessibility rules before it reaches your LMS, and ships with a record of what passed — in both languages."
         path="/"
       />
       {/* Animated Background */}

@@ -475,6 +475,7 @@ export function DifferentiatedLessonOutput({
                 assets={combinedAssets}
                 isGeneratingImages={isGeneratingImages || isGeneratingVariations}
                 blockingFailures={exportValidation.blocking}
+                validation={exportValidation}
               />
             </div>
           </div>

@@ -33,7 +33,7 @@ export function CostComparison() {
 
               <div className="space-y-4">
                 {[
-                  { title: 'Accessibility Built Into Generation', desc: 'Every lesson is generated as semantic HTML with bilingual language markup and validated against an accessibility rubric before it reaches your LMS' },
+                  { title: 'Accessibility Built Into Generation', desc: 'Every lesson is checked against 15 accessibility rules before it reaches your LMS, and ships with a record of what passed — in both languages' },
                   { title: 'Evidence On Every Lesson', desc: 'Each exported page carries a conformance record naming the rubric version and the result of each check' },
                   { title: 'Teacher Time Saved', desc: '5-10 hours per teacher per week' },
                   { title: 'Better Student Outcomes', desc: 'Every student gets personalized, accessible materials' },

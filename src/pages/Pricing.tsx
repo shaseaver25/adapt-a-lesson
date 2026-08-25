@@ -49,8 +49,8 @@ export default function Pricing() {
             Choose Your Plan
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Unlock the full power of differentiated learning. Every plan generates semantic HTML with
-            bilingual language markup, validated against an accessibility rubric before export.
+            Unlock the full power of differentiated learning. Every lesson is checked against 15
+            accessibility rules before it reaches your LMS, and ships with a record of what passed — in both languages.
           </p>
         </div>
 

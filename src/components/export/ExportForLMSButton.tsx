@@ -15,6 +15,7 @@ import type { StudentGroup } from '@/types/studentGroup';
 import { extractVisualDescriptions } from '@/lib/imageGeneration';
 import { checkLabel, type HardCheckResults } from '../../../supabase/functions/_shared/lessonRubric.ts';
 import type { VisualAssets } from '../../../supabase/functions/_shared/lessonHtmlRenderer.ts';
+import { type ExportValidation, toConformanceRecord } from '@/lib/validation/validateLessonForExport';
 
 interface ExportForLMSButtonProps {
   groups: (StudentGroup & { id: string })[];
@@ -25,6 +26,12 @@ interface ExportForLMSButtonProps {
   isGeneratingImages?: boolean;
   /** Names of blocking rubric checks that failed. Any entry disables export. */
   blockingFailures?: string[];
+  /**
+   * Rubric result for the markup being exported. Stamped onto every downloaded
+   * file, so a handout uploaded to an LMS by hand carries the same conformance
+   * record as one we push to Canvas ourselves.
+   */
+  validation?: ExportValidation;
 }
 
 export function ExportForLMSButton({
@@ -34,10 +41,12 @@ export function ExportForLMSButton({
   getGroupEnglishContent,
   assets,
   isGeneratingImages = false,
-  blockingFailures = []
+  blockingFailures = [],
+  validation
 }: ExportForLMSButtonProps) {
   const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
+  const conformance = validation ? toConformanceRecord(validation) : undefined;
 
   // Level indicator colors
   const levelStyles: Record<string, string> = {
@@ -97,7 +106,7 @@ export function ExportForLMSButton({
         return;
       }
       
-      downloadGroupHTML(lessonTitle, content, group, englishContent, assets);
+      downloadGroupHTML(lessonTitle, content, group, englishContent, assets, conformance);
       
       toast({
         title: 'Downloaded!',
@@ -144,7 +153,7 @@ export function ExportForLMSButton({
         content: getGroupContent(group.groupName),
         englishContent: getGroupEnglishContent?.(group.groupName)
       }));
-      await downloadAllAsZip(lessonTitle, groupContents, assets);
+      await downloadAllAsZip(lessonTitle, groupContents, assets, conformance);
       
       const bilingualCount = groupContents.filter(g => g.group.homeLanguage !== 'English' && g.englishContent).length;
       

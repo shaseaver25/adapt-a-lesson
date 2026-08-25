@@ -66,7 +66,7 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
           '1,000s of existing materials in your LMS',
           'New lessons, worksheets, and assessments every week',
         ],
-        cta: 'RealPath Learning builds accessibility into generation: semantic HTML with bilingual language markup, validated against an accessibility rubric before export, with a conformance record on every exported page.',
+        cta: 'RealPath Learning builds accessibility into generation: every lesson is checked against 15 accessibility rules before it reaches your LMS, and ships with a record of what passed — in both languages.',
       };
     }
     if (compliancePercentage >= 50) {
