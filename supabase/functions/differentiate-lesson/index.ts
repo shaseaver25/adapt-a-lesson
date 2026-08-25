@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { marked } from "https://esm.sh/marked@17.0.1";
 import { renderLessonForValidation } from "../_shared/lessonHtmlRenderer.ts";
+import { retryableFailures } from "../_shared/lessonRubric.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,7 +12,13 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const MAX_REGEN_ATTEMPTS = 1;
+// Tunable without a redeploy: the right value depends on real pass rates, which
+// can only be measured against production data (see lesson_validation_results).
+const MAX_REGEN_ATTEMPTS = (() => {
+  const raw = Number(Deno.env.get("MAX_REGEN_ATTEMPTS"));
+  return Number.isInteger(raw) && raw >= 0 && raw <= 3 ? raw : 1;
+})();
+
 // Wall-clock budget so the whole request stays under Supabase's ~150s edge
 // function limit. A second (regeneration) pass runs only if enough time remains;
 // otherwise we return the first result with its validation flags instead of 504-ing.
@@ -502,14 +509,33 @@ Remember:
         break;
       }
       regenAttempts = attempt;
-      if (validation.passed) {
-        console.log(`Validation passed on attempt ${attempt}`);
+
+      const failed = Object.entries(validation.hardCheckResults)
+        .filter(([, r]) => !r.passed && !r.skipped)
+        .map(([k]) => k);
+
+      // Only a blocking failure is worth a second generation. Advisory checks
+      // do not stop export, and a full regeneration costs a model call and
+      // ~30-60s of the request budget — too much to spend on a check that was
+      // never going to hold the lesson back.
+      const worthRetrying = retryableFailures(validation.hardCheckResults);
+
+      if (worthRetrying.length === 0) {
+        if (failed.length > 0) {
+          console.log(
+            `Attempt ${attempt}: no blocking failures worth regenerating; advisory issues remain: ${failed.join(", ")}`,
+          );
+        } else {
+          console.log(`Validation passed on attempt ${attempt}`);
+        }
         break;
       }
-      const failed = Object.entries(validation.hardCheckResults)
-        .filter(([, r]) => !r.passed)
-        .map(([k]) => k);
-      console.warn(`Validation failed on attempt ${attempt}, failed checks: ${failed.join(", ")}`);
+
+      console.warn(
+        `Validation failed on attempt ${attempt}; blocking: ${worthRetrying.join(", ")}${
+          failed.length > worthRetrying.length ? ` (advisory also failing: ${failed.filter((f) => !worthRetrying.includes(f)).join(", ")})` : ""
+        }`,
+      );
       if (attempt === MAX_REGEN_ATTEMPTS) {
         console.warn(`Reached max regen attempts (${MAX_REGEN_ATTEMPTS}); returning residual issues`);
       }

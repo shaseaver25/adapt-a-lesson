@@ -162,3 +162,28 @@ export function advisoryFailures(results: HardCheckResults | null | undefined): 
 export function canExport(results: HardCheckResults | null | undefined): boolean {
   return blockingFailures(results).length === 0;
 }
+
+/**
+ * Checks a regeneration cannot fix, so retrying on them only burns budget.
+ *
+ * `math_requires_manual_review` fires on every lesson that contains equations.
+ * It is a flag for a human, not a defect in the output, so a second generation
+ * produces the same flag at the cost of a model call and ~30-60s of the
+ * request's time budget.
+ */
+export const NOT_FIXABLE_BY_REGENERATION: CheckName[] = ['math_requires_manual_review'];
+
+/**
+ * Failures that justify regenerating the lesson.
+ *
+ * Only blocking checks qualify: an advisory failure does not stop export, so
+ * spending a whole extra generation on one is a bad trade. Generation-time
+ * validation also runs before any diagram exists, so the image checks are
+ * skipped there and can never trigger a retry — they are settled at export
+ * time instead.
+ */
+export function retryableFailures(results: HardCheckResults | null | undefined): string[] {
+  return blockingFailures(results).filter(
+    (name) => !NOT_FIXABLE_BY_REGENERATION.includes(name as CheckName),
+  );
+}

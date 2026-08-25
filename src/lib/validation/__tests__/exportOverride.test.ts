@@ -8,6 +8,7 @@ import {
   type ExportOverride,
 } from '../../../../supabase/functions/_shared/lessonExportOverride.ts';
 import { buildConformanceFooterHTML } from '../../../../supabase/functions/_shared/lessonHtmlRenderer.ts';
+import { retryableFailures } from '../../../../supabase/functions/_shared/lessonRubric.ts';
 
 const GOOD_REASON =
   'Diagram alt text needs rewriting; assigning tomorrow and replacing the page by Friday.';
@@ -148,5 +149,52 @@ describe('conformance record discloses an override', () => {
   it('says nothing about an override when there was none', () => {
     const html = buildConformanceFooterHTML(baseRecord);
     expect(html).not.toContain('Exported with a known accessibility failure');
+  });
+});
+
+describe('retryableFailures', () => {
+  it('does not regenerate for an advisory failure', () => {
+    // word_count_in_grade_range is advisory: it never stops export, so a whole
+    // extra generation is a bad trade.
+    expect(
+      retryableFailures({
+        has_all_sections: { passed: true },
+        word_count_in_grade_range: { passed: false, details: '2400 words' },
+      }),
+    ).toEqual([]);
+  });
+
+  it('does not regenerate for a lesson flagged as containing maths', () => {
+    // Fires on every lesson with equations; a retry returns the same flag.
+    expect(retryableFailures({ math_requires_manual_review: { passed: false } })).toEqual([]);
+  });
+
+  it('regenerates for a blocking content failure', () => {
+    expect(
+      retryableFailures({
+        has_no_placeholder: { passed: false, details: "'TODO' in studentHandouts[0].content" },
+      }),
+    ).toEqual(['has_no_placeholder']);
+  });
+
+  it('ignores skipped checks', () => {
+    expect(
+      retryableFailures({ has_all_alt_text: { passed: false, skipped: true } }),
+    ).toEqual([]);
+  });
+
+  it('returns only the blocking half of a mixed failure set', () => {
+    expect(
+      retryableFailures({
+        has_no_placeholder: { passed: false },
+        link_text_is_descriptive: { passed: false },
+        math_requires_manual_review: { passed: false },
+      }),
+    ).toEqual(['has_no_placeholder']);
+  });
+
+  it('survives a missing results object', () => {
+    expect(retryableFailures(null)).toEqual([]);
+    expect(retryableFailures(undefined)).toEqual([]);
   });
 });
