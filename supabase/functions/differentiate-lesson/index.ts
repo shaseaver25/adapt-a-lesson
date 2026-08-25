@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { marked } from "https://esm.sh/marked@17.0.1";
+import { renderLessonForValidation } from "../_shared/lessonHtmlRenderer.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -93,6 +95,7 @@ type ValidationResponse = {
 // Call the stateless validate-lesson edge function.
 async function callValidate(
   structuredLessonData: unknown,
+  renderedHtml: unknown,
   gradeBand: string | null,
   authHeader: string | null,
 ): Promise<ValidationResponse | null> {
@@ -105,7 +108,7 @@ async function callValidate(
         Authorization: authHeader ?? `Bearer ${SUPABASE_ANON_KEY}`,
         apikey: SUPABASE_ANON_KEY,
       },
-      body: JSON.stringify({ structuredLessonData, gradeBand }),
+      body: JSON.stringify({ structuredLessonData, gradeBand, renderedHtml }),
     });
     if (!res.ok) {
       console.error("validate-lesson returned", res.status, await res.text());
@@ -201,15 +204,45 @@ FOR NON-ENGLISH GROUPS (CRITICAL - BILINGUAL OUTPUT):
 - This enables side-by-side bilingual display
 
 HANDOUT CONTENT STRUCTURE (both languages):
-- Start with: **Name:** _____ **Date:** _____
-- Include: 🎯 Learning Target (student-friendly)
+- Start with: **Name:** [BLANK] **Date:** [BLANK]
+- Include: Learning Target (student-friendly)
 - Include: Lesson content
 - Include: Vocabulary box
-- Include: Practice section with answer lines
+- Include: Practice section, with [ANSWER LINE] after every question
 - Include: Reflection section
 - Use markdown formatting
 - NEVER include teacher directions, scaffolding strategies, or pacing notes
 - Write TO the student: "You will..." not "Teacher will..."
+
+ACCESSIBILITY REQUIREMENTS (MANDATORY — output is validated against these before it can be exported to an LMS):
+
+1. HEADINGS
+- Use markdown headings (#, ##, ###) in order. Never skip a level: a ## may only be followed by another ## or a ###, never by a ####.
+- Heading text must be plain words only. NO emoji, icons, arrows, or decorative characters anywhere in a heading, and especially never at the start of one — a screen reader announces the emoji's name before the heading text.
+- Emoji are fine in ordinary body text. Keep them out of headings.
+
+2. LINKS
+- Link text must describe the destination: "Read the NASA water cycle overview", not "click here" or "read more".
+- Never use "click here", "read more", "learn more", "here", or "this link" as the visible text of a link.
+
+3. COLOR
+- Never identify work by color alone. "Answer the red questions" is not usable by a student who cannot see color.
+- Always pair a color with a label, number, or word: "Answer the questions marked Set A (red)", "Complete problems 1-5 (green box)".
+
+4. ANSWER BLANKS — use these tokens, never underscores
+- [BLANK] for a short inline blank (a name, a date, a single word).
+- [ANSWER LINE] for a full-width line or box where a student writes a sentence or more.
+- NEVER write runs of underscores such as _____ . A screen reader announces each underscore separately.
+- Every question in a Practice section must be followed by [ANSWER LINE] (or [BLANK] if the answer is one word).
+
+5. MATH
+- If the lesson contains equations, write them as LaTeX delimited with $...$ for inline math and $$...$$ for display math.
+- Never render an equation as an image, and never flatten it into ambiguous plain text.
+- Lessons containing math are flagged for manual teacher review, so keep equations simple and self-explanatory.
+
+6. IMAGES
+- Only request an image when it carries meaning students need. Decorative images are not worth the accessibility cost.
+- Write [VISUAL:] descriptions as descriptions of what the finished image SHOWS, not as instructions to an image generator. Write "The water cycle as a loop between a lake, a cloud, and rain falling on a hillside", not "Create a colorful diagram showing the water cycle".
 
 LEVEL MAPPING:
 - "Below Grade" → "embers"
@@ -220,10 +253,10 @@ LEVEL MAPPING:
 CRITICAL FOR [VISUAL:] TAGS:
 - [VISUAL: description] tags must ALWAYS be written in ENGLISH, even inside translated content
 - This ensures consistent image generation across all language versions
-- Example in a Spanish handout: "[VISUAL: A diagram showing the water cycle with arrows]" (NOT "[VISUAL: Un diagrama del ciclo del agua]")
+- Example in a Spanish handout: "[VISUAL: The water cycle as a loop, with arrows from a lake to a cloud to rain]" (NOT "[VISUAL: Un diagrama del ciclo del agua]")
 - For translated content, add a translated caption on the line AFTER the [VISUAL:] tag to help students understand
 - Example:
-  [VISUAL: A labeled diagram of a plant cell]
+  [VISUAL: A plant cell with the nucleus, cell wall, and chloroplasts labeled]
   *Diagrama etiquetado de una célula vegetal*
 
 ORDER: Always process groups from lowest to highest level (embers → supernovas).`;
@@ -253,7 +286,7 @@ ORDER: Always process groups from lowest to highest level (embers → supernovas
       optionsDesc += '- Generate comprehension questions for each group\n';
     }
     if (options.includeVisualPlaceholders) {
-      optionsDesc += `- IMPORTANT: Include [VISUAL: detailed English description] tags throughout the content. ALWAYS write the description in ENGLISH even for translated handouts. Add at least 2-3 visuals per handout. For translated content, add a translated caption line after the tag. Example in Spanish handout:\n  [VISUAL: A diagram showing the water cycle]\n  *Un diagrama del ciclo del agua*\n`;
+      optionsDesc += `- IMPORTANT: Include [VISUAL: description of what the image shows] tags throughout the content. ALWAYS write the description in ENGLISH even for translated handouts, and describe what the finished image shows rather than instructing a generator. Add at least 2-3 visuals per handout. For translated content, add a translated caption line after the tag. Example in a Spanish handout:\n  [VISUAL: The water cycle as a loop between a lake, a cloud, and rain falling on a hillside]\n  *El ciclo del agua*\n`;
     }
     if (options.includeGraphicOrganizers) {
       optionsDesc += `- Include graphic organizers (type: ${options.graphicOrganizerType || 'auto'})\n`;
@@ -382,8 +415,8 @@ Remember:
             groupName: g.groupName,
             level: LEVEL_MAP[g.readingLevelLabel] || 'flames',
             language: g.homeLanguage,
-            content: `# ${g.groupName} Handout\n\n**Name:** _____ **Date:** _____\n\n🎯 **Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*`,
-            englishContent: g.homeLanguage !== 'English' ? `# ${g.groupName} Handout\n\n**Name:** _____ **Date:** _____\n\n🎯 **Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*` : null,
+            content: `# ${g.groupName} Handout\n\n**Name:** [BLANK] **Date:** [BLANK]\n\n**Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*`,
+            englishContent: g.homeLanguage !== 'English' ? `# ${g.groupName} Handout\n\n**Name:** [BLANK] **Date:** [BLANK]\n\n**Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*` : null,
           }));
         }
         return {
@@ -457,7 +490,13 @@ Remember:
         `Generated (attempt ${attempt}): teacherGuide ${structuredLessonData.teacherGuide.length} chars, ${structuredLessonData.studentHandouts.length} handouts`,
       );
 
-      validation = await callValidate(structuredLessonData, gradeBand ?? null, authHeader);
+      // Validate the HTML that will actually ship, rendered through the same
+      // module the exporter uses — not the markdown behind it.
+      const renderedHtml = renderLessonForValidation(
+        structuredLessonData,
+        (md: string) => marked.parse(md) as string,
+      );
+      validation = await callValidate(structuredLessonData, renderedHtml, gradeBand ?? null, authHeader);
       if (!validation) {
         console.warn("validate-lesson unavailable; returning without validation");
         break;
