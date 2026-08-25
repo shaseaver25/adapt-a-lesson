@@ -1,5 +1,14 @@
 import { marked } from 'marked';
-import { getISOCode, isRTLLanguage } from '@/lib/languageCodes';
+import {
+  buildLessonSectionHTML as buildSharedLessonSectionHTML,
+  escapeHtml,
+  getISOCode,
+  isRTLLanguage,
+  processLessonMarkdown,
+  type VisualAssets,
+} from '../../../supabase/functions/_shared/lessonHtmlRenderer.ts';
+
+const parseMarkdown = (md: string): string => marked.parse(md) as string;
 
 interface StudentGroup {
   id: string;
@@ -16,7 +25,7 @@ interface LessonExportData {
   englishContent?: string;
   group: StudentGroup;
   generatedDate: string;
-  imageMap?: Map<string, string>; // Map of visual description -> image URL
+  assets?: VisualAssets;
 }
 
 /**
@@ -48,79 +57,83 @@ export function readingLevelLabelFromKey(level: string): string {
 }
 
 /**
- * Build just the inner-body HTML fragment for one lesson section
- * (heading + bilingual <table> or single-column <div>). Reused by the
- * Canvas push flow so what we send matches the direct HTML export — same
- * <table>, <caption>, <th scope="col">, <td lang="..."> structure.
- *
- * No <html>/<head>/<style> wrapper; intended to be embedded inside another
- * document (a Canvas Page body, a parent HTML doc, etc.).
+ * Inner-body HTML fragment for one lesson section, used by the Canvas push
+ * flow. Delegates to the shared renderer so validation and export always see
+ * identical markup.
  */
 export function buildLessonSectionHTML(data: {
   heading: string;
   content: string;
   englishContent?: string;
   homeLanguage: string;
-  imageMap?: Map<string, string>;
+  assets?: VisualAssets;
 }): string {
-  const { heading, content, englishContent, homeLanguage, imageMap } = data;
-  const isBilingual =
-    homeLanguage !== 'English' && !!englishContent && englishContent.trim().length > 0;
+  return buildSharedLessonSectionHTML({ ...data, parseMarkdown });
+}
 
-  const translatedLangCode = getISOCode(homeLanguage);
+/**
+ * Get color scheme based on student level
+ */
+function getLevelColors(level: string): { primary: string; light: string; dark: string } {
+  const colors: Record<string, { primary: string; light: string; dark: string }> = {
+    embers: { primary: '#ef4444', light: '#fef2f2', dark: '#b91c1c' },
+    sparks: { primary: '#f97316', light: '#fff7ed', dark: '#c2410c' },
+    flames: { primary: '#f59e0b', light: '#fffbeb', dark: '#b45309' },
+    blazers: { primary: '#10b981', light: '#ecfdf5', dark: '#047857' },
+    supernovas: { primary: '#8b5cf6', light: '#f5f3ff', dark: '#6d28d9' }
+  };
+  return colors[level] || colors.flames;
+}
+
+/**
+ * Sanitize filename for download
+ */
+function sanitizeFilename(name: string): string {
+  return name
+    .replace(/[^a-zA-Z0-9\s-]/g, '')
+    .replace(/\s+/g, '_')
+    .substring(0, 100);
+}
+
+/**
+ * Generate a standalone HTML file for a student group
+ */
+export function generateStudentHTML(data: LessonExportData): string {
+  const { title, content, englishContent, group, generatedDate, assets } = data;
+
+  const isBilingual =
+    group.homeLanguage !== 'English' && !!englishContent && englishContent.trim().length > 0;
+
+  const translatedLangCode = getISOCode(group.homeLanguage);
   const isRTL = isRTLLanguage(translatedLangCode);
   const dirAttr = isRTL ? 'rtl' : 'ltr';
+  const direction = dirAttr;
+  const textAlign = isRTL ? 'right' : 'left';
 
-  const processMarkdown = (md: string): string => {
-    let processed = md;
-    const findImageUrl = (description: string): string | undefined => {
-      const trimmedDesc = description.trim();
-      if (imageMap?.has(trimmedDesc)) return imageMap.get(trimmedDesc);
-      if (imageMap) {
-        const lowerDesc = trimmedDesc.toLowerCase();
-        for (const [key, url] of imageMap.entries()) {
-          if (key.toLowerCase() === lowerDesc) return url;
-        }
-      }
-      return undefined;
-    };
-    const replaceVisual = (_m: string, description: string) => {
-      const imageUrl = findImageUrl(description);
-      if (imageUrl) {
-        return `<figure class="lesson-figure">
-          <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(description)}" class="lesson-image" loading="lazy" />
-          <figcaption>${escapeHtml(description)}</figcaption>
-        </figure>`;
-      }
-      return `<div class="visual-placeholder">
-        <span class="visual-icon">📐</span>
-        <span class="visual-label">${escapeHtml(description)}</span>
-        <span class="teacher-note">Teacher: Insert diagram or use whiteboard</span>
-      </div>`;
-    };
-    processed = processed.replace(/\[VISUAL:\s*(.+?)\]/g, replaceVisual);
-    processed = processed.replace(/\[NANOBANANA:\s*"(.+?)"\]/g, replaceVisual);
-    processed = processed.replace(/_{10,}/g, '<div class="answer-line"></div>');
-    return marked.parse(processed) as string;
-  };
+  const translatedHTML = processLessonMarkdown(content, parseMarkdown, assets);
+  const englishHTML = isBilingual && englishContent
+    ? processLessonMarkdown(englishContent, parseMarkdown, assets)
+    : '';
 
-  const translatedHTML = processMarkdown(content);
-  const englishHTML = isBilingual && englishContent ? processMarkdown(englishContent) : '';
+  const levelKey = getLevelKey(group.readingLevelLabel);
+  const levelColors = getLevelColors(levelKey);
 
-  const body = isBilingual
+  // Bilingual uses a semantic <table> for WCAG 2.1 AA (SC 1.3.1 Info & Relationships)
+  // with per-cell `lang` attributes (SC 3.1.2 Language of Parts).
+  const bodyContent = isBilingual
     ? `
-      <table class="bilingual-container" role="table" aria-describedby="bilingual-desc-${escapeHtml(translatedLangCode)}">
-        <caption id="bilingual-desc-${escapeHtml(translatedLangCode)}" class="sr-only">
-          Side-by-side bilingual handout. Left column: ${escapeHtml(homeLanguage)}. Right column: English. The two columns present the same lesson content in parallel.
+      <table class="bilingual-container" aria-describedby="bilingual-desc">
+        <caption id="bilingual-desc" class="sr-only">
+          Side-by-side bilingual handout. Left column: ${escapeHtml(group.homeLanguage)}. Right column: English. The two columns present the same lesson content in parallel.
         </caption>
         <thead>
           <tr>
             <th scope="col" lang="${translatedLangCode}" dir="${dirAttr}" class="bilingual-header translated">
-              <span class="column-flag" aria-hidden="true">🌍</span>
-              ${escapeHtml(homeLanguage)}
+              <span class="column-flag" aria-hidden="true">\ud83c\udf0d</span>
+              ${escapeHtml(group.homeLanguage)}
             </th>
             <th scope="col" lang="en" dir="ltr" class="bilingual-header english">
-              <span class="column-flag" aria-hidden="true">🇺🇸</span>
+              <span class="column-flag" aria-hidden="true">\ud83c\uddfa\ud83c\uddf8</span>
               English
             </th>
           </tr>
@@ -139,155 +152,6 @@ export function buildLessonSectionHTML(data: {
     `
     : `<div class="single-column-content" lang="${translatedLangCode}" dir="${dirAttr}">${translatedHTML}</div>`;
 
-  return `<section class="lesson-section"><h2>${escapeHtml(heading)}</h2>${body}</section>`;
-}
-
-/**
- * Get color scheme based on student level
- */
-function getLevelColors(level: string): { primary: string; light: string; dark: string } {
-  const colors: Record<string, { primary: string; light: string; dark: string }> = {
-    embers: { primary: '#ef4444', light: '#fef2f2', dark: '#b91c1c' },
-    sparks: { primary: '#f97316', light: '#fff7ed', dark: '#c2410c' },
-    flames: { primary: '#f59e0b', light: '#fffbeb', dark: '#b45309' },
-    blazers: { primary: '#10b981', light: '#ecfdf5', dark: '#047857' },
-    supernovas: { primary: '#8b5cf6', light: '#f5f3ff', dark: '#6d28d9' }
-  };
-  return colors[level] || colors.flames;
-}
-
-/**
- * Escape HTML special characters
- */
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-/**
- * Sanitize filename for download
- */
-function sanitizeFilename(name: string): string {
-  return name
-    .replace(/[^a-zA-Z0-9\s-]/g, '')
-    .replace(/\s+/g, '_')
-    .substring(0, 100);
-}
-
-/**
- * Generate a standalone HTML file for a student group
- */
-export function generateStudentHTML(data: LessonExportData): string {
-  const { title, content, englishContent, group, generatedDate, imageMap } = data;
-  
-  // Detect if this is a bilingual export
-  const isBilingual = group.homeLanguage !== 'English' && englishContent && englishContent.trim().length > 0;
-
-  // Language codes + direction
-  const translatedLangCode = getISOCode(group.homeLanguage);
-  const isRTL = isRTLLanguage(translatedLangCode);
-  const dirAttr = isRTL ? 'rtl' : 'ltr';
-  const direction = dirAttr;
-  const textAlign = isRTL ? 'right' : 'left';
-  
-  // Process content - convert [VISUAL: ...] and [NANOBANANA: "..."] to images or styled placeholders
-  const processMarkdown = (md: string): string => {
-    let processed = md;
-    
-    // Find image URL - now uses simple exact match since [VISUAL:] tags are always in English
-    const findImageUrl = (description: string): string | undefined => {
-      const trimmedDesc = description.trim();
-      
-      // Exact match (keys are now always English)
-      if (imageMap?.has(trimmedDesc)) {
-        return imageMap.get(trimmedDesc);
-      }
-      
-      // Fallback: case-insensitive match
-      if (imageMap) {
-        const lowerDesc = trimmedDesc.toLowerCase();
-        for (const [key, url] of imageMap.entries()) {
-          if (key.toLowerCase() === lowerDesc) {
-            return url;
-          }
-        }
-      }
-      
-      return undefined;
-    };
-    
-    const replaceVisual = (match: string, description: string) => {
-      const imageUrl = findImageUrl(description);
-      
-      if (imageUrl) {
-        return `<figure class="lesson-figure">
-          <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(description)}" class="lesson-image" loading="lazy" />
-          <figcaption>${escapeHtml(description)}</figcaption>
-        </figure>`;
-      }
-      
-      // Fallback to styled placeholder
-      return `<div class="visual-placeholder">
-        <span class="visual-icon">📐</span>
-        <span class="visual-label">${escapeHtml(description)}</span>
-        <span class="teacher-note">Teacher: Insert diagram or use whiteboard</span>
-      </div>`;
-    };
-    
-    // Replace both [VISUAL: ...] and [NANOBANANA: "..."] formats
-    processed = processed.replace(/\[VISUAL:\s*(.+?)\]/g, replaceVisual);
-    processed = processed.replace(/\[NANOBANANA:\s*"(.+?)"\]/g, replaceVisual);
-    
-    processed = processed.replace(/_{10,}/g, '<div class="answer-line"></div>');
-    return marked.parse(processed) as string;
-  };
-  
-  const translatedHTML = processMarkdown(content);
-  const englishHTML = isBilingual && englishContent ? processMarkdown(englishContent) : '';
-  
-  // Get level styling
-  const levelKey = getLevelKey(group.readingLevelLabel);
-  const levelColors = getLevelColors(levelKey);
-  
-  // Build body content based on bilingual or single-column
-  // Bilingual uses a semantic <table> for WCAG 2.1 AA (SC 1.3.1 Info & Relationships)
-  // with per-cell `lang` attributes (SC 3.1.2 Language of Parts).
-  const bodyContent = isBilingual
-    ? `
-      <table class="bilingual-container" role="table" aria-describedby="bilingual-desc">
-        <caption id="bilingual-desc" class="sr-only">
-          Side-by-side bilingual handout. Left column: ${escapeHtml(group.homeLanguage)}. Right column: English. The two columns present the same lesson content in parallel.
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col" lang="${translatedLangCode}" dir="${dirAttr}" class="bilingual-header translated">
-              <span class="column-flag" aria-hidden="true">🌍</span>
-              ${escapeHtml(group.homeLanguage)}
-            </th>
-            <th scope="col" lang="en" dir="ltr" class="bilingual-header english">
-              <span class="column-flag" aria-hidden="true">🇺🇸</span>
-              English
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td lang="${translatedLangCode}" dir="${dirAttr}" class="bilingual-cell translated">
-              <div class="column-content">${translatedHTML}</div>
-            </td>
-            <td lang="en" dir="ltr" class="bilingual-cell english">
-              <div class="column-content">${englishHTML}</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    `
-    : `<div class="single-column-content">${translatedHTML}</div>`;
-  
   const languageDisplay = isBilingual 
     ? `${escapeHtml(group.homeLanguage)} + English` 
     : escapeHtml(group.homeLanguage);
@@ -695,7 +559,7 @@ export function downloadGroupHTML(
   content: string,
   group: StudentGroup,
   englishContent?: string,
-  imageMap?: Map<string, string>
+  assets?: VisualAssets
 ): void {
   const html = generateStudentHTML({
     title,
@@ -703,7 +567,7 @@ export function downloadGroupHTML(
     englishContent,
     group,
     generatedDate: new Date().toLocaleDateString(),
-    imageMap
+    assets
   });
   downloadHTML(html, `${title}_${group.groupName}`);
 }
@@ -714,14 +578,14 @@ export function downloadGroupHTML(
 export async function downloadAllAsZip(
   title: string,
   groupContents: { group: StudentGroup; content: string; englishContent?: string }[],
-  imageMap?: Map<string, string>
+  assets?: VisualAssets
 ): Promise<void> {
   const JSZip = (await import('jszip')).default;
   const zip = new JSZip();
   const generatedDate = new Date().toLocaleDateString();
   
   groupContents.forEach(({ group, content, englishContent }) => {
-    const html = generateStudentHTML({ title, content, englishContent, group, generatedDate, imageMap });
+    const html = generateStudentHTML({ title, content, englishContent, group, generatedDate, assets });
     const filename = `${sanitizeFilename(title)}_${sanitizeFilename(group.groupName)}.html`;
     zip.file(filename, html);
   });
@@ -742,7 +606,7 @@ ${groupContents.map(({ group }) => {
 
 ## How to Use
 
-1. Upload these HTML files to your LMS (Canvas, Schoology, Google Classroom)
+1. Upload these HTML files to your LMS (Canvas is supported directly; other LMSs accept the file as an upload)
 2. Assign each file to the appropriate student group
 3. Students click the file to view their personalized lesson
 ${bilingualGroups.length > 0 ? '\n## Bilingual Layout\n\nFiles for non-English groups display content side-by-side:\n- Left column: Content in student\'s home language\n- Right column: English version\n' : ''}
