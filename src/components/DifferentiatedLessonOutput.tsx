@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { normalizeMarkdownTables } from '../../supabase/functions/_shared/lessonHtmlRenderer.ts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -116,10 +117,14 @@ const findImageUrl = (description: string, imageMap: Map<string, string>): strin
 
 // Process content to replace [VISUAL:] and [NANOBANANA:] tags with actual images
 const processContentWithImages = (content: string, imageMap: Map<string, string>): string => {
-  if (!content || imageMap.size === 0) return content;
-  
-  let processed = content;
-  
+  if (!content) return content;
+
+  // Repair malformed tables before react-markdown sees them. This screen is a
+  // third render path alongside the exporter and the validator, so it needs the
+  // same normalisation or a table renders here as literal pipe characters.
+  let processed = normalizeMarkdownTables(content);
+  if (imageMap.size === 0) return processed;
+
   // Replace [VISUAL: description] with markdown image
   processed = processed.replace(/\[VISUAL:\s*(.+?)\]/gi, (match, description) => {
     const desc = description.trim();

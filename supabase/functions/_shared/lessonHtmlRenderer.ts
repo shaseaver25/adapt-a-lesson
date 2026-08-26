@@ -154,6 +154,90 @@ export function resolveAltText(
   return { alt: sanitizeAltText(description), fromVisionModel: false };
 }
 
+/** A line that looks like a table row: starts and ends with a pipe. */
+const TABLE_ROW = /^\s*\|.*\|\s*$/;
+/** A GFM delimiter row: only pipes, dashes, colons and spaces. */
+const DELIMITER_ROW = /^\s*\|[\s:|-]*\|\s*$/;
+
+/** Count the cells in a table row, ignoring the outer pipes. */
+function cellCount(line: string): number {
+  const trimmed = line.trim().replace(/^\|/, '').replace(/\|$/, '');
+  return trimmed.split('|').length;
+}
+
+/**
+ * Repair the table shapes a language model actually emits.
+ *
+ * A GFM table needs a delimiter row whose cell count matches the header, and it
+ * must not be indented four spaces (that makes it a code block). Models get
+ * this wrong often, and when they do the parser is right to refuse: the reader
+ * gets a run of literal pipe characters where a table should be, which is
+ * unreadable on screen and unnavigable with a screen reader (SC 1.3.1).
+ *
+ * Repaired here rather than only in the prompt because the prompt cannot be
+ * relied on, and both the exporter and the in-app view need the same result.
+ * A table that already parses is left exactly as it is.
+ */
+export function normalizeMarkdownTables(markdown: string): string {
+  const lines = String(markdown ?? '').split('\n');
+  const out: string[] = [];
+  let inFence = false;
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+
+    // Never touch anything inside a fenced code block.
+    if (/^\s*(```|~~~)/.test(line)) {
+      inFence = !inFence;
+      out.push(line);
+      continue;
+    }
+    if (inFence || !TABLE_ROW.test(line)) {
+      out.push(line);
+      continue;
+    }
+
+    // Collect the whole run of consecutive table-ish lines.
+    const run: string[] = [];
+    let j = i;
+    while (j < lines.length && TABLE_ROW.test(lines[j]) && !/^\s*(```|~~~)/.test(lines[j])) {
+      run.push(lines[j]);
+      j += 1;
+    }
+    i = j - 1;
+
+    // Four spaces of indent turns the whole block into a code block, so strip
+    // the common indentation off the run.
+    const indents = run.map((r) => (r.match(/^\s*/)?.[0].length ?? 0));
+    const commonIndent = Math.min(...indents);
+    const body = commonIndent > 0 ? run.map((r) => r.slice(commonIndent)) : run.slice();
+
+    const headers = cellCount(body[0]);
+    const hasDelimiter = body.length > 1 && DELIMITER_ROW.test(body[1]);
+    const delimiter = `|${' --- |'.repeat(headers)}`;
+
+    if (!hasDelimiter) {
+      // A single stray row is not a table; leave it alone rather than inventing one.
+      if (body.length < 2) {
+        out.push(...body);
+        continue;
+      }
+      out.push(body[0], delimiter, ...body.slice(1));
+      continue;
+    }
+
+    // Delimiter is present but its cell count must match the header exactly.
+    if (cellCount(body[1]) !== headers) {
+      out.push(body[0], delimiter, ...body.slice(2));
+      continue;
+    }
+
+    out.push(...body);
+  }
+
+  return out.join('\n');
+}
+
 /**
  * Apply the lesson-specific token replacements, then run the injected markdown
  * parser. Every export path and the validator go through this function.
@@ -163,7 +247,7 @@ export function processLessonMarkdown(
   parseMarkdown: MarkdownParser,
   assets?: VisualAssets,
 ): string {
-  let processed = String(markdown ?? '');
+  let processed = normalizeMarkdownTables(String(markdown ?? ''));
 
   const replaceVisual = (_match: string, rawDescription: string): string => {
     const description = rawDescription.trim();

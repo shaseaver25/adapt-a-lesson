@@ -242,7 +242,17 @@ ACCESSIBILITY REQUIREMENTS (MANDATORY — output is validated against these befo
 - NEVER write runs of underscores such as _____ . A screen reader announces each underscore separately.
 - Every question in a Practice section must be followed by [ANSWER LINE] (or [BLANK] if the answer is one word).
 
-5. MATH
+5. TABLES — vocabulary boxes, glossaries, and anything in columns
+- A table MUST have a delimiter row directly under the header, with exactly one cell per header cell:
+  | Word | Meaning |
+  | --- | --- |
+  | Melody | A group of sounds that moves up and down |
+- The delimiter row is not optional. Without it the table is not a table: it reaches the student as a row of literal | characters, and a screen reader reads it as one long run-on sentence.
+- Start every table line at the left margin. Never indent a table, and never nest one inside a bullet or numbered list.
+- Put a blank line before and after the table.
+- Every row must have the same number of cells as the header.
+
+6. MATH
 - If the lesson contains equations, write them as LaTeX delimited with $...$ for inline math and $$...$$ for display math.
 - Never render an equation as an image, and never flatten it into ambiguous plain text.
 - Lessons containing math are flagged for manual teacher review, so keep equations simple and self-explanatory.

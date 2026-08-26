@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { normalizeMarkdownTables } from '../../supabase/functions/_shared/lessonHtmlRenderer.ts';
 import LessonImageFrame from '@/components/LessonImageFrame';
 import { LessonValidationBanner } from '@/components/LessonValidationBanner';
 import { LessonValidationBadge } from '@/components/LessonValidationBadge';
@@ -228,10 +229,14 @@ export default function LessonView() {
 
   // Process content to replace [VISUAL:] and [NANOBANANA:] tags with actual images
   const processContentWithImages = useCallback((content: string): string => {
-    if (!content || imageMap.size === 0) return content;
-    
-    let processed = content;
-    
+    if (!content) return content;
+
+    // Repair malformed tables before react-markdown sees them — see the note in
+    // DifferentiatedLessonOutput. Without this a vocabulary or rubric table
+    // reaches the reader as a run of literal pipe characters.
+    let processed = normalizeMarkdownTables(content);
+    if (imageMap.size === 0) return processed;
+
     // Replace [VISUAL: description] with markdown image
     processed = processed.replace(/\[VISUAL:\s*(.+?)\]/gi, (match, description) => {
       const desc = description.trim();

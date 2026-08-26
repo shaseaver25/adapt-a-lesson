@@ -288,10 +288,39 @@ function checkBilingualSectionCounts(rendered: RenderedLesson | null): CheckResu
 }
 
 // ---------- 9. vocabulary_table_well_formed ----------
-function checkVocabularyTable(rendered: RenderedLesson | null): CheckResult {
+function checkVocabularyTable(rendered: RenderedLesson | null, data: LessonData): CheckResult {
   if (!rendered) return NO_RENDER;
   const issues: string[] = [];
   let applicable = 0;
+
+  // A table that fails to parse does not disappear — it reaches the reader as a
+  // run of literal pipe characters, unnavigable by a screen reader (SC 1.3.1).
+  // Counting only rendered <table> elements would report "no tables present"
+  // and pass, which is precisely backwards, so compare the source against the
+  // output first.
+  (data.studentHandouts ?? []).forEach((h, i) => {
+    const renderedHandout = (rendered.studentHandouts ?? [])[i];
+    // Pair each source column with the HTML it actually produced. Keyed by
+    // position, not by language name — an English-only handout keeps its
+    // markdown in `content`, so matching on the label would read the wrong
+    // (empty) field and report a false failure.
+    const pairs: Array<[string, string | null | undefined, string]> = [
+      [h.language || "home language", h.content, renderedHandout?.contentHtml ?? ""],
+      ["English", h.englishContent, renderedHandout?.englishContentHtml ?? ""],
+    ];
+    pairs.forEach(([label, markdown, html]) => {
+      if (!markdown) return;
+      // Two or more consecutive pipe-delimited lines is a table someone meant.
+      const looksTabular = /^[^\n]*\|[^\n]*\|[^\n]*\n[^\n]*\|[^\n]*\|/m.test(markdown);
+      if (!looksTabular) return;
+      if (!/<table\b/i.test(html)) {
+        issues.push(
+          `handout[${i}] (${h.groupName ?? "?"}, ${label}): source has table rows but none rendered as a <table> — it will show as literal pipe characters`,
+        );
+        applicable += 1;
+      }
+    });
+  });
   (rendered.studentHandouts ?? []).forEach((h, i) => {
     columns(h).forEach(({ label, html }) => {
       const tables = html.match(/<table\b[\s\S]*?<\/table>/gi) ?? [];
@@ -508,7 +537,7 @@ export function runAllChecks(
     heading_text_has_no_leading_emoji: checkHeadingEmoji(rendered),
     translated_content_has_lang_attribute: checkTranslatedLangAttr(rendered),
     bilingual_section_counts_match: checkBilingualSectionCounts(rendered),
-    vocabulary_table_well_formed: checkVocabularyTable(rendered),
+    vocabulary_table_well_formed: checkVocabularyTable(rendered, data),
     practice_section_has_answer_mechanism: checkPracticeAnswerMechanism(rendered),
     answer_blanks_use_semantic_markup: checkAnswerBlankMarkup(data),
     link_text_is_descriptive: checkLinkText(rendered),
