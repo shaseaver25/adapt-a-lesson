@@ -46,7 +46,9 @@ function GettingStartedVideoPlayer() {
     }
   };
   return <div className="aspect-video bg-foreground relative">
-      <video ref={videoRef} src={videos[currentVideo]} onEnded={handleVideoEnd} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} className="w-full h-full object-cover" controls playsInline />
+      {/* WCAG SC 4.1.2: the player is focusable, so it needs a name a screen
+          reader can announce. The name tracks which part is playing. */}
+      <video ref={videoRef} src={videos[currentVideo]} aria-label={`Getting started, part ${currentVideo + 1} of ${videos.length}`} onEnded={handleVideoEnd} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} className="w-full h-full object-cover" controls playsInline />
       {!isPlaying && <button onClick={handlePlay} className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors">
           <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform">
             <Play className="w-8 h-8 text-secondary ml-1" fill="currentColor" />
@@ -390,7 +392,7 @@ export default function Landing() {
             videoUrl: '/videos/rubric-creation.mp4'
           }].map((video, i) => <div key={i} className="bg-background rounded-2xl overflow-hidden shadow-xl hover:-translate-y-2 hover:shadow-2xl transition-all">
                 <div className="aspect-video bg-gradient-to-br from-foreground to-foreground/80 relative">
-                  <video src={video.videoUrl} controls className="w-full h-full object-cover" />
+                  <video src={video.videoUrl} aria-label={video.title} controls className="w-full h-full object-cover" />
                 </div>
                 <div className="p-5">
                   <h3 className="font-display text-lg font-bold text-foreground mb-2">{video.title}</h3>

@@ -81,6 +81,7 @@ export function AssessmentForm({ onSubmit, isLoading }: AssessmentFormProps) {
         <div className="rounded-lg overflow-hidden border border-border bg-muted/30">
           <video
             controls
+            aria-label="What is authentic assessment?"
             className="w-full max-h-[400px]"
             poster="/videos/authentic-assessment-explained.mp4#t=0.1"
           >

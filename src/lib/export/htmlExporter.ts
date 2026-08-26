@@ -437,9 +437,13 @@ export function generateStudentHTML(data: LessonExportData): string {
       max-width: 400px;
     }
     
+    /* 0.75rem counts as normal text, so WCAG SC 1.4.3 wants 4.5:1.
+       #64748b on the placeholder's #f0f9ff ground was 4.46:1; #52606d is 5.31:1.
+       axe missed this because the audit fixture had images, so the placeholder
+       this element lives in never rendered. */
     .teacher-note {
       font-size: 0.75rem;
-      color: #64748b;
+      color: #52606d;
       margin-top: 0.5rem;
       font-style: italic;
     }
