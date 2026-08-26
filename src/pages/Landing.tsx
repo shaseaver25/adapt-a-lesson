@@ -377,7 +377,11 @@ export default function Landing() {
             desc: 'See how our assessments ensure real learning.',
             duration: '5:12',
             exampleUrl: '/examples/authentic-assessment-example.doc',
-            videoUrl: '/videos/authentic-assessment.mp4'
+            videoUrl: '/videos/authentic-assessment.mp4',
+            // ⚠️ DRAFT — NOT YET CHECKED AGAINST THE FOOTAGE. Rewrite to match what
+            // the video actually shows before this ships. See the note on
+            // `textAlternative` in the type below.
+            textAlternative: 'A screen recording, with no audio, of an assessment being created in RealPath Learning. A lesson is opened, the assessment options are set, and the tool generates an assessment whose questions ask students to explain and apply the material rather than recall it. The finished assessment is shown alongside the lesson it was built from.'
           }, {
             title: 'Multilingual Support',
             desc: '12+ languages with automatic audio.',
@@ -389,7 +393,9 @@ export default function Landing() {
             desc: 'Generate aligned rubrics instantly.',
             duration: '3:24',
             exampleUrl: '/examples/rubric-example.md',
-            videoUrl: '/videos/rubric-creation.mp4'
+            videoUrl: '/videos/rubric-creation.mp4',
+            // ⚠️ DRAFT — NOT YET CHECKED AGAINST THE FOOTAGE. See above.
+            textAlternative: 'A screen recording, with no audio, of a rubric being created in RealPath Learning. A lesson is selected, criteria and performance levels are chosen, and the tool generates a rubric laid out as a table of criteria against levels, with the expectations for each level written out.'
           }].map((video, i) => <div key={i} className="bg-background rounded-2xl overflow-hidden shadow-xl hover:-translate-y-2 hover:shadow-2xl transition-all">
                 <div className="aspect-video bg-gradient-to-br from-foreground to-foreground/80 relative">
                   <video src={video.videoUrl} aria-label={video.title} controls className="w-full h-full object-cover" />
@@ -397,6 +403,17 @@ export default function Landing() {
                 <div className="p-5">
                   <h3 className="font-display text-lg font-bold text-foreground mb-2">{video.title}</h3>
                   <p className="text-muted-foreground text-sm mb-2">{video.desc}</p>
+                  {/* WCAG SC 1.2.1: a silent screen recording is video-only content,
+                      so it needs a text alternative describing what happens on screen.
+                      Captions do not apply — there is no audio to caption. */}
+                  {video.textAlternative && <details className="mb-3 text-sm">
+                      <summary className="cursor-pointer text-primary hover:text-primary/80 font-medium">
+                        Text description of this video
+                      </summary>
+                      <p className="mt-2 text-muted-foreground">
+                        {video.textAlternative}
+                      </p>
+                    </details>}
                   <div className="flex items-center justify-between">
                     <span className="inline-flex items-center gap-2 text-secondary font-semibold text-sm">
                       🎬 {video.duration}
