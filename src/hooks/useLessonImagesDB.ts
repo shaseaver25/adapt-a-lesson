@@ -8,6 +8,7 @@ interface LessonImage {
   storage_path: string;
   description: string | null;
   alt_text: string | null;
+  long_description: string | null;
   file_size: number | null;
   created_at: string;
   signedUrl?: string;

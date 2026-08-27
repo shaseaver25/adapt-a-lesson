@@ -51,7 +51,7 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
           'Inconsistent: Human error leads to gaps',
           'Reactive: Problems found after publishing',
         ],
-        cta: 'RealPath Learning automates compliance so teachers create accessible content from the start—no extra work required.',
+        cta: 'RealPath Learning automates the repeatable parts so teachers create accessible content from the start—no extra work required.',
       };
     }
     if (compliancePercentage >= 75) {
@@ -66,7 +66,7 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
           '1,000s of existing materials in your LMS',
           'New lessons, worksheets, and assessments every week',
         ],
-        cta: 'RealPath Learning ensures 100% compliance automatically, protecting your district from risk while empowering your teachers.',
+        cta: 'RealPath Learning builds accessibility into generation: every lesson is checked against 15 accessibility rules before it reaches your LMS, and ships with a record of what passed — in both languages.',
       };
     }
     if (compliancePercentage >= 50) {
@@ -82,7 +82,7 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
           'Mandatory remediation of all existing content',
           'Reputational damage to your district',
         ],
-        cta: 'RealPath Learning eliminates compliance risk by building accessibility into every lesson from day one.',
+        cta: 'RealPath Learning builds accessibility into every lesson from the start, and blocks export when a lesson fails a required check.',
       };
     }
     return {
@@ -97,7 +97,7 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
         'Loss of federal funding',
         'Court-ordered remediation of all district content',
       ],
-      cta: 'RealPath Learning provides immediate compliance for new content and a clear path to remediating existing materials.',
+      cta: 'RealPath Learning gives new content accessible structure from the start, and a clear path to remediating existing materials.',
     };
   };
 
@@ -108,7 +108,7 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
         <div className="flex items-center justify-center gap-2 mb-8">
           <Badge variant="outline" className="gap-2 py-1.5 px-4 text-sm border-secondary/40 bg-secondary/5 text-secondary font-semibold">
             <Shield className="w-4 h-4" />
-            ADA Title II • DOJ WCAG 2.1 AA Compliance
+            ADA Title II • DOJ WCAG 2.1 AA
           </Badge>
         </div>
 
@@ -138,28 +138,39 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
           {/* Items */}
           <div className="divide-y divide-border/50">
             {checklistItems.map((item) => (
-              <label
+              <div
                 key={item.id}
-                className="flex items-start gap-4 p-4 hover:bg-muted/30 transition-colors cursor-pointer"
+                className="flex items-start gap-4 p-4 hover:bg-muted/30 transition-colors"
               >
                 <Checkbox
+                  id={`checklist-${item.id}`}
                   checked={!!checkedItems[item.id]}
                   onCheckedChange={() => handleCheckbox(item.id)}
+                  aria-describedby={`checklist-${item.id}-category`}
                   className="mt-0.5"
                 />
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-foreground block">
+                  <label
+                    htmlFor={`checklist-${item.id}`}
+                    className="text-sm font-medium text-foreground block cursor-pointer"
+                  >
                     {item.label}
+                  </label>
+                  <span id={`checklist-${item.id}-category`} className="text-xs text-muted-foreground">
+                    {item.category}
                   </span>
-                  <span className="text-xs text-muted-foreground">{item.category}</span>
                 </div>
-              </label>
+              </div>
             ))}
           </div>
 
           {/* Progress + Submit */}
           <div className="p-5 border-t border-border bg-muted/20 space-y-4">
-            <Progress value={compliancePercentage} className="h-2" />
+            <Progress
+              value={compliancePercentage}
+              aria-label={`Checklist progress: ${checkedCount} of ${totalCount} items checked`}
+              className="h-2"
+            />
             <Button
               onClick={() => setShowResults(true)}
               size="lg"
@@ -222,9 +233,9 @@ export function ComplianceChecklist({ onCtaClick }: ComplianceChecklistProps) {
         {/* Stats */}
         <div className="mt-10 grid grid-cols-3 gap-4">
           {[
-            { value: '100%', label: 'Compliance-Native' },
+            { value: '15', label: 'Automated Checks per Lesson' },
             { value: '18 yrs', label: 'Classroom Experience' },
-            { value: 'Zero', label: 'Compliance Risk' },
+            { value: '12+', label: 'Languages With Language Markup' },
           ].map((stat, i) => (
             <div key={i} className="text-center p-4 bg-card rounded-xl border border-border/50">
               <p className="font-display text-2xl font-bold text-primary">{stat.value}</p>

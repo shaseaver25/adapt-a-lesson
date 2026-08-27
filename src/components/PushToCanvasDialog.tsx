@@ -7,9 +7,23 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle2, ExternalLink, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, ExternalLink, Loader2, ShieldAlert, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { buildLessonSectionHTML } from "@/lib/export/htmlExporter";
+import { LessonValidationPanel } from "@/components/LessonValidationPanel";
+import {
+  type ExportValidation,
+  toConformanceRecord,
+} from "@/lib/validation/validateLessonForExport";
+import { checkLabel } from "../../supabase/functions/_shared/lessonRubric.ts";
+import type { VisualAssets } from "../../supabase/functions/_shared/lessonHtmlRenderer.ts";
+import {
+  buildOverriddenChecks,
+  MIN_OVERRIDE_REASON_LENGTH,
+  overrideReasonError,
+  type ExportOverride,
+} from "../../supabase/functions/_shared/lessonExportOverride.ts";
+import { Textarea } from "@/components/ui/textarea";
 
 /**
  * Architectural choice — Option A (frontend HTML generation):
@@ -40,8 +54,12 @@ interface Props {
   teacherGuide?: string;
   /** One published page per handout. */
   handouts: PushHandout[];
-  /** [VISUAL: description] -> signed URL. */
-  imageMap?: Map<string, string>;
+  /** Images, alt text, and long descriptions keyed by [VISUAL: description]. */
+  assets?: VisualAssets;
+  /** Rubric result for the markup about to be pushed. Blocking failures stop the push. */
+  validation: ExportValidation;
+  /** Persisted lesson this push came from, when there is one. Recorded on an override. */
+  lessonId?: string | null;
 }
 
 interface BuiltPage {
@@ -64,7 +82,7 @@ function buildPages(
   lessonTitle: string,
   teacherGuide: string | undefined,
   handouts: PushHandout[],
-  imageMap?: Map<string, string>,
+  assets?: VisualAssets,
 ): BuiltPage[] {
   const pages: BuiltPage[] = [];
   if (teacherGuide && teacherGuide.trim()) {
@@ -74,7 +92,7 @@ function buildPages(
         heading: "Teacher Guide",
         content: teacherGuide,
         homeLanguage: "English",
-        imageMap,
+        assets,
       }),
       published: false,
       groupKey: "teacher_guide",
@@ -89,7 +107,7 @@ function buildPages(
         content: h.content,
         englishContent: h.englishContent,
         homeLanguage: h.homeLanguage || "English",
-        imageMap,
+        assets,
       }),
       published: true,
       groupKey: `group_${h.groupName.replace(/[^a-z0-9]+/gi, "_").toLowerCase()}`,
@@ -99,7 +117,7 @@ function buildPages(
 }
 
 export function PushToCanvasDialog({
-  open, onOpenChange, lessonTitle, teacherGuide, handouts, imageMap,
+  open, onOpenChange, lessonTitle, teacherGuide, handouts, assets, validation, lessonId,
 }: Props) {
   const [courses, setCourses] = useState<CanvasCourse[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(false);
@@ -115,7 +133,17 @@ export function PushToCanvasDialog({
   const [results, setResults] = useState<PageResult[] | null>(null);
   const [courseUrl, setCourseUrl] = useState<string | null>(null);
 
-  const builtPages = buildPages(lessonTitle, teacherGuide, handouts, imageMap);
+  // Overriding a blocking failure ships a known defect, so it takes a
+  // deliberate second action plus a written reason — never a single click.
+  const [overrideRequested, setOverrideRequested] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+
+  const builtPages = buildPages(lessonTitle, teacherGuide, handouts, assets);
+  const hasBlockingFailures = validation.blocking.length > 0;
+  const overrideReasonProblem = overrideReasonError(overrideReason);
+  const overrideReady = overrideRequested && overrideReasonProblem === null;
+  // Blocked unless the teacher has written a valid reason to proceed anyway.
+  const isBlocked = hasBlockingFailures && !overrideReady;
 
   const loadCourses = async () => {
     setCoursesLoading(true); setCoursesError(null);
@@ -129,6 +157,7 @@ export function PushToCanvasDialog({
     if (open) {
       setCourseId(""); setModuleId("none"); setModules([]);
       setErrorMsg(null); setResults(null); setCourseUrl(null);
+      setOverrideRequested(false); setOverrideReason("");
       loadCourses();
     }
   }, [open]);
@@ -147,10 +176,18 @@ export function PushToCanvasDialog({
   }, [courseId]);
 
   const handleSubmit = async () => {
-    if (!courseId || builtPages.length === 0) return;
+    if (!courseId || builtPages.length === 0 || isBlocked) return;
     setSubmitting(true); setErrorMsg(null); setResults(null); setCourseUrl(null);
 
-    const imageUrls = imageMap ? Array.from(imageMap.values()) : [];
+    const imageUrls = assets?.imageMap ? Array.from(assets.imageMap.values()) : [];
+    const override: ExportOverride | undefined = hasBlockingFailures
+      ? {
+          reason: overrideReason.trim(),
+          overriddenChecks: buildOverriddenChecks(validation.hardCheckResults, validation.blocking),
+          overriddenAt: new Date().toISOString(),
+        }
+      : undefined;
+
     const { data, error } = await supabase.functions.invoke("canvas-push-lesson", {
       method: "POST",
       body: {
@@ -160,6 +197,10 @@ export function PushToCanvasDialog({
           title, bodyHtml, published, groupKey,
         })),
         imageUrls,
+        conformance: toConformanceRecord(validation),
+        override,
+        lessonId: lessonId ?? null,
+        lessonTitle,
       },
     });
     setSubmitting(false);
@@ -170,6 +211,12 @@ export function PushToCanvasDialog({
       const msg = data?.error || error?.message || "Push failed";
       if (code === "TOKEN_EXPIRED" || code === "NO_CONNECTION") {
         setErrorMsg("Your Canvas connection has expired or is missing. Reconnect Canvas in Settings.");
+      } else if (code === "VALIDATION_BLOCKED") {
+        setErrorMsg(`${msg} Fix the blocking checks above, then push again.`);
+      } else if (code === "OVERRIDE_INVALID") {
+        setErrorMsg(`${msg} Update the reason above, then push again.`);
+      } else if (code === "OVERRIDE_NOT_LOGGED") {
+        setErrorMsg(msg);
       } else if (code === "IMAGE_UPLOAD_FAILED") {
         setErrorMsg(`An image failed to upload to Canvas. Details: ${msg}`);
       } else {
@@ -209,11 +256,85 @@ export function PushToCanvasDialog({
             This creates one Canvas page per part of the lesson — an
             unpublished Teacher Guide plus one published page per student
             group ({builtPages.length} page{builtPages.length === 1 ? "" : "s"} total).
-            Images upload to Canvas file storage so they don't expire.
+            Images upload to Canvas file storage so they don't expire. Each page carries an
+            accessibility conformance record recording the checks below.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          <LessonValidationPanel
+            hardCheckResults={validation.hardCheckResults}
+            rubricVersion={validation.rubricVersion}
+            blocking={validation.blocking}
+            advisory={validation.advisory}
+          />
+
+          {hasBlockingFailures && (
+            <div className="space-y-3 rounded-md border border-destructive/50 p-3">
+              <p id="canvas-push-blocked" className="flex items-start gap-2 text-sm text-destructive">
+                <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
+                <span>
+                  This lesson cannot be pushed to Canvas until{" "}
+                  {validation.blocking.map(checkLabel).join(", ")}{" "}
+                  {validation.blocking.length === 1 ? "is" : "are"} fixed.
+                </span>
+              </p>
+
+              {!overrideRequested ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setOverrideRequested(true)}
+                >
+                  Export anyway with a recorded reason
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <label htmlFor="override-reason" className="text-sm font-medium block">
+                    Why is this being exported with a known accessibility failure?
+                  </label>
+                  <p id="override-reason-help" className="text-xs text-muted-foreground">
+                    This is recorded against the lesson so the defect can be found and repaired,
+                    and it is printed on the Canvas page itself so anyone reading it knows the
+                    page is pending repair. Say what is wrong and how it will be fixed.
+                  </p>
+                  <Textarea
+                    id="override-reason"
+                    value={overrideReason}
+                    onChange={(e) => setOverrideReason(e.target.value)}
+                    rows={3}
+                    aria-describedby={
+                      overrideReasonProblem ? "override-reason-error" : "override-reason-help"
+                    }
+                    aria-invalid={overrideReason.length > 0 && overrideReasonProblem !== null}
+                    placeholder="e.g. Diagram alt text needs rewriting; assigning tomorrow and will replace the page by Friday."
+                  />
+                  {overrideReason.length > 0 && overrideReasonProblem ? (
+                    <p id="override-reason-error" className="text-xs text-destructive">
+                      {overrideReasonProblem}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      {Math.max(0, MIN_OVERRIDE_REASON_LENGTH - overrideReason.trim().length)}{" "}
+                      more character
+                      {MIN_OVERRIDE_REASON_LENGTH - overrideReason.trim().length === 1 ? "" : "s"}{" "}
+                      needed.
+                    </p>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setOverrideRequested(false); setOverrideReason(""); }}
+                  >
+                    Cancel override
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
           <div>
             <label className="text-sm font-medium mb-1 block">Course</label>
             {coursesLoading ? (
@@ -319,9 +440,13 @@ export function PushToCanvasDialog({
             {results ? "Close" : "Cancel"}
           </Button>
           {!results && (
-            <Button onClick={handleSubmit} disabled={!courseId || submitting || builtPages.length === 0}>
+            <Button
+              onClick={handleSubmit}
+              disabled={!courseId || submitting || builtPages.length === 0 || isBlocked}
+              aria-describedby={isBlocked ? "canvas-push-blocked" : undefined}
+            >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Push {builtPages.length} page{builtPages.length === 1 ? "" : "s"}
+              {overrideReady ? "Push anyway" : `Push ${builtPages.length} page${builtPages.length === 1 ? "" : "s"}`}
             </Button>
           )}
         </DialogFooter>

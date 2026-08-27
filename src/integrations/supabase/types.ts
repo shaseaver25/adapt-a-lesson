@@ -753,6 +753,7 @@ export type Database = {
           group_id: string | null
           id: string
           lesson_id: string
+          long_description: string | null
           storage_path: string
         }
         Insert: {
@@ -763,6 +764,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           lesson_id: string
+          long_description?: string | null
           storage_path: string
         }
         Update: {
@@ -773,6 +775,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           lesson_id?: string
+          long_description?: string | null
           storage_path?: string
         }
         Relationships: [

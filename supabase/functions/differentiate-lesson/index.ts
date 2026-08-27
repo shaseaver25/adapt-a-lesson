@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { marked } from "https://esm.sh/marked@17.0.1";
+import { renderLessonForValidation } from "../_shared/lessonHtmlRenderer.ts";
+import { retryableFailures } from "../_shared/lessonRubric.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,7 +12,13 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const MAX_REGEN_ATTEMPTS = 1;
+// Tunable without a redeploy: the right value depends on real pass rates, which
+// can only be measured against production data (see lesson_validation_results).
+const MAX_REGEN_ATTEMPTS = (() => {
+  const raw = Number(Deno.env.get("MAX_REGEN_ATTEMPTS"));
+  return Number.isInteger(raw) && raw >= 0 && raw <= 3 ? raw : 1;
+})();
+
 // Wall-clock budget so the whole request stays under Supabase's ~150s edge
 // function limit. A second (regeneration) pass runs only if enough time remains;
 // otherwise we return the first result with its validation flags instead of 504-ing.
@@ -93,6 +102,7 @@ type ValidationResponse = {
 // Call the stateless validate-lesson edge function.
 async function callValidate(
   structuredLessonData: unknown,
+  renderedHtml: unknown,
   gradeBand: string | null,
   authHeader: string | null,
 ): Promise<ValidationResponse | null> {
@@ -105,7 +115,7 @@ async function callValidate(
         Authorization: authHeader ?? `Bearer ${SUPABASE_ANON_KEY}`,
         apikey: SUPABASE_ANON_KEY,
       },
-      body: JSON.stringify({ structuredLessonData, gradeBand }),
+      body: JSON.stringify({ structuredLessonData, gradeBand, renderedHtml }),
     });
     if (!res.ok) {
       console.error("validate-lesson returned", res.status, await res.text());
@@ -201,15 +211,55 @@ FOR NON-ENGLISH GROUPS (CRITICAL - BILINGUAL OUTPUT):
 - This enables side-by-side bilingual display
 
 HANDOUT CONTENT STRUCTURE (both languages):
-- Start with: **Name:** _____ **Date:** _____
-- Include: 🎯 Learning Target (student-friendly)
+- Start with: **Name:** [BLANK] **Date:** [BLANK]
+- Include: Learning Target (student-friendly)
 - Include: Lesson content
 - Include: Vocabulary box
-- Include: Practice section with answer lines
+- Include: Practice section, with [ANSWER LINE] after every question
 - Include: Reflection section
 - Use markdown formatting
 - NEVER include teacher directions, scaffolding strategies, or pacing notes
 - Write TO the student: "You will..." not "Teacher will..."
+
+ACCESSIBILITY REQUIREMENTS (MANDATORY — output is validated against these before it can be exported to an LMS):
+
+1. HEADINGS
+- Use markdown headings (#, ##, ###) in order. Never skip a level: a ## may only be followed by another ## or a ###, never by a ####.
+- Heading text must be plain words only. NO emoji, icons, arrows, or decorative characters anywhere in a heading, and especially never at the start of one — a screen reader announces the emoji's name before the heading text.
+- Emoji are fine in ordinary body text. Keep them out of headings.
+
+2. LINKS
+- Link text must describe the destination: "Read the NASA water cycle overview", not "click here" or "read more".
+- Never use "click here", "read more", "learn more", "here", or "this link" as the visible text of a link.
+
+3. COLOR
+- Never identify work by color alone. "Answer the red questions" is not usable by a student who cannot see color.
+- Always pair a color with a label, number, or word: "Answer the questions marked Set A (red)", "Complete problems 1-5 (green box)".
+
+4. ANSWER BLANKS — use these tokens, never underscores
+- [BLANK] for a short inline blank (a name, a date, a single word).
+- [ANSWER LINE] for a full-width line or box where a student writes a sentence or more.
+- NEVER write runs of underscores such as _____ . A screen reader announces each underscore separately.
+- Every question in a Practice section must be followed by [ANSWER LINE] (or [BLANK] if the answer is one word).
+
+5. TABLES — vocabulary boxes, glossaries, and anything in columns
+- A table MUST have a delimiter row directly under the header, with exactly one cell per header cell:
+  | Word | Meaning |
+  | --- | --- |
+  | Melody | A group of sounds that moves up and down |
+- The delimiter row is not optional. Without it the table is not a table: it reaches the student as a row of literal | characters, and a screen reader reads it as one long run-on sentence.
+- Start every table line at the left margin. Never indent a table, and never nest one inside a bullet or numbered list.
+- Put a blank line before and after the table.
+- Every row must have the same number of cells as the header.
+
+6. MATH
+- If the lesson contains equations, write them as LaTeX delimited with $...$ for inline math and $$...$$ for display math.
+- Never render an equation as an image, and never flatten it into ambiguous plain text.
+- Lessons containing math are flagged for manual teacher review, so keep equations simple and self-explanatory.
+
+6. IMAGES
+- Only request an image when it carries meaning students need. Decorative images are not worth the accessibility cost.
+- Write [VISUAL:] descriptions as descriptions of what the finished image SHOWS, not as instructions to an image generator. Write "The water cycle as a loop between a lake, a cloud, and rain falling on a hillside", not "Create a colorful diagram showing the water cycle".
 
 LEVEL MAPPING:
 - "Below Grade" → "embers"
@@ -220,10 +270,10 @@ LEVEL MAPPING:
 CRITICAL FOR [VISUAL:] TAGS:
 - [VISUAL: description] tags must ALWAYS be written in ENGLISH, even inside translated content
 - This ensures consistent image generation across all language versions
-- Example in a Spanish handout: "[VISUAL: A diagram showing the water cycle with arrows]" (NOT "[VISUAL: Un diagrama del ciclo del agua]")
+- Example in a Spanish handout: "[VISUAL: The water cycle as a loop, with arrows from a lake to a cloud to rain]" (NOT "[VISUAL: Un diagrama del ciclo del agua]")
 - For translated content, add a translated caption on the line AFTER the [VISUAL:] tag to help students understand
 - Example:
-  [VISUAL: A labeled diagram of a plant cell]
+  [VISUAL: A plant cell with the nucleus, cell wall, and chloroplasts labeled]
   *Diagrama etiquetado de una célula vegetal*
 
 ORDER: Always process groups from lowest to highest level (embers → supernovas).`;
@@ -253,7 +303,7 @@ ORDER: Always process groups from lowest to highest level (embers → supernovas
       optionsDesc += '- Generate comprehension questions for each group\n';
     }
     if (options.includeVisualPlaceholders) {
-      optionsDesc += `- IMPORTANT: Include [VISUAL: detailed English description] tags throughout the content. ALWAYS write the description in ENGLISH even for translated handouts. Add at least 2-3 visuals per handout. For translated content, add a translated caption line after the tag. Example in Spanish handout:\n  [VISUAL: A diagram showing the water cycle]\n  *Un diagrama del ciclo del agua*\n`;
+      optionsDesc += `- IMPORTANT: Include [VISUAL: description of what the image shows] tags throughout the content. ALWAYS write the description in ENGLISH even for translated handouts, and describe what the finished image shows rather than instructing a generator. Add at least 2-3 visuals per handout. For translated content, add a translated caption line after the tag. Example in a Spanish handout:\n  [VISUAL: The water cycle as a loop between a lake, a cloud, and rain falling on a hillside]\n  *El ciclo del agua*\n`;
     }
     if (options.includeGraphicOrganizers) {
       optionsDesc += `- Include graphic organizers (type: ${options.graphicOrganizerType || 'auto'})\n`;
@@ -382,8 +432,8 @@ Remember:
             groupName: g.groupName,
             level: LEVEL_MAP[g.readingLevelLabel] || 'flames',
             language: g.homeLanguage,
-            content: `# ${g.groupName} Handout\n\n**Name:** _____ **Date:** _____\n\n🎯 **Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*`,
-            englishContent: g.homeLanguage !== 'English' ? `# ${g.groupName} Handout\n\n**Name:** _____ **Date:** _____\n\n🎯 **Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*` : null,
+            content: `# ${g.groupName} Handout\n\n**Name:** [BLANK] **Date:** [BLANK]\n\n**Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*`,
+            englishContent: g.homeLanguage !== 'English' ? `# ${g.groupName} Handout\n\n**Name:** [BLANK] **Date:** [BLANK]\n\n**Learning Target:** See teacher guide for objectives.\n\n---\n\n*Content generation incomplete. Please regenerate this lesson.*` : null,
           }));
         }
         return {
@@ -457,20 +507,45 @@ Remember:
         `Generated (attempt ${attempt}): teacherGuide ${structuredLessonData.teacherGuide.length} chars, ${structuredLessonData.studentHandouts.length} handouts`,
       );
 
-      validation = await callValidate(structuredLessonData, gradeBand ?? null, authHeader);
+      // Validate the HTML that will actually ship, rendered through the same
+      // module the exporter uses — not the markdown behind it.
+      const renderedHtml = renderLessonForValidation(
+        structuredLessonData,
+        (md: string) => marked.parse(md) as string,
+      );
+      validation = await callValidate(structuredLessonData, renderedHtml, gradeBand ?? null, authHeader);
       if (!validation) {
         console.warn("validate-lesson unavailable; returning without validation");
         break;
       }
       regenAttempts = attempt;
-      if (validation.passed) {
-        console.log(`Validation passed on attempt ${attempt}`);
+
+      const failed = Object.entries(validation.hardCheckResults)
+        .filter(([, r]) => !r.passed && !r.skipped)
+        .map(([k]) => k);
+
+      // Only a blocking failure is worth a second generation. Advisory checks
+      // do not stop export, and a full regeneration costs a model call and
+      // ~30-60s of the request budget — too much to spend on a check that was
+      // never going to hold the lesson back.
+      const worthRetrying = retryableFailures(validation.hardCheckResults);
+
+      if (worthRetrying.length === 0) {
+        if (failed.length > 0) {
+          console.log(
+            `Attempt ${attempt}: no blocking failures worth regenerating; advisory issues remain: ${failed.join(", ")}`,
+          );
+        } else {
+          console.log(`Validation passed on attempt ${attempt}`);
+        }
         break;
       }
-      const failed = Object.entries(validation.hardCheckResults)
-        .filter(([, r]) => !r.passed)
-        .map(([k]) => k);
-      console.warn(`Validation failed on attempt ${attempt}, failed checks: ${failed.join(", ")}`);
+
+      console.warn(
+        `Validation failed on attempt ${attempt}; blocking: ${worthRetrying.join(", ")}${
+          failed.length > worthRetrying.length ? ` (advisory also failing: ${failed.filter((f) => !worthRetrying.includes(f)).join(", ")})` : ""
+        }`,
+      );
       if (attempt === MAX_REGEN_ATTEMPTS) {
         console.warn(`Reached max regen attempts (${MAX_REGEN_ATTEMPTS}); returning residual issues`);
       }

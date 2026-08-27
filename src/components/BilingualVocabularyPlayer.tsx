@@ -1,3 +1,4 @@
+import { functionAuthHeaders } from '@/lib/supabaseFunctionHeaders';
 import React, { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, Loader2, Volume2, PlayCircle } from 'lucide-react';
@@ -83,11 +84,7 @@ export function BilingualVocabularyPlayer({
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: await functionAuthHeaders('hear this word'),
         body: JSON.stringify({
           text,
           language,

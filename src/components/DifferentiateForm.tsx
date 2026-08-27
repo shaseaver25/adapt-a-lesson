@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { ImportLessonControls } from '@/components/import/ImportLessonControls';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -370,6 +371,12 @@ export function DifferentiateForm({ onSubmit, isLoading, error, onRetry, onCance
             This name will be used when saving the differentiated lesson.
           </p>
         </div>
+
+        <ImportLessonControls
+          onImported={setCachedLessonContent}
+          hasExistingContent={cachedLessonContent.trim().length > 0}
+          disabled={isLoading}
+        />
 
         <div className="space-y-2">
           <Label htmlFor="lessonContent" className="text-sm font-medium">Lesson Content</Label>

@@ -11,7 +11,7 @@ export const PRICING_TIERS = {
     features: [
       "60 tokens/month",
       "All differentiation features",
-      "100% WCAG 2.1 AA compliant",
+      "Bilingual handouts, accessibility-checked before export",
     ],
   },
   school: {

@@ -33,8 +33,8 @@ export function CostComparison() {
 
               <div className="space-y-4">
                 {[
-                  { title: '100% Compliant from Day 1', desc: 'Every lesson automatically meets WCAG 2.1 AA' },
-                  { title: 'Zero Compliance Risk', desc: 'Protected from OCR complaints and lawsuits' },
+                  { title: 'Accessibility Built Into Generation', desc: 'Every lesson is checked against 15 accessibility rules before it reaches your LMS, and ships with a record of what passed — in both languages' },
+                  { title: 'Evidence On Every Lesson', desc: 'Each exported page carries a conformance record naming the rubric version and the result of each check' },
                   { title: 'Teacher Time Saved', desc: '5-10 hours per teacher per week' },
                   { title: 'Better Student Outcomes', desc: 'Every student gets personalized, accessible materials' },
                 ].map((item, i) => (

@@ -1,5 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import {
+  buildConformanceFooterHTML,
+  type ConformanceRecord,
+} from "../_shared/lessonHtmlRenderer.ts";
+import { type ExportOverride, overrideError } from "../_shared/lessonExportOverride.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -87,6 +92,61 @@ Deno.serve(async (req) => {
     const moduleId = body.moduleId != null ? Number(body.moduleId) : null;
     const imageUrls: string[] = Array.isArray(body.imageUrls) ? body.imageUrls.map(String) : [];
 
+    // Every page carries its own conformance record: the district sees this,
+    // never the internal lesson_validation_results table.
+    const conformance = body.conformance as ConformanceRecord | undefined;
+    if (!conformance || !Array.isArray(conformance.checks) || conformance.checks.length === 0) {
+      return err("BAD_REQUEST", "conformance record required", 400);
+    }
+    const blockingFailures = conformance.checks.filter((c) => c.blocking && !c.skipped && !c.passed);
+
+    // A blocking failure stops the push unless the teacher overrode it in
+    // writing. The override is re-validated here rather than trusted from the
+    // client, and it is logged before any page is created — if the log write
+    // fails the push does not happen, because an unlogged override is exactly
+    // the silent-defect case the gate exists to prevent.
+    const override = body.override as ExportOverride | undefined;
+    if (blockingFailures.length > 0) {
+      if (!override) {
+        return err(
+          "VALIDATION_BLOCKED",
+          `Lesson has ${blockingFailures.length} blocking accessibility failure(s): ${
+            blockingFailures.map((c) => c.label).join(", ")
+          }`,
+          422,
+        );
+      }
+      const overrideProblem = overrideError(override, blockingFailures.map((c) => c.name));
+      if (overrideProblem) {
+        return err("OVERRIDE_INVALID", overrideProblem, 422);
+      }
+
+      const { error: logErr } = await admin.from("lesson_export_overrides").insert({
+        lesson_id: body.lessonId ? String(body.lessonId) : null,
+        user_id: userId,
+        rubric_version: conformance.rubricVersion,
+        export_target: "canvas",
+        lesson_title: body.lessonTitle ? String(body.lessonTitle) : null,
+        overridden_checks: override.overriddenChecks,
+        reason: override.reason.trim(),
+      });
+      if (logErr) {
+        console.error("lesson_export_overrides insert failed", logErr);
+        return err(
+          "OVERRIDE_NOT_LOGGED",
+          "The override could not be recorded, so the push was cancelled. An override that is not logged cannot be repaired later. Try again.",
+          500,
+        );
+      }
+    }
+
+    // Disclose the override on the page itself, not just in our own table.
+    const conformanceFooter = buildConformanceFooterHTML(
+      blockingFailures.length > 0 && override
+        ? { ...conformance, override }
+        : conformance,
+    );
+
     // New multi-page contract: pages: [{ title, bodyHtml, published, groupKey? }]
     // Backwards-compat with single-page: { title, bodyHtml }
     type PageIn = { title: string; bodyHtml: string; published?: boolean; groupKey?: string };
@@ -137,7 +197,7 @@ Deno.serve(async (req) => {
     };
     const results: PageResult[] = [];
     for (const p of pages) {
-      let rewritten = p.bodyHtml;
+      let rewritten = p.bodyHtml + conformanceFooter;
       for (const [src, dst] of urlMap.entries()) rewritten = rewritten.split(src).join(dst);
 
       try {

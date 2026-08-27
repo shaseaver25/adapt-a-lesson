@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { normalizeMarkdownTables } from '../../supabase/functions/_shared/lessonHtmlRenderer.ts';
 import LessonImageFrame from '@/components/LessonImageFrame';
 import { LessonValidationBanner } from '@/components/LessonValidationBanner';
 import { LessonValidationBadge } from '@/components/LessonValidationBadge';
@@ -17,6 +18,8 @@ import { getStudentFriendlyIcon, getReadingLevelColor } from '@/lib/readingLevel
 import type { StudentHandout } from '@/types/differentiatedLesson';
 import { useLessonImagesDB } from '@/hooks/useLessonImagesDB';
 import { PushToCanvasDialog } from '@/components/PushToCanvasDialog';
+import { LessonValidationPanel } from '@/components/LessonValidationPanel';
+import { validateLessonForExport } from '@/lib/validation/validateLessonForExport';
 import { 
   ArrowLeft, 
   Printer, 
@@ -216,15 +219,24 @@ export default function LessonView() {
 
   // Image fetching
   const { fetchImages } = useLessonImagesDB();
-  const [imageMap, setImageMap] = useState<Map<string, string>>(new Map());
+  const [assets, setAssets] = useState<{
+    imageMap: Map<string, string>;
+    altTextMap: Map<string, string>;
+    longDescriptionMap: Map<string, string>;
+  }>({ imageMap: new Map(), altTextMap: new Map(), longDescriptionMap: new Map() });
+  const imageMap = assets.imageMap;
   const [imagesLoaded, setImagesLoaded] = useState(false);
 
   // Process content to replace [VISUAL:] and [NANOBANANA:] tags with actual images
   const processContentWithImages = useCallback((content: string): string => {
-    if (!content || imageMap.size === 0) return content;
-    
-    let processed = content;
-    
+    if (!content) return content;
+
+    // Repair malformed tables before react-markdown sees them — see the note in
+    // DifferentiatedLessonOutput. Without this a vocabulary or rubric table
+    // reaches the reader as a run of literal pipe characters.
+    let processed = normalizeMarkdownTables(content);
+    if (imageMap.size === 0) return processed;
+
     // Replace [VISUAL: description] with markdown image
     processed = processed.replace(/\[VISUAL:\s*(.+?)\]/gi, (match, description) => {
       const desc = description.trim();
@@ -259,13 +271,16 @@ export default function LessonView() {
   useEffect(() => {
     if (lesson?.id) {
       fetchImages(lesson.id).then((images) => {
-        const map = new Map<string, string>();
+        const imageMapNext = new Map<string, string>();
+        const altTextMap = new Map<string, string>();
+        const longDescriptionMap = new Map<string, string>();
         images.forEach((img) => {
-          if (img.description && img.signedUrl) {
-            map.set(img.description, img.signedUrl);
-          }
+          if (!img.description || !img.signedUrl) return;
+          imageMapNext.set(img.description, img.signedUrl);
+          if (img.alt_text) altTextMap.set(img.description, img.alt_text);
+          if (img.long_description) longDescriptionMap.set(img.description, img.long_description);
         });
-        setImageMap(map);
+        setAssets({ imageMap: imageMapNext, altTextMap, longDescriptionMap });
         setImagesLoaded(true);
       });
     }
@@ -398,6 +413,14 @@ export default function LessonView() {
   const hasTeacherGuide = !!lesson.teacher_guide;
   const hasHandouts = studentHandouts.length > 0;
 
+  // Re-run the rubric over the markup this lesson would actually export, with
+  // the stored diagrams and their alt text attached.
+  const exportValidation = validateLessonForExport(
+    { teacherGuide: lesson.teacher_guide ?? '', studentHandouts },
+    null,
+    assets,
+  );
+
   return (
     <>
       {/* Print styles */}
@@ -507,7 +530,9 @@ export default function LessonView() {
             englishContent: h.englishContent,
             homeLanguage: h.language || 'English',
           }))}
-          imageMap={imageMap}
+          assets={assets}
+          validation={exportValidation}
+          lessonId={lesson.id ?? id ?? null}
         />
 
         {/* Lesson Content */}
@@ -518,6 +543,14 @@ export default function LessonView() {
                 <LessonValidationBanner failedChecks={failedChecks} />
               </div>
             )}
+            <div className="no-print mb-4">
+              <LessonValidationPanel
+                hardCheckResults={exportValidation.hardCheckResults}
+                rubricVersion={exportValidation.rubricVersion}
+                blocking={exportValidation.blocking}
+                advisory={exportValidation.advisory}
+              />
+            </div>
           </div>
           <article className="lesson-content max-w-5xl mx-auto bg-card border border-border rounded-xl shadow-sm overflow-hidden">
             {/* Differentiation options badges - hidden on print */}
@@ -567,15 +600,23 @@ export default function LessonView() {
                   <>
                     {/* Print button for handouts */}
                     <div className="no-print flex justify-end p-4 border-b border-border">
-                      <Button 
-                        variant="default" 
-                        size="sm" 
-                        onClick={handlePrintHandouts}
-                        className="gap-2 bg-primary hover:bg-primary/90"
-                      >
-                        <Printer className="h-4 w-4" />
-                        Print Handouts
-                      </Button>
+                      <div className="flex flex-col items-end gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handlePrintHandouts}
+                          className="gap-2"
+                          aria-describedby="print-handouts-note"
+                        >
+                          <Printer className="h-4 w-4" />
+                          Print handouts (print copy)
+                        </Button>
+                        <p id="print-handouts-note" className="max-w-sm text-right text-xs text-muted-foreground">
+                          Print copy — not the accessible version. Browser-printed PDFs carry no tag
+                          structure, so screen readers cannot navigate them. Use the Canvas export for
+                          accessible delivery.
+                        </p>
+                      </div>
                     </div>
 
                     {/* Nested tabs for each student group */}
@@ -697,15 +738,22 @@ export default function LessonView() {
                   <>
                     {/* Print button for teacher guide */}
                     <div className="no-print flex justify-end p-4 border-b border-border">
-                      <Button 
-                        variant="default" 
-                        size="sm" 
-                        onClick={handlePrintTeacher}
-                        className="gap-2 bg-primary hover:bg-primary/90"
-                      >
-                        <Printer className="h-4 w-4" />
-                        Print Teacher Guide
-                      </Button>
+                      <div className="flex flex-col items-end gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handlePrintTeacher}
+                          className="gap-2"
+                          aria-describedby="print-teacher-note"
+                        >
+                          <Printer className="h-4 w-4" />
+                          Print teacher guide (print copy)
+                        </Button>
+                        <p id="print-teacher-note" className="max-w-sm text-right text-xs text-muted-foreground">
+                          Print copy — not the accessible version. Browser-printed PDFs carry no tag
+                          structure. Use the Canvas export for accessible delivery.
+                        </p>
+                      </div>
                     </div>
 
                     <div className="p-6 md:p-8">
@@ -733,7 +781,7 @@ export default function LessonView() {
         {/* Footer - hidden on print */}
         <footer className="no-print border-t border-border py-6 mt-8">
           <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-            <p>RealPath Learning — WCAG 2.1 AA compliant differentiation for every learner</p>
+            <p>RealPath Learning — differentiated lessons with bilingual language markup, checked against an accessibility rubric before export</p>
           </div>
         </footer>
       </div>

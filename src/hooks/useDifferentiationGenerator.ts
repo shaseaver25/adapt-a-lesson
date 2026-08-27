@@ -1,3 +1,4 @@
+import { functionAuthHeaders } from '@/lib/supabaseFunctionHeaders';
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,9 +9,19 @@ import { StudentGroup } from '@/types/studentGroup';
 import { DifferentiationProgressState, createInitialProgressState } from '@/components/DifferentiationProgressModal';
 import { DifferentiateInput } from '@/components/DifferentiateForm';
 import type { DifferentiatedLessonData, StudentHandout } from '@/types/differentiatedLesson';
+import type { HardCheckResults } from '../../supabase/functions/_shared/lessonRubric.ts';
+
+export interface GenerationValidation {
+  passed: boolean;
+  hardCheckResults: HardCheckResults;
+  rubricVersion: string;
+  regenAttempts: number;
+}
 
 interface UseDifferentiationGeneratorReturn {
   differentiatedLesson: DifferentiatedLessonData | null;
+  /** Rubric result from the generation pass, before any diagrams exist. */
+  generationValidation: GenerationValidation | null;
   selectedGroups: (StudentGroup & { id: string })[];
   originalLessonContent: string;
   isDifferentiating: boolean;
@@ -37,6 +48,7 @@ export function useDifferentiationGenerator(
   generateAudio: (lessonId: string, content: string, groups: (StudentGroup & { id: string })[]) => Promise<any>
 ): UseDifferentiationGeneratorReturn {
   const [differentiatedLesson, setDifferentiatedLesson] = useState<DifferentiatedLessonData | null>(null);
+  const [generationValidation, setGenerationValidation] = useState<GenerationValidation | null>(null);
   const [selectedGroups, setSelectedGroups] = useState<(StudentGroup & { id: string })[]>([]);
   const [originalLessonContent, setOriginalLessonContent] = useState<string>('');
   const [isDifferentiating, setIsDifferentiating] = useState(false);
@@ -142,11 +154,7 @@ export function useDifferentiationGenerator(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/differentiate-lesson`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
+          headers: await functionAuthHeaders('generate a lesson'),
           body: JSON.stringify({
             lessonContent: input.lessonContent,
             selectedGroups: input.selectedGroups,
@@ -170,14 +178,8 @@ export function useDifferentiationGenerator(
       }
 
       const lessonData: DifferentiatedLessonData = result.data;
-      const validation = result.validation as
-        | {
-            passed: boolean;
-            hardCheckResults: Record<string, { passed: boolean; details?: string; skipped?: boolean }>;
-            rubricVersion: string;
-            regenAttempts: number;
-          }
-        | null;
+      const validation = (result.validation ?? null) as GenerationValidation | null;
+      setGenerationValidation(validation);
       
       console.log('Received structured lesson data:', {
         teacherGuideLength: lessonData.teacherGuide?.length,
@@ -354,6 +356,7 @@ export function useDifferentiationGenerator(
 
   const handleResetDifferentiation = () => {
     setDifferentiatedLesson(null);
+    setGenerationValidation(null);
     setSelectedGroups([]);
     setCachedLessonContent('');
     clearSelection();
@@ -364,6 +367,7 @@ export function useDifferentiationGenerator(
 
   return {
     differentiatedLesson,
+    generationValidation,
     selectedGroups,
     originalLessonContent,
     isDifferentiating,

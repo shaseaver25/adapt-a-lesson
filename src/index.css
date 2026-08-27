@@ -32,13 +32,22 @@
     --secondary-foreground: 0 0% 100%;
 
     --muted: 38 30% 94%;
-    --muted-foreground: 22 20% 45%;
+    /* WCAG SC 1.4.3: must clear 4.5:1 on --background (cream), --card (white)
+       and --muted. At 45% it was 4.41 on --background — the single cause of the
+       42 contrast violations axe found on the landing page. 41% gives 5.15 /
+       5.55 / 4.92, so it holds on all three grounds. */
+    --muted-foreground: 22 20% 41%;
 
-    /* Gold accent */
+    /* Gold accent. The hue is deliberately unchanged — gold is a light colour,
+       so the fix is dark text on it, not a darker gold. White on this gold was
+       3.16:1 (fails); the ink below is 5.07:1. Applies to the `accent` button
+       variant and every shadcn hover surface that uses bg-accent. */
     --accent: 32 95% 44%;
-    --accent-foreground: 0 0% 100%;
+    --accent-foreground: 22 29% 13%;
 
-    --destructive: 0 72% 51%;
+    /* 51% was 4.45:1 on --background — marginal fail, and `text-destructive`
+       is used in ~90 places for real error copy. 46% gives 5.20. */
+    --destructive: 0 72% 46%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 38 25% 88%;
@@ -78,6 +87,17 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
+  /* NOT CURRENTLY REACHABLE. Nothing in the app adds the `dark` class — there is
+     no ThemeProvider and no theme toggle — so these tokens never apply and are
+     outside the scope of any accessibility conformance claim.
+     Before enabling dark mode, three tokens below must be fixed; they were
+     measured and they fail WCAG SC 1.4.3:
+       --primary      143 70% 35%  -> 3.72:1 as a fill with white text
+       --destructive  0 62.8% 40%  -> 2.57:1 as text (`text-destructive`)
+       --accent       32 85% 50%   -> 2.61:1 as a fill with white text
+     Each needs to be lightened and paired with dark foreground text, the same
+     way the light theme's accent was fixed above. Left unchanged here because
+     that is a visible redesign of a theme no one can currently review. */
   .dark {
     --background: 22 20% 8%;
     --foreground: 38 30% 95%;

@@ -21,7 +21,7 @@ export default function Pricing() {
     <div className="min-h-screen bg-background">
       <Seo
         title="Pricing — RealPath Learning"
-        description="Simple plans for educators, schools, and districts. WCAG 2.1 AA compliant differentiated lessons starting at $19/month."
+        description="Simple plans for educators, schools, and districts. Differentiated lessons with bilingual language markup starting at $19/month."
         path="/pricing"
       />
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
@@ -49,7 +49,8 @@ export default function Pricing() {
             Choose Your Plan
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Unlock the full power of differentiated learning. Every plan includes WCAG 2.1 AA compliance built in.
+            Unlock the full power of differentiated learning. Every lesson is checked against 15
+            accessibility rules before it reaches your LMS, and ships with a record of what passed — in both languages.
           </p>
         </div>
 
