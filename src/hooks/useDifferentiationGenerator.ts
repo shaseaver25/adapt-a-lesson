@@ -1,3 +1,4 @@
+import { functionAuthHeaders } from '@/lib/supabaseFunctionHeaders';
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -153,11 +154,7 @@ export function useDifferentiationGenerator(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/differentiate-lesson`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
+          headers: await functionAuthHeaders('generate a lesson'),
           body: JSON.stringify({
             lessonContent: input.lessonContent,
             selectedGroups: input.selectedGroups,

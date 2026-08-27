@@ -1,3 +1,4 @@
+import { functionAuthHeaders } from '@/lib/supabaseFunctionHeaders';
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -90,11 +91,7 @@ export function LessonAudioPlayer({
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
+          headers: await functionAuthHeaders('generate audio'),
           body: JSON.stringify({ 
             text: audioText,
             language: group.homeLanguage,
